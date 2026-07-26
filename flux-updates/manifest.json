@@ -1,0 +1,26 @@
+﻿{
+    "mandatory":  false,
+    "releasedAt":  "2026-07-17T16:20:05.7398694Z",
+    "version":  "1.1.0",
+    "notes":  "Flux Rec Room core update 1.1.0",
+    "packages":  [
+                     {
+                         "path":  "flux-core-1.1.0.zip",
+                         "sha256":  "d662b3f0098240275d58cea0badf63fffd2aa394b336dccc4dcda509f05c218e",
+                         "id":  "core",
+                         "size":  40318
+                     }
+                 ],
+    "channel":  "stable",
+    "baseUrl":  "/flux-updates/packages/1.1.0",
+    "minLauncher":  "1.0.0",
+    "builds":  {
+                   "2019":  {
+                                "supported":  true
+                            },
+                   "2023":  {
+                                "supported":  true,
+                                "clientIncluded":  false
+                            }
+               }
+}

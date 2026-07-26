@@ -1,0 +1,86 @@
+[images]
+remote_images = [
+  "^(?:https:\\/\\/firebasestorage\\.googleapis\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+  "^(?:https:\\/\\/(?!\\.)[^/]*?\\.googleusercontent\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+  "^(?:https:\\/\\/lh3\\.googleusercontent\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+  "^(?:https:\\/\\/media\\.giphy\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+  "^(?:https:\\/\\/i\\.giphy\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+]
+
+[build]
+command = "npm run build"
+publish = ".next"
+
+  [build.environment]
+  NEXT_PUBLIC_FIREBASE_API_KEY = "AIzaSyBV_ev8AVpKwgioPSSWiBYf8UU09bLbWOU"
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "flux-544a6.firebaseapp.com"
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID = "flux-544a6"
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = "flux-544a6.firebasestorage.app"
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "475310930388"
+  NEXT_PUBLIC_FIREBASE_APP_ID = "1:475310930388:web:b6dfe7518bb06d5e01be41"
+  NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID = "G-SMS9G4W1ZV"
+
+[[plugins]]
+package = "@netlify/plugin-nextjs"
+
+[[headers]]
+for = "/_next/static/*"
+
+  [headers.values]
+  Cache-Control = "public, max-age=31536000, immutable"
+
+[[redirects]]
+from = "/_next/image"
+to = "/.netlify/images?url=:url&w=:width&q=:quality"
+status = 200
+
+  [redirects.query]
+  url = ":url"
+  w = ":width"
+  q = ":quality"
+
+[[redirects]]
+from = "/_ipx/*"
+to = "/.netlify/images?url=:url&w=:width&q=:quality"
+status = 200
+
+  [redirects.query]
+  url = ":url"
+  w = ":width"
+  q = ":quality"
+
+[context]
+
+  [context.production]
+
+    [context.production.images]
+    remote_images = [
+      "^(?:https:\\/\\/firebasestorage\\.googleapis\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/(?!\\.)[^/]*?\\.googleusercontent\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/lh3\\.googleusercontent\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/media\\.giphy\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/i\\.giphy\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+    ]
+
+    [[context.production.headers]]
+    for = "/_next/static/*"
+
+      [context.production.headers.values]
+      Cache-Control = "public, max-age=31536000, immutable"
+
+  [context.master]
+
+    [context.master.images]
+    remote_images = [
+      "^(?:https:\\/\\/firebasestorage\\.googleapis\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/(?!\\.)[^/]*?\\.googleusercontent\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/lh3\\.googleusercontent\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/media\\.giphy\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$",
+      "^(?:https:\\/\\/i\\.giphy\\.com(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)|$))$"
+    ]
+
+    [[context.master.headers]]
+    for = "/_next/static/*"
+
+      [context.master.headers.values]
+      Cache-Control = "public, max-age=31536000, immutable"
