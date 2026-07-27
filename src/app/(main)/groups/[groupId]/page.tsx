@@ -1,5 +1,9 @@
 "use client";
 
+export function generateStaticParams() {
+  return [{ groupId: "_" }];
+}
+
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
