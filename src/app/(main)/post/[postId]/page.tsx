@@ -1,5 +1,9 @@
 "use client";
 
+export function generateStaticParams() {
+  return [{ postId: "_" }];
+}
+
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
