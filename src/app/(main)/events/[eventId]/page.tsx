@@ -1,5 +1,9 @@
 "use client";
 
+export function generateStaticParams() {
+  return [{ eventId: "_" }];
+}
+
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, Loader2, MapPin, Users } from "lucide-react";
