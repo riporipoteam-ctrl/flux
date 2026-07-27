@@ -1,0 +1,374 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      // Privilege comes from the authenticated Firebase identity, never from
+      // mutable fields a user can write into their own profile document.
+      return isSignedIn()
+        && request.auth.token.email == "ripo.ripoteam@gmail.com";
+    }
+
+    function isOwner() {
+      return isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isSelf(uid)
+        && request.resource.data.email == request.auth.token.email
+        && (isOwner() || (
+          request.resource.data.isAdmin != true
+          && request.resource.data.isOwner != true
+        ));
+      allow update: if (
+          isSelf(uid)
+          && request.resource.data.email == request.auth.token.email
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['isAdmin', 'isOwner', 'email'])
+        )
+        || isOwner()
+        || (isAdmin() && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['isVerified', 'verifiedType', 'coins', 'isAdmin', 'updatedAt']));
+      allow delete: if isAdmin();
+
+      match /following/{targetId} {
+        allow read: if true;
+        allow write: if isSelf(uid);
+      }
+
+      match /followers/{followerId} {
+        allow read: if true;
+        allow create, delete: if isSignedIn() && request.auth.uid == followerId;
+        allow update: if false;
+      }
+
+      match /likes/{postId} {
+        allow read: if isSelf(uid);
+        allow write: if isSelf(uid);
+      }
+
+      match /bookmarks/{postId} {
+        allow read: if isSelf(uid);
+        allow write: if isSelf(uid);
+      }
+    }
+
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && !exists(/databases/$(database)/documents/usernames/$(username));
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /posts/{postId} {
+      // Private drafts only for author; missing visibility = public (legacy posts)
+      allow read: if resource.data.isDeleted != true
+        && (
+          !('visibility' in resource.data)
+          || resource.data.visibility == null
+          || resource.data.visibility == "public"
+          || resource.data.authorId == request.auth.uid
+          || isAdmin()
+        )
+        && (
+          resource.data.isDraft != true
+          || resource.data.authorId == request.auth.uid
+        );
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.isAdmin != true;
+      allow update: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isAdmin());
+
+      match /likes/{uid} {
+        allow read: if true;
+        allow write: if isSelf(uid);
+      }
+
+      match /reposts/{uid} {
+        allow read: if true;
+        allow write: if isSelf(uid);
+      }
+
+      match /bookmarks/{uid} {
+        allow read: if isSelf(uid);
+        allow write: if isSelf(uid);
+      }
+
+      match /pollVotes/{uid} {
+        allow read: if true;
+        allow create: if isSelf(uid);
+        allow update, delete: if false;
+      }
+    }
+
+    match /notifications/{id} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /hashtags/{tag} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /reports/{id} {
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow read, update: if isAdmin();
+    }
+
+    match /blocks/{id} {
+      allow read: if isSignedIn();
+      allow create, delete: if isSignedIn()
+        && request.resource.data.blockerId == request.auth.uid;
+    }
+
+    match /mutes/{id} {
+      allow read: if isSignedIn() && resource.data.muterId == request.auth.uid;
+      allow write: if isSignedIn();
+    }
+
+    match /lists/{listId} {
+      allow read: if resource.data.isPrivate != true
+        || resource.data.ownerId == request.auth.uid;
+      allow write: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+
+      match /members/{uid} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+    }
+
+    match /groups/{groupId} {
+      allow read: if resource.data.isPrivate != true || isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      match /members/{uid} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+
+      match /ranks/{rankId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+    }
+
+    match /conversations/{convId} {
+      allow read: if isSignedIn()
+        && request.auth.uid in resource.data.participantIds;
+      allow create: if isSignedIn()
+        && request.auth.uid in request.resource.data.participantIds;
+      allow update, delete: if isSignedIn()
+        && request.auth.uid in resource.data.participantIds;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.senderId == request.auth.uid;
+        allow update: if isSignedIn();
+        allow delete: if isSignedIn()
+          && resource.data.senderId == request.auth.uid;
+      }
+
+      match /typing/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSelf(uid);
+      }
+    }
+
+    match /calls/{callId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn()
+        && (resource.data.hostId == request.auth.uid || isAdmin());
+
+      match /attendees/{uid} {
+        allow read: if true;
+        allow write: if isSelf(uid);
+      }
+    }
+
+    match /shopItems/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /purchases/{id} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /gifts/{id} {
+      allow read: if isSignedIn()
+        && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.fromId == request.auth.uid;
+    }
+
+    match /coinTransactions/{id} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
+    }
+
+    match /dailyChallenges/{date} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /userChallenges/{id} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /aiConversations/{id} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+          && get(/databases/$(database)/documents/aiConversations/$(id)).data.userId == request.auth.uid;
+        allow create: if isSignedIn()
+          && get(/databases/$(database)/documents/aiConversations/$(id)).data.userId == request.auth.uid;
+        allow update, delete: if isSignedIn()
+          && get(/databases/$(database)/documents/aiConversations/$(id)).data.userId == request.auth.uid;
+      }
+    }
+
+    match /activity/{uid}/events/{eventId} {
+      allow read, write: if isSelf(uid);
+    }
+
+    match /adminLogs/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    match /adminMessages/{id} {
+      allow create: if isAdmin();
+      allow read, update: if isSignedIn()
+        && (resource.data.toUserId == request.auth.uid || isAdmin());
+    }
+
+    match /customBadges/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /shopMeta/{id} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /accountLinks/{linkId} {
+      allow read: if isSignedIn()
+        && request.auth.uid in resource.data.memberUids;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn()
+        && request.auth.uid in resource.data.memberUids;
+
+      match /publicMembers/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+
+    /* ---- Free live stream host (Sunshine/Moonlight tunnel URL) ---- */
+    match /streamHosts/{id} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn()
+        && resource.data.hostUid == request.auth.uid;
+    }
+
+    /* ---- Game rooms gallery (Flux Rec) ----
+       Public rooms: anyone can read.
+       Private rooms: only author can read.
+    */
+    match /publishedRooms/{roomId} {
+      allow read: if resource.data.get('isPrivate', false) != true
+        || (isSignedIn() && resource.data.authorId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.isOfficial != true
+        && request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn()
+        && (
+          resource.data.authorId == request.auth.uid
+          || (
+            resource.data.get('isPrivate', false) != true
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['visits', 'cheers', 'updatedAt'])
+          )
+        );
+      allow delete: if isOwner()
+        || (isSignedIn() && resource.data.authorId == request.auth.uid);
+    }
+
+    match /gameConfig/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /gameAnnouncements/{id} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    /* ---- Flux Hangout (instant browser multiplayer) ---- */
+    match /gameSessions/{uid} {
+      allow read: if true;
+      allow create, update: if isSelf(uid);
+      allow delete: if isSelf(uid) || isAdmin();
+    }
+
+    match /hangoutRooms/{roomCode} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+
+      match /players/{uid} {
+        allow read: if isSignedIn();
+        // create/delete own presence; any room member can update others (tag / scores)
+        allow create, delete: if isSelf(uid);
+        allow update: if isSignedIn();
+      }
+
+      match /chat/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if isSignedIn()
+          && (resource.data.uid == request.auth.uid || isAdmin());
+      }
+
+      match /pickups/{pickupId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+  }
+}

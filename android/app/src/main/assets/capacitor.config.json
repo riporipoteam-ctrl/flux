@@ -1,0 +1,27 @@
+{
+	"appId": "network.flux.social",
+	"appName": "Flux",
+	"webDir": "public",
+	"server": {
+		"url": "http://localhost:3000",
+		"cleartext": true,
+		"androidScheme": "https"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 1200,
+			"backgroundColor": "#0a0a0c",
+			"showSpinner": false
+		},
+		"StatusBar": {
+			"style": "DARK",
+			"backgroundColor": "#0a0a0c"
+		},
+		"Keyboard": {
+			"resize": "body"
+		}
+	},
+	"android": {
+		"allowMixedContent": true
+	}
+}
