@@ -13,7 +13,8 @@
   <script>
     // If Capacitor loads webDir only (no server.url), bounce to game once host is known
     // Prefer same origin /game when served from Next/Firebase
-    if (location.protocol !== 'file:') {
+    const isGitHubPages = location.hostname.endsWith('.github.io');
+    if (location.protocol !== 'file:' && !isGitHubPages) {
       location.replace('/game?app=1');
     }
   </script>
