@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { stripUndefined } from "@/lib/firestore-safe";
+import { assetUrl } from "@/lib/asset-url";
 
 export type PublishedRoom = {
   id: string;
@@ -217,7 +218,7 @@ export function roomThumbUrl(room: PublishedRoom): string {
   if (room.imageUrl) {
     // Absolute or site-relative
     if (room.imageUrl.startsWith("http") || room.imageUrl.startsWith("/")) {
-      return room.imageUrl;
+      return assetUrl(room.imageUrl);
     }
   }
   const raw = (room.imageName || room.imageUrl || "").trim();
@@ -227,7 +228,7 @@ export function roomThumbUrl(room: PublishedRoom): string {
       .replace(/[^a-zA-Z0-9._-]/g, "");
     if (base) {
       // 1) Static public copy  2) API route that also reads RecNet cache
-      return `/game-thumbs/${encodeURIComponent(base)}.png`;
+      return assetUrl(`/game-thumbs/${encodeURIComponent(base)}.png`);
     }
   }
   // Deterministic gradient avatar fallback (no external dependency)

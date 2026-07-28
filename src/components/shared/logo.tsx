@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/asset-url";
 
 export function Logo({
   className,
@@ -32,7 +33,7 @@ export function Logo({
         style={{ width: size, height: size }}
       >
         <Image
-          src="/flux-icon.png"
+          src={assetUrl("/flux-icon.png")}
           alt="Flux social media network"
           width={size}
           height={size}

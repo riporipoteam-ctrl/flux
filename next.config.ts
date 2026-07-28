@@ -5,6 +5,9 @@ const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "flux";
 const basePath = isGitHubPages ? `/${repositoryName}` : "";
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
   // GitHub Pages is a static host. Keep normal deployments server-capable,
   // while exporting a path-safe static build only in the Pages workflow.
   ...(isGitHubPages

@@ -51,6 +51,7 @@ import {
   flairForDecoration,
   getCatalogItem,
 } from "@/lib/shop-catalog";
+import { assetUrl } from "@/lib/asset-url";
 
 export default function ProfilePage() {
   const params = useParams();
@@ -236,14 +237,14 @@ export default function ProfilePage() {
           {profile.bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={profile.bannerUrl}
+              src={assetUrl(profile.bannerUrl)}
               alt=""
               className="h-full w-full cursor-zoom-in object-cover"
             />
           ) : bannerDeco?.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={bannerDeco.imageUrl}
+              src={assetUrl(bannerDeco.imageUrl)}
               alt=""
               className="h-full w-full object-cover opacity-90"
             />
@@ -251,7 +252,7 @@ export default function ProfilePage() {
           {bannerDeco && profile.bannerUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={bannerDeco.imageUrl}
+              src={assetUrl(bannerDeco.imageUrl)}
               alt=""
               className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-screen"
             />

@@ -17,7 +17,7 @@
   z-index: -2;
   background:
     linear-gradient(180deg, rgba(36, 98, 112, .2), rgba(16, 54, 34, .82)),
-    url('/game-thumbs/flux-farming-hero.png') center / cover no-repeat;
+    var(--flux-farm-hero) center / cover no-repeat;
   filter: saturate(.9);
   transform: scale(1.02);
 }
@@ -257,7 +257,7 @@
 
 .overlay { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 18px; background: rgba(5, 20, 13, .72); backdrop-filter: blur(10px); }
 .modal { width: min(680px, 100%); max-height: min(82vh, 720px); overflow-y: auto; border: 1px solid rgba(255,255,255,.18); border-radius: 27px; color: #fff; background: #153927; box-shadow: 0 30px 90px rgba(0,0,0,.4); }
-.modalHero { position: relative; min-height: 175px; padding: 26px; overflow: hidden; border-radius: 27px 27px 0 0; background: linear-gradient(90deg, rgba(8,35,22,.92), rgba(8,35,22,.22)), url('/game-thumbs/flux-farming-hero.png') center / cover; }
+.modalHero { position: relative; min-height: 175px; padding: 26px; overflow: hidden; border-radius: 27px 27px 0 0; background: linear-gradient(90deg, rgba(8,35,22,.92), rgba(8,35,22,.22)), var(--flux-farm-hero) center / cover; }
 .modalEyebrow { margin: 0; color: #ffe17c; font-size: 9px; font-weight: 950; letter-spacing: .18em; text-transform: uppercase; }
 .modalTitle { margin: 7px 0 0; max-width: 420px; font-family: Georgia, serif; font-size: clamp(28px, 5vw, 44px); line-height: 1; }
 .modalStory { max-width: 430px; margin: 10px 0 0; color: rgba(255,255,255,.72); font-size: 12px; line-height: 1.55; }

@@ -6,6 +6,7 @@ import { ImageViewer } from "@/components/shared/image-viewer";
 import { cn } from "@/lib/utils";
 import type { UserDecorations, UserProfile } from "@/types";
 import { frameClassForDecoration } from "@/lib/shop-catalog";
+import { assetUrl } from "@/lib/asset-url";
 
 export function UserAvatar({
   user,
@@ -71,7 +72,7 @@ export function UserAvatar({
         >
           {user?.avatarUrl ? (
             <AvatarImage
-              src={user.avatarUrl}
+              src={assetUrl(user.avatarUrl)}
               alt={user.displayName || "User"}
             />
           ) : null}
@@ -80,7 +81,7 @@ export function UserAvatar({
       </span>
       <ImageViewer
         open={open}
-        src={user?.avatarUrl}
+        src={user?.avatarUrl ? assetUrl(user.avatarUrl) : user?.avatarUrl}
         alt={user?.displayName || "Avatar"}
         onClose={() => setOpen(false)}
       />

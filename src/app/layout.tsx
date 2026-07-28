@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/contexts/theme-context";
 import { MobileBoot } from "@/components/providers/mobile-boot";
 import "./globals.css";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -22,7 +24,7 @@ export const metadata: Metadata = {
     "Flux is a premium social network by Ripo Team — posts, groups, chats, shop, Hangout multiplayer, and AskAI. Install as app on phone — Firebase-backed, no PC required.",
   applicationName: "Flux",
   authors: [{ name: "Ripo Team" }],
-  manifest: "/manifest.webmanifest",
+  manifest: `${basePath}/manifest.webmanifest`,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -30,11 +32,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico?v=flux-20260722", type: "image/x-icon", sizes: "256x256" },
-      { url: "/flux-icon.png?v=flux-20260722", type: "image/png", sizes: "1024x1024" },
+      { url: `${basePath}/favicon.ico?v=flux-20260722`, type: "image/x-icon", sizes: "256x256" },
+      { url: `${basePath}/flux-icon.png?v=flux-20260722`, type: "image/png", sizes: "1024x1024" },
     ],
-    shortcut: [{ url: "/flux-icon.png?v=flux-20260722", type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: "/flux-icon.png?v=flux-20260722", type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-20260722`, type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: `${basePath}/flux-icon.png?v=flux-20260722`, type: "image/png", sizes: "180x180" }],
   },
   other: {
     "mobile-web-app-capable": "yes",

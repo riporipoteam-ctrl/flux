@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { assetUrl } from "@/lib/asset-url";
 
 export default function GroupsPage() {
   const { user } = useAuth();
@@ -170,7 +171,7 @@ export default function GroupsPage() {
                 <label className="relative flex h-28 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-dashed border-border bg-muted/40">
                   {bannerPrev ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={bannerPrev} alt="" className="h-full w-full object-cover" />
+                    <img src={assetUrl(bannerPrev)} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <span className="flex items-center gap-2 text-sm text-muted-foreground">
                       <ImageIcon className="h-4 w-4" /> Banner
@@ -192,7 +193,7 @@ export default function GroupsPage() {
                   <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-muted">
                     {avatarPrev ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarPrev} alt="" className="h-full w-full object-cover" />
+                      <img src={assetUrl(avatarPrev)} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <Camera className="h-5 w-5 text-muted-foreground" />
                     )}
@@ -285,7 +286,7 @@ export default function GroupsPage() {
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-muted text-lg font-bold">
                   {g.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={g.avatarUrl} alt="" className="h-full w-full object-cover" />
+                    <img src={assetUrl(g.avatarUrl)} alt="" className="h-full w-full object-cover" />
                   ) : (
                     g.name.slice(0, 1).toUpperCase()
                   )}

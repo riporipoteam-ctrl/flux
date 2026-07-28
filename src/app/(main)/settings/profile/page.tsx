@@ -24,6 +24,7 @@ import { MAX_BIO_LENGTH } from "@/lib/constants";
 import { MOOD_OPTIONS, PROFILE_ACCENTS } from "@/lib/default-avatars";
 import { cn, formatUsername } from "@/lib/utils";
 import { PageTransition } from "@/components/shared/page-transition";
+import { assetUrl } from "@/lib/asset-url";
 
 export default function EditProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -166,7 +167,7 @@ export default function EditProfilePage() {
           {bannerPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={bannerPreview}
+              src={assetUrl(bannerPreview)}
               alt=""
               className="h-full w-full object-cover"
             />

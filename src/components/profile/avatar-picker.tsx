@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Camera, Check } from "lucide-react";
 import { DEFAULT_AVATARS } from "@/lib/default-avatars";
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/asset-url";
 
 export function AvatarPicker({
   value,
@@ -75,7 +76,7 @@ export function AvatarPicker({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={avatar.src}
+                  src={assetUrl(avatar.src)}
                   alt={avatar.name}
                   className="h-full w-full object-cover"
                 />

@@ -7,6 +7,7 @@ import {
   isCapacitorNative,
   markFluxMobileApp,
 } from "@/lib/mobile-app";
+import { assetUrl } from "@/lib/asset-url";
 
 /**
  * When Flux is installed as APK/IPA/PWA, mark app mode and optionally
@@ -19,7 +20,7 @@ export function MobileBoot() {
   useEffect(() => {
     // Register PWA SW
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").then((registration) => registration.update()).catch(() => undefined);
+      navigator.serviceWorker.register(assetUrl("/sw.js")).then((registration) => registration.update()).catch(() => undefined);
     }
     if ("caches" in window) {
       void caches.keys().then((keys) => Promise.all(

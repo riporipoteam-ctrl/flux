@@ -31,6 +31,7 @@ import { uploadAvatar, uploadBanner } from "@/services/media";
 import { followUser } from "@/services/follows";
 import type { UserProfile } from "@/types";
 import { cn, formatUsername } from "@/lib/utils";
+import { assetUrl } from "@/lib/asset-url";
 
 const STEPS = [
   "Username",
@@ -288,7 +289,7 @@ export default function OnboardingPage() {
                   {bannerPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={bannerPreview}
+                      src={assetUrl(bannerPreview)}
                       alt=""
                       className="h-full w-full object-cover"
                     />

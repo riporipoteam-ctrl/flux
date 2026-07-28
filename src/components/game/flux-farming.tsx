@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   ArrowLeft,
   BookOpen,
@@ -29,6 +36,7 @@ import {
   type SeedId,
 } from "@/lib/games/flux-farming-state";
 import styles from "./flux-farming.module.css";
+import { assetUrl } from "@/lib/asset-url";
 
 type Panel = "map" | "journal" | "upgrades" | "animals" | "friends" | "leaderboard" | null;
 
@@ -135,7 +143,13 @@ export function FluxFarming({ farmOwner, onExit }: { farmOwner: string; onExit: 
   }
 
   return (
-    <div ref={rootRef} className={styles.root}>
+    <div
+      ref={rootRef}
+      className={styles.root}
+      style={{
+        "--flux-farm-hero": `url("${assetUrl("/game-thumbs/flux-farming-hero.png")}")`,
+      } as CSSProperties}
+    >
       <div className={styles.backdrop} />
       <div className={styles.shell}>
         <header className={styles.topbar}>

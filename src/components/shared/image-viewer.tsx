@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { assetUrl } from "@/lib/asset-url";
 
 /** Fullscreen viewer for avatars, banners, post/group images */
 export function ImageViewer({
@@ -52,7 +53,7 @@ export function ImageViewer({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.96, opacity: 0 }}
             transition={{ type: "spring", stiffness: 340, damping: 28 }}
-            src={src}
+            src={assetUrl(src)}
             alt={alt}
             className="max-h-[90vh] max-w-[94vw] rounded-2xl object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}

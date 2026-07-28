@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
+import { assetUrl } from "@/lib/asset-url";
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -207,7 +208,7 @@ export default function GroupDetailPage() {
           style={
             group.bannerUrl
               ? {
-                  backgroundImage: `url(${group.bannerUrl})`,
+                  backgroundImage: `url(${assetUrl(group.bannerUrl)})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }
@@ -218,7 +219,7 @@ export default function GroupDetailPage() {
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border-4 border-background bg-muted text-2xl font-bold">
             {group.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={group.avatarUrl} alt="" className="h-full w-full object-cover" />
+              <img src={assetUrl(group.avatarUrl)} alt="" className="h-full w-full object-cover" />
             ) : (
               group.name.slice(0, 1).toUpperCase()
             )}

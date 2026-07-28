@@ -1,6 +1,13 @@
 /* Flux PWA service worker — cache shell for faster launch on phone */
 const CACHE = "flux-shell-v2";
-const PRECACHE = ["/", "/manifest.webmanifest", "/favicon.ico", "/flux-icon.png"];
+const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
+const scoped = (path) => `${SCOPE_PATH}${path}`;
+const PRECACHE = [
+  scoped("/"),
+  scoped("/manifest.webmanifest"),
+  scoped("/favicon.ico"),
+  scoped("/flux-icon.png"),
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -24,7 +31,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   // Network-first for API / Firebase; cache-first for same-origin static
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith(scoped("/api/"))) return;
 
   event.respondWith(
     fetch(req)
@@ -33,6 +40,6 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => undefined);
         return res;
       })
-      .catch(() => caches.match(req).then((r) => r || caches.match("/")))
+      .catch(() => caches.match(req).then((r) => r || caches.match(scoped("/"))))
   );
 });

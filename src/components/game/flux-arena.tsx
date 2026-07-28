@@ -44,6 +44,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/asset-url";
 
 const SPEED = 260;
 const EMOJIS = ["🙂", "😎", "🔥", "🎮", "✨", "🚀", "👾", "🦊", "⚡", "👑"];
@@ -133,7 +134,7 @@ export function FluxArena({
             if (p.avatarUrl && !avatarsRef.current.has(p.uid)) {
               const img = new Image();
               img.crossOrigin = "anonymous";
-              img.src = p.avatarUrl;
+              img.src = assetUrl(p.avatarUrl);
               avatarsRef.current.set(p.uid, img);
             }
           }

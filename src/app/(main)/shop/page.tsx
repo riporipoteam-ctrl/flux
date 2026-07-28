@@ -40,6 +40,7 @@ import { searchUsers } from "@/services/users";
 import type { UserProfile } from "@/types";
 import { formatCount } from "@/lib/utils";
 import { MobileHeader } from "@/components/layout/mobile-header";
+import { assetUrl } from "@/lib/asset-url";
 
 const FILTERS = [
   "all",
@@ -366,7 +367,7 @@ export default function ShopPage() {
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={item.imageUrl}
+                            src={assetUrl(item.imageUrl)}
                             alt={item.name}
                             className="h-full w-full object-cover"
                             onError={(e) => {
