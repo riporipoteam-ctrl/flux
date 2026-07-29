@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FluxPlaysWorld } from "@/components/game/flux-plays-world";
 import { LoadingScreen } from "@/components/shared/loading-screen";
@@ -8,6 +8,14 @@ import { useAuth } from "@/contexts/auth-context";
 import { getFluxPlayGame, type FluxPlayGame } from "@/services/flux-plays";
 
 export default function FluxPlayPage() {
+  return (
+    <Suspense fallback={<LoadingScreen label="Preparing Flux Plays…" />}>
+      <FluxPlayPageClient />
+    </Suspense>
+  );
+}
+
+function FluxPlayPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
