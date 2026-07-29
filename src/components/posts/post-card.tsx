@@ -36,6 +36,7 @@ import {
   votePoll,
 } from "@/services/posts";
 import { cn, formatCount } from "@/lib/utils";
+import { absoluteAppUrl, postPath, profilePath } from "@/lib/routes";
 import { flairForDecoration } from "@/lib/shop-catalog";
 import {
   Dialog,
@@ -83,7 +84,7 @@ export function PostCard({
 
   const goToPost = () => {
     if (disableNavigate) return;
-    router.push(`/post/${post.id}`);
+    router.push(postPath(post.id));
   };
 
   const onLike = async (e?: React.MouseEvent) => {
@@ -140,7 +141,7 @@ export function PostCard({
 
   const onShare = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const url = `${window.location.origin}/post/${post.id}`;
+    const url = absoluteAppUrl(postPath(post.id));
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied");
@@ -185,7 +186,7 @@ export function PostCard({
         ) : (
           <button
             type="button"
-            onClick={() => router.push(`/post/${post.repostOfId}`)}
+            onClick={() => router.push(postPath(post.repostOfId!))}
             className="w-full rounded-xl border border-border p-3 text-left text-sm text-muted-foreground hover:bg-muted/40"
           >
             View original post
@@ -217,7 +218,7 @@ export function PostCard({
       ) : null}
       <div className="flex gap-3">
         <Link
-          href={author?.username ? `/${author.username}` : "#"}
+          href={author?.username ? profilePath(author.username) : "#"}
           onClick={(e) => e.stopPropagation()}
         >
           <UserAvatar
@@ -230,7 +231,7 @@ export function PostCard({
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[15px]">
               <Link
-                href={author?.username ? `/${author.username}` : "#"}
+                href={author?.username ? profilePath(author.username) : "#"}
                 onClick={(e) => e.stopPropagation()}
                 className="truncate font-bold hover:underline"
               >
@@ -390,7 +391,7 @@ export function PostCard({
                   return (
                     <Link
                       key={i}
-                      href={`/${part.slice(1)}`}
+                      href={profilePath(part.slice(1))}
                       onClick={(e) => e.stopPropagation()}
                       className="text-primary hover:underline"
                     >
@@ -496,7 +497,7 @@ export function PostCard({
               className="mt-3 overflow-hidden rounded-2xl border border-border transition hover:bg-muted/40"
               onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/post/${post.quotedPost!.id}`);
+                router.push(postPath(post.quotedPost!.id));
               }}
             >
               <div className="p-3">
@@ -525,7 +526,7 @@ export function PostCard({
             <ActionBtn
               onClick={() => {
                 if (disableNavigate) setReplyOpen(true);
-                else router.push(`/post/${post.id}`);
+                else router.push(postPath(post.id));
               }}
               label="Reply"
               count={post.repliesCount}

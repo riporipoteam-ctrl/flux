@@ -26,6 +26,7 @@ import { Logo } from "@/components/shared/logo";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
 import { cn, formatCount } from "@/lib/utils";
+import { isNavPathActive, profilePath } from "@/lib/routes";
 
 const links = [
   { href: "/home", label: "Home", icon: Home },
@@ -52,9 +53,7 @@ export function MobileDrawer({
   const pathname = usePathname();
   const { profile } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const profileHref = profile?.username
-    ? `/${profile.username}`
-    : "/settings/profile";
+  const profileHref = profilePath(profile?.username);
 
   useEffect(() => {
     setMounted(true);
@@ -111,7 +110,7 @@ export function MobileDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
+            className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
             onClick={onClose}
           />
           <motion.aside
@@ -122,14 +121,14 @@ export function MobileDrawer({
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
-            className="absolute inset-y-0 left-0 flex h-[100dvh] w-[min(86vw,320px)] max-w-full flex-col overflow-hidden border-r border-border bg-background shadow-2xl overscroll-contain"
+            className="absolute inset-y-0 left-0 flex h-[100dvh] w-[min(90vw,350px)] max-w-full flex-col overflow-hidden border-r border-border/80 bg-card shadow-2xl overscroll-contain"
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
               <Logo href="/home" size={34} />
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full p-2 hover:bg-muted"
+                className="grid h-11 w-11 place-items-center rounded-full transition hover:bg-muted active:scale-95"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
@@ -140,9 +139,9 @@ export function MobileDrawer({
               <Link
                 href={profileHref}
                 onClick={onClose}
-                className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3"
+                className="mx-3 mt-3 flex shrink-0 items-center gap-3 rounded-2xl border border-border/80 bg-muted/45 p-3 transition hover:bg-muted/70"
               >
-                <UserAvatar user={profile} decorations={profile.decorations} />
+                <UserAvatar user={profile} decorations={profile.decorations} clickable={false} ring />
                 <div className="min-w-0">
                   <p className="truncate font-bold">{profile.displayName}</p>
                   <p className="truncate text-sm text-muted-foreground">
@@ -162,20 +161,20 @@ export function MobileDrawer({
               </Link>
             ) : null}
 
-            <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
+            <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
               {links.map((item) => {
                 const Icon = item.icon;
-                const active =
-                  pathname === item.href ||
-                  pathname.startsWith(item.href + "/");
+                const active = isNavPathActive(pathname, item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
                     className={cn(
-                      "flex items-center gap-4 px-5 py-3 text-[17px] font-bold transition",
-                      active ? "bg-muted" : "hover:bg-muted/70"
+                      "mb-1 flex min-h-12 items-center gap-4 rounded-xl px-3.5 py-2.5 text-[16px] font-bold transition active:scale-[0.99]",
+                      active
+                        ? "bg-accent text-accent-foreground"
+                        : "text-foreground hover:bg-muted/70"
                     )}
                   >
                     <Icon className="h-6 w-6" strokeWidth={active ? 2.4 : 2} />
@@ -186,7 +185,7 @@ export function MobileDrawer({
               <Link
                 href={profileHref}
                 onClick={onClose}
-                className="flex items-center gap-4 px-5 py-3 text-[17px] font-bold hover:bg-muted/70"
+                className={cn("mb-1 flex min-h-12 items-center gap-4 rounded-xl px-3.5 py-2.5 text-[16px] font-bold transition hover:bg-muted/70", pathname.startsWith("/profile") && "bg-accent text-accent-foreground")}
               >
                 <User className="h-6 w-6" />
                 Profile
@@ -195,7 +194,7 @@ export function MobileDrawer({
                 <Link
                   href="/admin"
                   onClick={onClose}
-                  className="flex items-center gap-4 px-5 py-3 text-[17px] font-bold hover:bg-muted/70"
+                  className="mb-1 flex min-h-12 items-center gap-4 rounded-xl px-3.5 py-2.5 text-[16px] font-bold transition hover:bg-muted/70"
                 >
                   <Shield className="h-6 w-6" />
                   Admin

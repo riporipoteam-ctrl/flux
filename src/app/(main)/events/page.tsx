@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { toast } from "sonner";
+import { eventPath } from "@/lib/routes";
 
 export default function EventsPage() {
   const { user } = useAuth();
@@ -74,7 +75,7 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center justify-between glass border-b border-border px-4 py-3">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center justify-between glass border-b border-border px-4 py-3">
         <h1 className="text-lg font-bold">Events</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -159,7 +160,7 @@ export default function EventsPage() {
             return (
               <li key={ev.id}>
                 <Link
-                  href={`/events/${ev.id}`}
+                  href={eventPath(ev.id)}
                   className="block px-4 py-4 transition hover:bg-muted/40"
                 >
                   <p className="text-xs font-medium text-primary">{when}</p>

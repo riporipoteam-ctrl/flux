@@ -20,6 +20,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageTransition } from "@/components/shared/page-transition";
 import { cn } from "@/lib/utils";
+import { postPath, profilePath } from "@/lib/routes";
 
 type Row = Notification & { actor?: UserProfile | null };
 
@@ -56,7 +57,7 @@ export default function ActivityPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 glass-strong border-b border-border/70 px-4 py-3">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 glass-strong border-b border-border/70 px-4 py-3">
         <h1 className="text-lg font-bold tracking-tight">Activity</h1>
         <p className="text-xs text-muted-foreground">
           Your full history of likes, follows, replies, and more
@@ -79,9 +80,9 @@ export default function ActivityPage() {
             {items.map((n, i) => {
               const Icon = iconFor(n.type);
               const href = n.postId
-                ? `/post/${n.postId}`
+                ? postPath(n.postId)
                 : n.actor?.username
-                  ? `/${n.actor.username}`
+                  ? profilePath(n.actor.username)
                   : "/activity";
               const time = n.createdAt?.toDate
                 ? formatDistanceToNowStrict(n.createdAt.toDate())

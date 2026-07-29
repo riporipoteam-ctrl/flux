@@ -14,6 +14,7 @@ import { getTrendingHashtags, type HashtagInfo } from "@/services/hashtags";
 import type { UserProfile } from "@/types";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { profilePath } from "@/lib/routes";
 
 export function RightRail() {
   const { user, profile } = useAuth();
@@ -99,7 +100,7 @@ export function RightRail() {
               </div>
             </div>
             <Link
-              href={`/${profile.username}`}
+              href={profilePath(profile.username)}
               className="shrink-0 text-xs font-bold text-[#1d9bf0] hover:underline"
             >
               Profile
@@ -151,7 +152,7 @@ export function RightRail() {
             ) : (
               suggestions.map((u) => (
                 <li key={u.uid} className="flex items-center gap-2.5">
-                  <Link href={`/${u.username}`}>
+                  <Link href={profilePath(u.username)}>
                     <UserAvatar
                       user={u}
                       size="sm"
@@ -160,7 +161,7 @@ export function RightRail() {
                   </Link>
                   <div className="min-w-0 flex-1">
                     <Link
-                      href={`/${u.username}`}
+                      href={profilePath(u.username)}
                       className="block truncate text-sm font-bold hover:underline"
                     >
                       {u.displayName}

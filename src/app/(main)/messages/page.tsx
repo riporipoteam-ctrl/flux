@@ -120,7 +120,7 @@ function MessagesInner() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-0px)] min-h-screen flex-col lg:h-screen">
+    <div className="flex h-[calc(100dvh_-_3.5rem_-_env(safe-area-inset-top))] min-h-0 flex-col lg:h-screen">
       <header className="shrink-0 border-b border-border px-4 py-3 glass">
         <h1 className="text-lg font-bold">Messages</h1>
       </header>

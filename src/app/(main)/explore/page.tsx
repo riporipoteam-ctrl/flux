@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/posts/post-card";
 import { UserAvatar } from "@/components/shared/user-avatar";
+import { groupPath, profilePath } from "@/lib/routes";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useAuth } from "@/contexts/auth-context";
 import { searchUsers } from "@/services/users";
@@ -89,7 +90,7 @@ function ExploreInner() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 space-y-3 glass border-b border-border px-4 py-3">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 space-y-3 glass border-b border-border px-4 py-3">
         <h1 className="text-lg font-bold">Explore</h1>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -156,7 +157,7 @@ function ExploreInner() {
                 {users.map((u) => (
                   <li key={u.uid}>
                     <Link
-                      href={`/${u.username}`}
+                      href={profilePath(u.username)}
                       className="flex items-center gap-3 px-4 py-3 transition hover:bg-muted/40"
                     >
                       <UserAvatar user={u} />
@@ -178,7 +179,7 @@ function ExploreInner() {
                 {groups.map((g) => (
                   <li key={g.id}>
                     <Link
-                      href={`/groups/${g.id}`}
+                      href={groupPath(g.id)}
                       className="block px-4 py-3 transition hover:bg-muted/40"
                     >
                       <p className="font-semibold">{g.name}</p>

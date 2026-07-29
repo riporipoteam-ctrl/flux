@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
-import { MobileHeader } from "@/components/layout/mobile-header";
+import { profilePath } from "@/lib/routes";
 
 export default function AdminPage() {
   const { user, profile } = useAuth();
@@ -108,11 +108,8 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 glass-strong border-b border-border px-3 py-2.5 sm:px-4">
-        <div className="lg:hidden">
-          <MobileHeader title="Admin" />
-        </div>
-        <h1 className="hidden items-center gap-2 text-xl font-extrabold lg:flex">
+      <header className="relative z-20 hidden border-b border-border px-4 py-2.5 lg:sticky lg:top-0 lg:z-30 lg:block glass-strong">
+        <h1 className="flex items-center gap-2 text-xl font-extrabold">
           <Shield className="h-5 w-5 text-[#1d9bf0]" />
           Admin · Ripo Team
         </h1>
@@ -175,7 +172,7 @@ export default function AdminPage() {
                       <div>
                         <p className="font-extrabold">{selected.displayName}</p>
                         <Link
-                          href={`/${selected.username}`}
+                          href={profilePath(selected.username)}
                           className="text-sm text-[#1d9bf0] hover:underline"
                         >
                           @{selected.username}

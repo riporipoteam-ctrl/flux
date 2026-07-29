@@ -21,10 +21,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/empty-state";
-import { MobileHeader } from "@/components/layout/mobile-header";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { assetUrl } from "@/lib/asset-url";
+import { groupPath } from "@/lib/routes";
 
 export default function GroupsPage() {
   const { user } = useAuth();
@@ -98,7 +98,7 @@ export default function GroupsPage() {
       toast.success("Group created");
       setOpen(false);
       reset();
-      router.push(`/groups/${id}`);
+      router.push(groupPath(id));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create group");
     } finally {
@@ -108,10 +108,7 @@ export default function GroupsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center justify-between glass-strong border-b border-border px-3 py-2.5 sm:px-4">
-        <div className="lg:hidden">
-          <MobileHeader title="Groups" />
-        </div>
+      <header className="relative z-20 flex items-center justify-end border-b border-border px-3 py-2.5 lg:sticky lg:top-0 lg:z-30 lg:justify-between sm:px-4 glass-strong">
         <h1 className="hidden text-xl font-extrabold lg:block">Groups</h1>
         <Dialog
           open={open}
@@ -280,7 +277,7 @@ export default function GroupsPage() {
           {groups.map((g) => (
             <li key={g.id}>
               <Link
-                href={`/groups/${g.id}`}
+                href={groupPath(g.id)}
                 className="flex items-start gap-3 px-4 py-4 transition hover:bg-muted/40"
               >
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-muted text-lg font-bold">

@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
           });
           if (result.ok) {
             groupId = result.groupId;
-            toolContext += `\n\n[Group created]\nName: ${name}\nID: ${groupId}\nLink path: /groups/${groupId}`;
+            toolContext += `\n\n[Group created]\nName: ${name}\nID: ${groupId}\nLink path: ${groupPath(groupId)}`;
             send({
               type: "group",
               groupId,
@@ -210,7 +210,7 @@ CRITICAL OUTPUT RULES:
 You have live context about Flux posts, profiles, and groups — use it when relevant.
 You may receive web search results — use them and cite briefly.
 If an image was generated, include the markdown image in your reply.
-If a group was created, tell the user the name and path /groups/{id}.
+If a group was created, tell the user the name and path /group?groupId={id}.
 You can analyze user-uploaded images when provided.
 Keep answers clear. Use short paragraphs and bullets when helpful.
 Do not invent Flux usernames or post contents not in context.

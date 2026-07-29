@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { LoadingScreen } from "@/components/shared/loading-screen";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
 
 export default function MainLayout({
@@ -18,7 +19,8 @@ export default function MainLayout({
   const pathname = usePathname();
   const isAskAI = pathname?.startsWith("/ask-ai");
   const isMessages = pathname?.startsWith("/messages");
-  const hideRail = isAskAI || isMessages;
+  const isImmersive = isAskAI || isMessages;
+  const hideRail = isImmersive;
 
   useEffect(() => {
     if (loading) return;
@@ -27,17 +29,15 @@ export default function MainLayout({
       router.replace("/onboarding");
   }, [user, profile, loading, router]);
 
-  // Fast path: only full-block while auth resolves; lighter spinner
   if (loading) {
     return <LoadingScreen label="Loading…" />;
   }
   if (!user) {
     return <LoadingScreen label="Redirecting…" />;
   }
-  // Profile still hydrating after auth
   if (!profile) {
     return (
-      <div className="grid min-h-screen place-items-center bg-background px-5">
+      <div className="grid min-h-[100dvh] place-items-center bg-background px-5">
         <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-center shadow-xl">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-muted text-xl">F</div>
           <h1 className="mt-4 text-lg font-bold">We couldn&apos;t load your profile</h1>
@@ -53,19 +53,24 @@ export default function MainLayout({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[1280px]">
+    <div className="mx-auto flex min-h-[100dvh] max-w-[1280px] overflow-x-clip">
       <Sidebar />
       <main
         className={
           isAskAI
-            ? "min-w-0 flex-1 bg-background pb-0 lg:border-x lg:border-border"
-            : "min-w-0 flex-1 border-x border-border bg-background pb-24 lg:pb-0"
+            ? "flex min-h-[100dvh] min-w-0 flex-1 flex-col bg-background lg:border-x lg:border-border"
+            : isMessages
+              ? "flex min-h-[100dvh] min-w-0 flex-1 flex-col border-x border-border bg-background"
+              : "flex min-h-[100dvh] min-w-0 flex-1 flex-col border-x border-border bg-background pb-24 lg:pb-0"
         }
       >
-        {children}
+        <MobileAppHeader />
+        <div className={isImmersive ? "min-h-0 min-w-0 flex-1" : "min-w-0 flex-1"}>
+          {children}
+        </div>
       </main>
       {!hideRail ? <RightRail /> : null}
-      {!isAskAI ? <MobileNav /> : null}
+      {!isImmersive ? <MobileNav /> : null}
     </div>
   );
 }

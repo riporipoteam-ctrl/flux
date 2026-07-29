@@ -40,9 +40,11 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { assetUrl } from "@/lib/asset-url";
 
-export default function GroupDetailPage() {
+export default function GroupDetailPage(
+  { groupIdOverride }: { groupIdOverride?: string } = {}
+) {
   const params = useParams();
-  const groupId = String(params.groupId || "");
+  const groupId = groupIdOverride || String(params.groupId || "");
   const { user } = useAuth();
   const router = useRouter();
 
@@ -172,7 +174,7 @@ export default function GroupDetailPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center gap-3 glass border-b border-border px-4 py-2">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center gap-3 glass border-b border-border px-4 py-2">
         <button
           onClick={() => router.push("/groups")}
           className="rounded-full p-2 hover:bg-muted"
