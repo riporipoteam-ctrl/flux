@@ -19,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flux by Ripo Team",
+  title: "Flux 2.0 — Social, Games, Create",
   description:
-    "Flux is a premium social network by Ripo Team — posts, groups, chats, shop, Hangout multiplayer, and AskAI. Install as app on phone — Firebase-backed, no PC required.",
+    "Flux 2.0 is the social and gaming network by Ripo Team — connect, create, and play together in Flux Plays from any device.",
   applicationName: "Flux",
   authors: [{ name: "Ripo Team" }],
   manifest: `${basePath}/manifest.webmanifest`,
@@ -45,8 +45,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0c" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f8fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#060814" },
   ],
   width: "device-width",
   initialScale: 1,

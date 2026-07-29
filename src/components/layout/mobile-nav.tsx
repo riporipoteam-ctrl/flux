@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Search, Bell, User, PenSquare } from "lucide-react";
+import { Home, Search, Gamepad2, User, PenSquare } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
 import { isNavPathActive, profilePath } from "@/lib/routes";
@@ -27,7 +27,7 @@ export function MobileNav() {
     { href: "/home", icon: Home, label: "Home" },
     { href: "/explore", icon: Search, label: "Explore" },
     { href: "__compose", icon: PenSquare, label: "Post", compose: true },
-    { href: "/notifications", icon: Bell, label: "Alerts" },
+    { href: "/games", icon: Gamepad2, label: "Games" },
     { href: profileHref, icon: User, label: "Profile" },
   ];
 
@@ -42,7 +42,7 @@ export function MobileNav() {
                   <motion.button
                     whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.94 }}
-                    className="-mt-5 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#1d9bf0] text-white shadow-[0_8px_24px_rgba(29,155,240,0.35)] ring-4 ring-background"
+                    className="-mt-5 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 text-white shadow-[0_10px_32px_rgba(96,72,255,0.4)] ring-4 ring-background"
                     aria-label="Compose"
                   >
                     <PenSquare className="h-5 w-5" />

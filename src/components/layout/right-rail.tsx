@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Hash, Search, UserPlus } from "lucide-react";
+import { ArrowRight, Gamepad2, Hash, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/shared/user-avatar";
@@ -15,6 +15,7 @@ import type { UserProfile } from "@/types";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { profilePath } from "@/lib/routes";
+import { assetUrl } from "@/lib/asset-url";
 
 export function RightRail() {
   const { user, profile } = useAuth();
@@ -60,7 +61,7 @@ export function RightRail() {
   };
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[320px] shrink-0 overflow-y-auto py-4 pl-6 no-scrollbar xl:block">
+    <aside className="sticky top-0 hidden h-[100dvh] w-[330px] shrink-0 overflow-y-auto py-4 pl-5 pr-1 no-scrollbar xl:block">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -80,9 +81,21 @@ export function RightRail() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search Flux"
-            className="h-11 rounded-full border-border/70 bg-card pl-10"
+            className="h-11 rounded-full border-border/70 bg-card/75 pl-10 shadow-soft backdrop-blur-xl"
           />
         </form>
+
+        <Link href="/games" className="group relative block overflow-hidden rounded-[26px] border border-white/10 bg-[#081126] shadow-soft">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={assetUrl("/game-thumbs/flux-plays-hero.png")} alt="" className="absolute inset-0 h-full w-full object-cover opacity-48 transition duration-500 group-hover:scale-105" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#07101f] via-[#07101f]/88 to-transparent" />
+          <div className="relative p-5 text-white">
+            <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-lg"><Gamepad2 className="h-4 w-4" /></span>
+            <h3 className="mt-4 text-lg font-black tracking-[-0.04em]">Flux Plays</h3>
+            <p className="mt-1 max-w-[190px] text-xs leading-5 text-white/62">Shared 3D worlds, synced with your Flux account.</p>
+            <span className="mt-4 inline-flex items-center gap-1 text-xs font-black text-cyan-200">Explore games <ArrowRight className="h-3.5 w-3.5" /></span>
+          </div>
+        </Link>
 
         {profile ? (
           <div className="surface-card flex items-center justify-between gap-3 p-4">
@@ -101,7 +114,7 @@ export function RightRail() {
             </div>
             <Link
               href={profilePath(profile.username)}
-              className="shrink-0 text-xs font-bold text-[#1d9bf0] hover:underline"
+              className="shrink-0 text-xs font-black text-primary hover:underline"
             >
               Profile
             </Link>
@@ -110,7 +123,7 @@ export function RightRail() {
 
         <div className="surface-card p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold">
-            <Hash className="h-4 w-4 text-[#1d9bf0]" />
+            <Hash className="h-4 w-4 text-primary" />
             Trending hashtags
           </div>
           {tags.length === 0 ? (
@@ -141,7 +154,7 @@ export function RightRail() {
 
         <div className="surface-card p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-bold">
-            <UserPlus className="h-4 w-4 text-[#1d9bf0]" />
+            <UserPlus className="h-4 w-4 text-primary" />
             Who to follow
           </div>
           <ul className="space-y-3">

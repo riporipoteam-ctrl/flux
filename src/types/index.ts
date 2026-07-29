@@ -255,7 +255,7 @@ export interface ShopItem {
 }
 
 export const defaultUserSettings = (): UserSettings => ({
-  theme: "light",
+  theme: "dark",
   language: "en",
   notifications: {
     likes: true,

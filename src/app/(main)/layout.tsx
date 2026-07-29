@@ -19,8 +19,9 @@ export default function MainLayout({
   const pathname = usePathname();
   const isAskAI = pathname?.startsWith("/ask-ai");
   const isMessages = pathname?.startsWith("/messages");
+  const isGames = pathname?.startsWith("/games");
   const isImmersive = isAskAI || isMessages;
-  const hideRail = isImmersive;
+  const hideRail = isImmersive || isGames;
 
   useEffect(() => {
     if (loading) return;
