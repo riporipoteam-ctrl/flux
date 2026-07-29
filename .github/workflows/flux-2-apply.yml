@@ -15,16 +15,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feat/flux-2-big-update
-      - name: Hash patch chunks
-        shell: bash
+      - name: Print mismatched ranges
         run: |
           python - <<'PY'
           from pathlib import Path
-          from hashlib import sha256
-          for name in ['part-00','part-02']:
-              data=Path('.github/flux2-patch/'+name).read_text()
-              print(name, len(data), repr(data[:20]), repr(data[-20:]))
-              for i in range(0,len(data),250):
-                  print(name,i,sha256(data[i:i+250].encode()).hexdigest())
+          a=Path('.github/flux2-patch/part-00').read_text()
+          b=Path('.github/flux2-patch/part-02').read_text()
+          print('P00',repr(a[3180:3370]))
+          print('P02',repr(b[4400:4830]))
           PY
           exit 1
