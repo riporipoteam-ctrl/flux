@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Home,
@@ -49,36 +51,86 @@ export function MobileDrawer({
 }) {
   const pathname = usePathname();
   const { profile } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const profileHref = profile?.username
     ? `/${profile.username}`
     : "/settings/profile";
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const scrollY = window.scrollY;
+    const previous = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+      width: document.body.style.width,
+      overflow: document.body.style.overflow,
+    };
+
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.position = previous.position;
+      document.body.style.top = previous.top;
+      document.body.style.left = previous.left;
+      document.body.style.right = previous.right;
+      document.body.style.width = previous.width;
+      document.body.style.overflow = previous.overflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open, onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open ? (
-        <>
+        <div className="fixed inset-0 z-[2147483000] isolate lg:hidden">
           <motion.button
             type="button"
             aria-label="Close menu"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/50 lg:hidden"
+            transition={{ duration: 0.18 }}
+            className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
             onClick={onClose}
           />
           <motion.aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
-            className="fixed bottom-0 left-0 top-0 z-[70] flex w-[min(86vw,320px)] flex-col border-r border-border bg-background lg:hidden"
+            className="absolute inset-y-0 left-0 flex h-[100dvh] w-[min(86vw,320px)] max-w-full flex-col overflow-hidden border-r border-border bg-background shadow-2xl overscroll-contain"
           >
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
               <Logo href="/home" size={34} />
               <button
                 type="button"
                 onClick={onClose}
                 className="rounded-full p-2 hover:bg-muted"
+                aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -88,7 +140,7 @@ export function MobileDrawer({
               <Link
                 href={profileHref}
                 onClick={onClose}
-                className="flex items-center gap-3 border-b border-border px-4 py-3"
+                className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3"
               >
                 <UserAvatar user={profile} decorations={profile.decorations} />
                 <div className="min-w-0">
@@ -110,7 +162,7 @@ export function MobileDrawer({
               </Link>
             ) : null}
 
-            <nav className="flex-1 overflow-y-auto py-2">
+            <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
               {links.map((item) => {
                 const Icon = item.icon;
                 const active =
@@ -151,8 +203,9 @@ export function MobileDrawer({
               ) : null}
             </nav>
           </motion.aside>
-        </>
+        </div>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
