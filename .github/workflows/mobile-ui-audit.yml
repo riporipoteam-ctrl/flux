@@ -103,7 +103,7 @@ jobs:
         if: steps.parts.outputs.ready == 'true'
         shell: bash
         run: |
-          rm -rf .github/mobile-patch
+          rm -rf node_modules .next out .github/mobile-patch
           rm -f .github/workflows/apply-mobile-ui.yml .github/mobile-ui-trigger.txt
           cat > .github/workflows/mobile-ui-audit.yml <<'YAML'
           name: Flux mobile UI audit
