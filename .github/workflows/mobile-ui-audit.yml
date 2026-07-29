@@ -29,8 +29,17 @@ jobs:
         shell: bash
         run: |
           ready=true
-          for part in 00 01 02 03 04; do
-            if [ ! -f ".github/mobile-patch/part-${part}" ]; then
+          for file in \
+            .github/mobile-patch/part-00 \
+            .github/mobile-patch/part-01 \
+            .github/mobile-patch/part-02 \
+            .github/mobile-patch/part-03 \
+            .github/mobile-patch/part-04-00 \
+            .github/mobile-patch/part-04-01 \
+            .github/mobile-patch/part-04-02 \
+            .github/mobile-patch/part-04-03 \
+            .github/mobile-patch/part-04-04; do
+            if [ ! -f "$file" ]; then
               ready=false
             fi
           done
@@ -43,7 +52,17 @@ jobs:
         if: steps.parts.outputs.ready == 'true'
         shell: bash
         run: |
-          cat .github/mobile-patch/part-* > /tmp/mobile-source.b64
+          cat \
+            .github/mobile-patch/part-00 \
+            .github/mobile-patch/part-01 \
+            .github/mobile-patch/part-02 \
+            .github/mobile-patch/part-03 \
+            .github/mobile-patch/part-04-00 \
+            .github/mobile-patch/part-04-01 \
+            .github/mobile-patch/part-04-02 \
+            .github/mobile-patch/part-04-03 \
+            .github/mobile-patch/part-04-04 \
+            > /tmp/mobile-source.b64
           echo "aaf5206d1f8095707c20bea3e4ed2cc2a9eb5e229d1df2c12b5057cb88eaa05a  /tmp/mobile-source.b64" | sha256sum -c -
           base64 -d /tmp/mobile-source.b64 | gzip -d > /tmp/mobile-source.patch
           echo "a4c636a3600b2bb281813e67fcc2466c81d85ebe9a56670f4ad8793fd5783628  /tmp/mobile-source.patch" | sha256sum -c -
