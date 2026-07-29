@@ -21,6 +21,7 @@ import {
   X,
   User,
   Shield,
+  Gamepad2,
 } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { UserAvatar } from "@/components/shared/user-avatar";
@@ -38,6 +39,7 @@ const links = [
   { href: "/lists", label: "Lists", icon: List },
   { href: "/groups", label: "Groups", icon: Users },
   { href: "/events", label: "Events", icon: Calendar },
+  { href: "/games", label: "Games", icon: Gamepad2 },
   { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/ask-ai", label: "AskAI", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings },
