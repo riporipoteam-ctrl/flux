@@ -39,7 +39,6 @@ import {
 import { searchUsers } from "@/services/users";
 import type { UserProfile } from "@/types";
 import { formatCount } from "@/lib/utils";
-import { MobileHeader } from "@/components/layout/mobile-header";
 import { assetUrl } from "@/lib/asset-url";
 
 const FILTERS = [
@@ -208,10 +207,7 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/80 px-3 py-2.5 backdrop-blur-xl sm:px-4">
-        <div className="lg:hidden">
-          <MobileHeader title="Shop" />
-        </div>
+      <header className="relative z-20 flex items-center justify-end border-b border-border bg-background/80 px-3 py-2.5 backdrop-blur-xl lg:sticky lg:top-0 lg:z-30 lg:justify-between sm:px-4">
         <div className="hidden lg:block">
           <h1 className="text-xl font-extrabold">Shop</h1>
           <p className="text-xs text-muted-foreground">

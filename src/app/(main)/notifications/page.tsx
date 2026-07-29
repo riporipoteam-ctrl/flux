@@ -16,6 +16,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
+import { groupPath, postPath, profilePath } from "@/lib/routes";
 
 type NotifRow = Notification & { actor?: UserProfile | null };
 
@@ -55,7 +56,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center justify-between glass border-b border-border px-4 py-3">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center justify-between glass border-b border-border px-4 py-3">
         <h1 className="text-lg font-bold">Notifications</h1>
         <Button variant="ghost" size="sm" onClick={markAll}>
           <CheckCheck className="h-4 w-4" />
@@ -77,11 +78,11 @@ export default function NotificationsPage() {
         <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {items.map((n) => {
             const href = n.postId
-              ? `/post/${n.postId}`
+              ? postPath(n.postId)
               : n.groupId
-                ? `/groups/${n.groupId}`
+                ? groupPath(n.groupId)
                 : n.actor?.username
-                  ? `/${n.actor.username}`
+                  ? profilePath(n.actor.username)
                   : "/notifications";
             const time = n.createdAt?.toDate
               ? formatDistanceToNowStrict(n.createdAt.toDate())

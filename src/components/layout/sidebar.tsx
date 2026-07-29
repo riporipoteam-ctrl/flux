@@ -26,6 +26,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { cn, formatCount } from "@/lib/utils";
+import { isNavPathActive, profilePath } from "@/lib/routes";
 import {
   Dialog,
   DialogContent,
@@ -58,9 +59,7 @@ export function Sidebar() {
   const { profile, user } = useAuth();
   const [composeOpen, setComposeOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-  const profileHref = profile?.username
-    ? `/${profile.username}`
-    : "/settings/profile";
+  const profileHref = profilePath(profile?.username);
 
   useEffect(() => {
     if (!user) return;
@@ -87,8 +86,7 @@ export function Sidebar() {
           if ("adminOnly" in item && item.adminOnly && !profile?.isAdmin) {
             return null;
           }
-          const active =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+          const active = isNavPathActive(pathname, item.href);
           const Icon = item.icon;
           return (
             <Link
@@ -136,7 +134,7 @@ export function Sidebar() {
           href={profileHref}
           className={cn(
             "nav-item group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[15px] font-semibold",
-            pathname === profileHref
+            pathname.startsWith("/profile")
               ? "text-foreground"
               : "text-muted-foreground hover:text-foreground"
           )}

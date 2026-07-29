@@ -15,7 +15,6 @@ import {
   StaggerItem,
   StaggerList,
 } from "@/components/shared/page-transition";
-import { MobileHeader } from "@/components/layout/mobile-header";
 
 export default function HomePage() {
   const { user, profile } = useAuth();
@@ -103,11 +102,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 glass-strong border-b border-border px-3 py-2.5 sm:px-4">
-        <div className="lg:hidden">
-          <MobileHeader title="Home" />
-        </div>
-        <div className="hidden items-center justify-between lg:flex">
+      <header className="relative z-20 hidden border-b border-border px-4 py-2.5 lg:sticky lg:top-0 lg:z-30 lg:block glass-strong">
+        <div className="flex items-center justify-between">
           <h1 className="text-xl font-extrabold tracking-tight">Home</h1>
           <div className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5" />

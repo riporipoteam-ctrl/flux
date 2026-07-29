@@ -25,6 +25,7 @@ import { MOOD_OPTIONS, PROFILE_ACCENTS } from "@/lib/default-avatars";
 import { cn, formatUsername } from "@/lib/utils";
 import { PageTransition } from "@/components/shared/page-transition";
 import { assetUrl } from "@/lib/asset-url";
+import { profilePath } from "@/lib/routes";
 
 export default function EditProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -131,7 +132,7 @@ export default function EditProfilePage() {
 
       await refreshProfile();
       toast.success("Profile updated");
-      router.push(nextUsername ? `/${nextUsername}` : "/home");
+      router.push(nextUsername ? profilePath(nextUsername) : "/home");
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Failed to save profile");
@@ -142,7 +143,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 glass-strong border-b border-border/70 px-4 py-3">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center justify-between gap-3 glass-strong border-b border-border/70 px-4 py-3">
         <div className="flex items-center gap-3">
           <Link
             href="/settings"

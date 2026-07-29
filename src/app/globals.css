@@ -323,3 +323,33 @@ body::before {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Mobile shell hardening */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100dvh;
+  overscroll-behavior-x: none;
+}
+
+@media (max-width: 1023px) {
+  button,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .surface-card {
+    border-radius: 1rem;
+  }
+}

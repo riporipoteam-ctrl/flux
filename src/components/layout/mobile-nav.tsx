@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Home, Search, Bell, User, PenSquare } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
+import { isNavPathActive, profilePath } from "@/lib/routes";
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,7 @@ export function MobileNav() {
   const pathname = usePathname();
   const { profile } = useAuth();
   const [open, setOpen] = useState(false);
-  const profileHref = profile?.username
-    ? `/${profile.username}`
-    : "/settings/profile";
+  const profileHref = profilePath(profile?.username);
 
   const tabs = [
     { href: "/home", icon: Home, label: "Home" },
@@ -33,8 +32,8 @@ export function MobileNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/70 bg-card/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl lg:hidden">
-      <div className="mx-auto flex h-[68px] max-w-lg items-center justify-around px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/80 bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(15,20,25,0.06)] backdrop-blur-2xl lg:hidden">
+      <div className="mx-auto flex h-16 max-w-lg items-center justify-around px-2">
         {tabs.map((tab) => {
           if (tab.compose) {
             return (
@@ -43,7 +42,7 @@ export function MobileNav() {
                   <motion.button
                     whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.94 }}
-                    className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-[#1d9bf0] text-white shadow-lg"
+                    className="-mt-5 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#1d9bf0] text-white shadow-[0_8px_24px_rgba(29,155,240,0.35)] ring-4 ring-background"
                     aria-label="Compose"
                   >
                     <PenSquare className="h-5 w-5" />
@@ -63,13 +62,16 @@ export function MobileNav() {
 
           const Icon = tab.icon;
           const active =
-            pathname === tab.href || pathname.startsWith(tab.href + "/");
+            tab.href === profileHref
+              ? pathname.startsWith("/profile")
+              : isNavPathActive(pathname, tab.href);
           return (
             <Link
               key={tab.href}
               href={tab.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-semibold transition-colors",
+                "relative flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 text-[10px] font-semibold transition-colors active:scale-95",
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >

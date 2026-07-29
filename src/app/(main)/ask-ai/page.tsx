@@ -35,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { groupPath } from "@/lib/routes";
 import { toast } from "sonner";
 import { ImageViewer } from "@/components/shared/image-viewer";
 import { ASKAI_BYLINE, ASKAI_NAME, APP_TEAM } from "@/lib/constants";
@@ -294,7 +295,7 @@ export default function AskAIPage() {
       if (genImage && !content.includes(genImage)) {
         content += `\n\n![generated](${genImage})`;
       }
-      if (groupId) content += `\n\nOpen your group: /groups/${groupId}`;
+      if (groupId) content += `\n\nOpen your group: ${groupPath(groupId)}`;
       if (!content) content = "I couldn't generate a reply. Try again.";
 
       await addMessage(convId, {
@@ -380,7 +381,7 @@ export default function AskAIPage() {
   const empty = messages.length === 0 && !streaming && !loading;
 
   return (
-    <div className="flex h-[100dvh] min-h-0 w-full bg-background">
+    <div className="flex h-[calc(100dvh_-_3.5rem_-_env(safe-area-inset-top))] min-h-0 w-full bg-background lg:h-[100dvh]">
       {/* Desktop history */}
       <aside
         className={cn(

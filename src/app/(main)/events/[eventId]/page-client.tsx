@@ -31,9 +31,11 @@ import {
 import { db } from "@/lib/firebase";
 import { getPost } from "@/services/posts";
 
-export default function EventDetailPage() {
+export default function EventDetailPage(
+  { eventIdOverride }: { eventIdOverride?: string } = {}
+) {
   const params = useParams();
-  const eventId = String(params.eventId || "");
+  const eventId = eventIdOverride || String(params.eventId || "");
   const { user } = useAuth();
   const router = useRouter();
   const [event, setEvent] = useState<FluxEvent | null>(null);
@@ -130,7 +132,7 @@ export default function EventDetailPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center gap-3 glass border-b border-border px-4 py-2">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center gap-3 glass border-b border-border px-4 py-2">
         <button
           onClick={() => router.push("/events")}
           className="rounded-full p-2 hover:bg-muted"

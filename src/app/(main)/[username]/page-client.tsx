@@ -52,10 +52,13 @@ import {
   getCatalogItem,
 } from "@/lib/shop-catalog";
 import { assetUrl } from "@/lib/asset-url";
+import { absoluteAppUrl, profilePath } from "@/lib/routes";
 
-export default function ProfilePage() {
+export default function ProfilePage(
+  { usernameOverride }: { usernameOverride?: string } = {}
+) {
   const params = useParams();
-  const username = String(params.username || "");
+  const username = usernameOverride || String(params.username || "");
   const { user, profile: me } = useAuth();
   const router = useRouter();
 
@@ -206,7 +209,7 @@ export default function ProfilePage() {
         themeItem?.id === "ocean-theme" && "bg-[#061018]"
       )}
     >
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-2 backdrop-blur-xl">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-2 backdrop-blur-xl">
         <button
           type="button"
           onClick={() => router.back()}
@@ -260,24 +263,25 @@ export default function ProfilePage() {
         </button>
 
         <div className="px-4">
-          <div className="flex items-end justify-between">
-            <div className="-mt-14 sm:-mt-16">
+          <div className="flex items-end justify-between gap-2">
+            <div className="-mt-12 shrink-0 sm:-mt-16">
               <UserAvatar
                 user={profile}
                 size="xl"
-                className="h-28 w-28 sm:h-32 sm:w-32"
+                className="h-24 w-24 sm:h-32 sm:w-32"
                 decorations={profile.decorations}
                 ring
               />
             </div>
-            <div className="mb-1 flex flex-wrap justify-end gap-2">
+            <div className="mb-1 flex min-w-0 flex-wrap justify-end gap-2">
               {isOwn ? (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
+                    aria-label="Share profile"
                     onClick={async () => {
-                      const url = `${window.location.origin}/${profile.username}`;
+                      const url = absoluteAppUrl(profilePath(profile.username));
                       try {
                         await navigator.clipboard.writeText(url);
                         toast.success("Profile link copied");
@@ -287,7 +291,7 @@ export default function ProfilePage() {
                     }}
                   >
                     <Share2 className="h-4 w-4" />
-                    Share
+                    <span className="hidden sm:inline">Share</span>
                   </Button>
                   <Link
                     href="/settings/profile"
@@ -532,7 +536,7 @@ export default function ProfilePage() {
               listUsers.map((u) => (
                 <Link
                   key={u.uid}
-                  href={`/${u.username}`}
+                  href={profilePath(u.username)}
                   onClick={() => setListOpen(null)}
                   className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-muted"
                 >

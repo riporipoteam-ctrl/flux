@@ -12,9 +12,11 @@ import { ComposeBox } from "@/components/posts/compose-box";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 
-export default function PostDetailPage() {
+export default function PostDetailPage(
+  { postIdOverride }: { postIdOverride?: string } = {}
+) {
   const params = useParams();
-  const postId = String(params.postId || "");
+  const postId = postIdOverride || String(params.postId || "");
   const { user } = useAuth();
   const router = useRouter();
 
@@ -71,7 +73,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex items-center gap-3 glass border-b border-border px-4 py-2">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center gap-3 glass border-b border-border px-4 py-2">
         <button
           onClick={() => router.back()}
           className="rounded-full p-2 transition hover:bg-muted"

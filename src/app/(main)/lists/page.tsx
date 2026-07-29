@@ -106,7 +106,7 @@ export default function ListsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 glass-strong border-b border-border/70 px-4 py-3">
+      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 glass-strong border-b border-border/70 px-4 py-3">
         <h1 className="text-lg font-bold">Lists</h1>
         <p className="text-xs text-muted-foreground">
           Curate custom people groups (private to you)
