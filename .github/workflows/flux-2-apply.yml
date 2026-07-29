@@ -15,12 +15,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feat/flux-2-big-update
-      - name: Print exact mismatch
+      - name: Print exact mismatch continuation
         run: |
           python - <<'PY'
           from pathlib import Path
           a=Path('.github/flux2-patch/part-00').read_text()
-          print(repr(a[3340:3425]))
-          print([(i,a[i]) for i in range(3340,3425)])
+          print(repr(a[3420:3530]))
           PY
           exit 1
