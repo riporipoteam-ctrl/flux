@@ -28,7 +28,6 @@ jobs:
         shell: bash
         run: |
           cat .github/flux2-patch/part-* > /tmp/flux2-patch.b64
-          echo "d091df8866dcc735de6076508d617c6b586897f7a30c4a1f71a9ddbc41a36452  /tmp/flux2-patch.b64" | sha256sum -c -
           base64 -d /tmp/flux2-patch.b64 | gzip -d > /tmp/flux2.patch
           echo "b23de4f4a55313257a34fcbd59023788a79583efeaebc361ed7f18341e0d9d8c  /tmp/flux2.patch" | sha256sum -c -
           git apply --check /tmp/flux2.patch
