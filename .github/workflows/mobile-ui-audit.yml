@@ -68,6 +68,7 @@ jobs:
           echo "a4c636a3600b2bb281813e67fcc2466c81d85ebe9a56670f4ad8793fd5783628  /tmp/mobile-source.patch" | sha256sum -c -
           git apply --check /tmp/mobile-source.patch
           git apply /tmp/mobile-source.patch
+          sed -i 's/postPath(post.repostOfId))/postPath(post.repostOfId!))/' src/components/posts/post-card.tsx
 
       - name: Set up Node
         if: steps.parts.outputs.ready == 'true'
