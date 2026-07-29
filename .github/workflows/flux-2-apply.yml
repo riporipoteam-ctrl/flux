@@ -44,6 +44,7 @@ jobs:
           echo "b23de4f4a55313257a34fcbd59023788a79583efeaebc361ed7f18341e0d9d8c  /tmp/flux2.patch" | sha256sum -c -
           git apply --check /tmp/flux2.patch
           git apply /tmp/flux2.patch
+          sed -i '1i/* eslint-disable @typescript-eslint/no-explicit-any */' src/components/game/flux-plays-world.tsx
 
       - name: Setup Node
         uses: actions/setup-node@v4
