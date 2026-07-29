@@ -1,112 +1,47 @@
-name: Apply and verify Flux mobile upgrade
+name: Flux mobile UI audit
 
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: flux-mobile-apply-${{ github.event.pull_request.number }}
+  group: mobile-ui-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  apply-verify-commit:
-    if: github.head_ref == 'fix/mobile-ui-audit-20260729' && github.actor != 'github-actions[bot]'
+  verify:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAGES: "true"
     steps:
-      - name: Check out PR branch
+      - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-
-      - name: Check patch parts
-        id: parts
-        shell: bash
-        run: |
-          ready=true
-          for file in \
-            .github/mobile-patch/part-00 \
-            .github/mobile-patch/part-01 \
-            .github/mobile-patch/part-02 \
-            .github/mobile-patch/part-03 \
-            .github/mobile-patch/part-04-00 \
-            .github/mobile-patch/part-04-01 \
-            .github/mobile-patch/part-04-02 \
-            .github/mobile-patch/part-04-03 \
-            .github/mobile-patch/part-04-04; do
-            if [ ! -f "$file" ]; then
-              ready=false
-            fi
-          done
-          echo "ready=${ready}" >> "$GITHUB_OUTPUT"
-          if [ "$ready" != "true" ]; then
-            echo "Patch staging is not complete yet."
-          fi
-
-      - name: Assemble and apply mobile source patch
-        if: steps.parts.outputs.ready == 'true'
-        shell: bash
-        run: |
-          cat \
-            .github/mobile-patch/part-00 \
-            .github/mobile-patch/part-01 \
-            .github/mobile-patch/part-02 \
-            .github/mobile-patch/part-03 \
-            .github/mobile-patch/part-04-00 \
-            .github/mobile-patch/part-04-01 \
-            .github/mobile-patch/part-04-02 \
-            .github/mobile-patch/part-04-03 \
-            .github/mobile-patch/part-04-04 \
-            > /tmp/mobile-source.b64
-          echo "aaf5206d1f8095707c20bea3e4ed2cc2a9eb5e229d1df2c12b5057cb88eaa05a  /tmp/mobile-source.b64" | sha256sum -c -
-          base64 -d /tmp/mobile-source.b64 | gzip -d > /tmp/mobile-source.patch
-          echo "a4c636a3600b2bb281813e67fcc2466c81d85ebe9a56670f4ad8793fd5783628  /tmp/mobile-source.patch" | sha256sum -c -
-          git apply --check /tmp/mobile-source.patch
-          git apply /tmp/mobile-source.patch
-          sed -i 's/postPath(post.repostOfId))/postPath(post.repostOfId!))/' src/components/posts/post-card.tsx
 
       - name: Set up Node
-        if: steps.parts.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
-        if: steps.parts.outputs.ready == 'true'
         run: npm ci
 
       - name: Lint
-        if: steps.parts.outputs.ready == 'true'
         run: npm run lint
 
-      - name: Build and verify GitHub Pages export
-        if: steps.parts.outputs.ready == 'true'
-        shell: bash
+      - name: Exclude server-only routes from static export
+        run: mv src/app/api .pages-api
+
+      - name: Build GitHub Pages export
+        run: npm run build
+
+      - name: Verify mobile-safe detail routes
         run: |
-          trap 'if [ -d .pages-api ]; then mv .pages-api src/app/api; fi' EXIT
-          mv src/app/api .pages-api
-          npm run build
           test -f out/profile/index.html
           test -f out/post/index.html
           test -f out/group/index.html
           test -f out/event/index.html
-          mv .pages-api src/app/api
-          trap - EXIT
-
-      - name: Commit verified mobile source upgrade
-        if: steps.parts.outputs.ready == 'true'
-        shell: bash
-        run: |
-          rm -rf node_modules .next out .github/mobile-patch
-          git restore --source=HEAD -- .github/workflows/nextjs.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Fix and upgrade Flux mobile experience"
-          git push origin HEAD:${{ github.head_ref }}
