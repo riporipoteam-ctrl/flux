@@ -7,34 +7,24 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: flux-2-apply-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
-  apply-verify-commit:
+  inspect:
     if: github.head_ref == 'feat/flux-2-big-update' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    env:
-      GITHUB_PAGES: "true"
     steps:
-      - name: Checkout Flux 2 branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: feat/flux-2-big-update
-          fetch-depth: 0
-
-      - name: Inspect staged Flux 2 patch
+      - name: Hash patch chunks
         shell: bash
         run: |
-          wc -c .github/flux2-patch/part-*
-          cat .github/flux2-patch/part-* > /tmp/flux2-patch.b64
-          wc -c /tmp/flux2-patch.b64
-          sha256sum /tmp/flux2-patch.b64
           python - <<'PY'
           from pathlib import Path
-          data=Path('/tmp/flux2-patch.b64').read_text()
-          bad=[(i,c) for i,c in enumerate(data) if c not in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r']
-          print('bad-count',len(bad),'first',bad[:10])
+          from hashlib import sha256
+          for name in ['part-00','part-02']:
+              data=Path('.github/flux2-patch/'+name).read_text()
+              print(name, len(data), repr(data[:20]), repr(data[-20:]))
+              for i in range(0,len(data),250):
+                  print(name,i,sha256(data[i:i+250].encode()).hexdigest())
           PY
           exit 1
