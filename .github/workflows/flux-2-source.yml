@@ -1,8 +1,8 @@
 name: Flux 2 source snapshot
 
 on:
-  push:
-    branches: [feat/flux-2-big-update]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   snapshot:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
