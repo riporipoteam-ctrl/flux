@@ -1,1 +1,0 @@
-Apply the verified Flux mobile UI patch.
