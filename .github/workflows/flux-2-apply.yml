@@ -31,7 +31,7 @@ jobs:
           from pathlib import Path
           parts=[]
           for path in sorted(Path('.github/flux2-patch').glob('part-*')):
-              data=path.read_text().strip()
+              data=''.join(path.read_text().split())
               if path.name == 'part-02':
                   data=data.replace('Sn1ruLd+95','Sn1ruLdAIza95',1)
               parts.append(data)
