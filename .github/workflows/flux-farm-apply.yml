@@ -38,44 +38,9 @@ jobs:
 
           path = Path("firestore.rules")
           source = path.read_text()
-          old = """    /* ---- Flux Plays: public game catalog and live 3D worlds ---- */
-              match /fluxPlayGames/{gameId} {
-                allow read: if resource.data.get('isPublic', true) == true
-                  || (isSignedIn() && resource.data.creatorUid == request.auth.uid);
-                allow create: if isSignedIn()
-                  && request.resource.data.creatorUid == request.auth.uid
-                  && request.resource.data.isOfficial != true;
-                allow update: if isSignedIn()
-                  && (
-                    resource.data.creatorUid == request.auth.uid
-                    || request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['plays', 'likes', 'activePlayers', 'updatedAt'])
-                  );
-                allow delete: if isOwner()
-                  || (isSignedIn() && resource.data.creatorUid == request.auth.uid);
-              }
-
-              match /fluxPlayWorlds/{gameId} {
-                allow read, create, update: if isSignedIn();
-                allow delete: if isAdmin();
-
-                match /players/{uid} {
-                  allow read: if isSignedIn();
-                  allow create, update, delete: if isSelf(uid);
-                }
-
-                match /blocks/{blockId} {
-                  allow read: if isSignedIn();
-                  allow create: if isSignedIn()
-                    && request.resource.data.creatorUid == request.auth.uid;
-                  allow update: if isSignedIn()
-                    && resource.data.creatorUid == request.auth.uid;
-                  allow delete: if isSignedIn()
-                    && (resource.data.creatorUid == request.auth.uid || isAdmin());
-                }
-              }
-          """
-          new = """    /* ---- Flux Farm: cloud saves and public player rankings ---- */
+          start = source.index("    /* ---- Flux Plays:")
+          end = source.index("\n\n  }\n}", start)
+          replacement = """    /* ---- Flux Farm: cloud saves and public player rankings ---- */
               match /fluxFarmSaves/{uid} {
                 allow read: if true;
                 allow create, update: if isSelf(uid)
@@ -87,11 +52,8 @@ jobs:
                   && request.resource.data.day is number
                   && request.resource.data.day >= 1;
                 allow delete: if isSelf(uid) || isAdmin();
-              }
-          """
-          if old not in source:
-              raise SystemExit("Expected Flux Plays rules block was not found")
-          path.write_text(source.replace(old, new))
+              }"""
+          path.write_text(source[:start] + replacement + source[end:])
           PY
 
       - name: Remove the retired Flux Plays runtime
@@ -128,7 +90,7 @@ jobs:
         shell: bash
         run: |
           rm -rf .github/flux-farm-payload .github/flux-farm-source
-          rm -f .github/workflows/flux-farm-apply.yml
+          rm -f .github/flux-farm-trigger.txt .github/workflows/flux-farm-apply.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
