@@ -10,7 +10,7 @@ export default function FluxFarmPage() {
 
   if (loading) {
     return (
-      <div className="grid min-h-[100dvh] place-items-center bg-[#152419] text-white">
+      <div className="grid min-h-[100dvh] place-items-center bg-[#152419] text-white" aria-live="polite">
         <div className="text-center">
           <Leaf className="mx-auto h-12 w-12 animate-bounce text-emerald-300" />
           <p className="mt-4 font-black">Opening Flux Farm…</p>
