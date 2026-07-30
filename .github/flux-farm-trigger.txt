@@ -1,1 +1,1 @@
-Trigger the Flux Farm verification workflow.
+Trigger the hardened Flux Farm verification workflow.
