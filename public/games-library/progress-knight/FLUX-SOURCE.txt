@@ -1,0 +1,4 @@
+Hosted by Flux from the open-source project below.
+Upstream: https://github.com/ihtasham42/progress-knight
+Revision: f6dd0c3c444d838f80325bbdca918160b99e89e5
+Flux has not removed the upstream copyright or license files.

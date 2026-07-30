@@ -93,10 +93,10 @@ export default function GamesPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-black tracking-[-0.04em]">Flux Games</h1>
-            <p className="text-xs text-muted-foreground">Free browser games selected for mobile, tablet and PC.</p>
+            <p className="text-xs text-muted-foreground">Open-source games hosted directly by Flux for mobile, tablet and PC.</p>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-emerald-500/15 bg-emerald-500/8 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-600">
-            <ShieldCheck className="h-3.5 w-3.5" /> No Flux VPS required
+            <ShieldCheck className="h-3.5 w-3.5" /> Hosted on Flux
           </div>
         </div>
       </header>
@@ -136,9 +136,9 @@ export default function GamesPage() {
         <section className="relative z-10 -mt-4 mx-2 grid grid-cols-2 gap-2 rounded-[26px] border border-border/70 bg-card/88 p-2 shadow-soft backdrop-blur-2xl sm:-mt-7 sm:mx-5 sm:grid-cols-4 sm:gap-3 sm:p-3">
           {[
             { icon: Smartphone, value: "Touch + PC", label: "Cross-device controls" },
-            { icon: ShieldCheck, value: "No paid files", label: "Free to launch" },
-            { icon: Zap, value: "Static", label: "No Flux game server" },
-            { icon: ExternalLink, value: `${BROWSER_GAMES.length} games`, label: "Source available" },
+            { icon: ShieldCheck, value: "Included in Flux", label: "No external site" },
+            { icon: Zap, value: "Static", label: "No VPS required" },
+            { icon: ExternalLink, value: `${BROWSER_GAMES.length} games`, label: "Hosted locally" },
           ].map(({ icon: Icon, value, label }) => (
             <motion.div key={value} whileHover={reduceMotion ? undefined : { y: -3 }} className="rounded-[20px] border border-border/60 bg-background/55 p-4">
               <Icon className="h-4.5 w-4.5 text-primary" />
@@ -190,7 +190,7 @@ export default function GamesPage() {
             <div>
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-primary"><Star className="h-3.5 w-3.5" /> Curated for Flux</div>
               <h2 className="mt-2 text-3xl font-black tracking-[-0.055em]">{category === "All" ? "All browser games" : category}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Good games only: cross-device, free to play and source available.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Good games only: cross-device, free to play, and hosted inside Flux.</p>
             </div>
             <span className="hidden rounded-full border border-border bg-card px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground sm:block">{filteredGames.length} results</span>
           </div>
@@ -214,8 +214,8 @@ export default function GamesPage() {
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-2xl">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-violet-500"><Sparkles className="h-3.5 w-3.5" /> New Flux features</div>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.045em]">Favorites, recent games, sharing and safer launching.</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">Flux remembers your games on-device, lets you share a clean Flux game link and keeps source and license details visible before launch.</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.045em]">Favorites, recent games, sharing and true in-Flux launching.</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">Flux remembers your games on-device, shares clean Flux links and launches every included game from Flux-owned files without sending players elsewhere.</p>
             </div>
             <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 text-xs font-black"><ShieldCheck className="h-4 w-4 text-emerald-500" /> Verified catalog</div>
           </div>
