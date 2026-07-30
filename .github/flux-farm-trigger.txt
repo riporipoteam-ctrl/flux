@@ -1,1 +1,1 @@
-Trigger final Flux Farm source materialization.
+Trigger clean Flux Farm source materialization.
