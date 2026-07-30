@@ -1,0 +1,120 @@
+name: Materialize Flux Farm
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.event.pull_request.head.ref == 'feat/flux-farm'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out Flux Farm branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/flux-farm
+          fetch-depth: 0
+
+      - name: Detect packed source
+        id: source
+        shell: bash
+        run: |
+          if [ -d .github/flux-farm-source ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Materialize verified Flux Farm source
+        if: steps.source.outputs.needed == 'true'
+        run: node scripts/prepare-flux-farm.mjs
+
+      - name: Replace Flux Plays security rules
+        if: steps.source.outputs.needed == 'true'
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("firestore.rules")
+          source = path.read_text()
+          start = source.index("    /* ---- Flux Plays:")
+          end = source.index("\n\n  }\n}", start)
+          replacement = """    /* ---- Flux Farm: cloud saves and public player rankings ---- */
+              match /fluxFarmSaves/{uid} {
+                allow read: if true;
+                allow create, update: if isSelf(uid)
+                  && request.resource.data.uid == request.auth.uid
+                  && request.resource.data.xp is number
+                  && request.resource.data.xp >= 0
+                  && request.resource.data.coins is number
+                  && request.resource.data.coins >= 0
+                  && request.resource.data.day is number
+                  && request.resource.data.day >= 1;
+                allow delete: if isSelf(uid) || isAdmin();
+              }"""
+          path.write_text(source[:start] + replacement + source[end:])
+          PY
+
+      - name: Remove preparation files and retired game
+        if: steps.source.outputs.needed == 'true'
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          for (const key of ['prepare:flux-farm', 'predev', 'prebuild', 'prelint']) delete pkg.scripts[key];
+          fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+          rm -rf .github/flux-farm-source .github/flux-farm-payload
+          rm -f .github/flux-farm-trigger.txt .github/workflows/flux-farm-apply.yml
+          rm -f scripts/prepare-flux-farm.mjs
+          rm -f src/app/play/page.tsx
+          rm -f src/components/game/flux-plays-world.tsx
+          rm -f src/services/flux-plays.ts
+          rm -f public/game-thumbs/flux-plays-hero.png
+          if grep -R -n -E "Flux Plays|flux-plays|fluxPlay" src firestore.rules; then
+            echo "Flux Plays references remain"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        if: steps.source.outputs.needed == 'true'
+        run: npm ci
+
+      - name: Lint
+        if: steps.source.outputs.needed == 'true'
+        run: npm run lint
+
+      - name: Build GitHub Pages export
+        if: steps.source.outputs.needed == 'true'
+        env:
+          GITHUB_PAGES: "true"
+          GITHUB_REPOSITORY: riporipoteam-ctrl/flux
+        run: npm run build
+
+      - name: Verify Flux Farm routes
+        if: steps.source.outputs.needed == 'true'
+        shell: bash
+        run: |
+          test -f out/games/index.html
+          test -f out/games/flux-farm/index.html
+
+      - name: Commit the verified game source
+        if: steps.source.outputs.needed == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Build Flux Farm [flux-farm-materialized]"
+          git push origin feat/flux-farm
