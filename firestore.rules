@@ -371,41 +371,18 @@ service cloud.firestore {
       }
     }
 
-    /* ---- Flux Plays: public game catalog and live 3D worlds ---- */
-    match /fluxPlayGames/{gameId} {
-      allow read: if resource.data.get('isPublic', true) == true
-        || (isSignedIn() && resource.data.creatorUid == request.auth.uid);
-      allow create: if isSignedIn()
-        && request.resource.data.creatorUid == request.auth.uid
-        && request.resource.data.isOfficial != true;
-      allow update: if isSignedIn()
-        && (
-          resource.data.creatorUid == request.auth.uid
-          || request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['plays', 'likes', 'activePlayers', 'updatedAt'])
-        );
-      allow delete: if isOwner()
-        || (isSignedIn() && resource.data.creatorUid == request.auth.uid);
-    }
-
-    match /fluxPlayWorlds/{gameId} {
-      allow read, create, update: if isSignedIn();
-      allow delete: if isAdmin();
-
-      match /players/{uid} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isSelf(uid);
-      }
-
-      match /blocks/{blockId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn()
-          && request.resource.data.creatorUid == request.auth.uid;
-        allow update: if isSignedIn()
-          && resource.data.creatorUid == request.auth.uid;
-        allow delete: if isSignedIn()
-          && (resource.data.creatorUid == request.auth.uid || isAdmin());
-      }
+    /* ---- Flux Farm: cloud saves and public player rankings ---- */
+    match /fluxFarmSaves/{uid} {
+      allow read: if true;
+      allow create, update: if isSelf(uid)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.xp is number
+        && request.resource.data.xp >= 0
+        && request.resource.data.coins is number
+        && request.resource.data.coins >= 0
+        && request.resource.data.day is number
+        && request.resource.data.day >= 1;
+      allow delete: if isSelf(uid) || isAdmin();
     }
 
   }

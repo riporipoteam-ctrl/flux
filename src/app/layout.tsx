@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Flux 2.0 — Social, Games, Create",
   description:
-    "Flux 2.0 is the social and gaming network by Ripo Team — connect, create, and play together in Flux Plays from any device.",
+    "Flux is the social and gaming network by Ripo Team — connect, create, and grow your farm from any device.",
   applicationName: "Flux",
   authors: [{ name: "Ripo Team" }],
   manifest: `${basePath}/manifest.webmanifest`,

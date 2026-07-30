@@ -1,205 +1,99 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
-  Boxes,
+  CloudRain,
   Gamepad2,
-  Globe2,
-  Heart,
-  Joystick,
-  Plus,
-  Search,
+  MoonStar,
+  Save,
   Sparkles,
+  Sun,
   Trophy,
   Users,
-  WandSparkles,
-  Zap,
+  Wheat,
+  Wind,
 } from "lucide-react";
-import { useAuth } from "@/contexts/auth-context";
-import {
-  createFluxPlayGame,
-  listFluxPlayGames,
-  type FluxPlayGame,
-  type FluxPlayMode,
-} from "@/services/flux-plays";
-import { assetUrl } from "@/lib/asset-url";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { cn, formatCount } from "@/lib/utils";
 
-const FILTERS = ["Discover", "Popular", "Adventure", "Obby", "Social", "My Worlds"] as const;
-type Filter = (typeof FILTERS)[number];
+const FEATURES = [
+  { icon: Wheat, label: "Farming & crops" },
+  { icon: Sun, label: "Day and night" },
+  { icon: CloudRain, label: "Dynamic weather" },
+  { icon: Users, label: "Hire farmers" },
+  { icon: Trophy, label: "Flux leaderboard" },
+  { icon: Save, label: "Cloud saving" },
+];
 
 export default function GamesPage() {
-  const router = useRouter();
-  const { profile } = useAuth();
-  const [games, setGames] = useState<FluxPlayGame[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Filter>("Discover");
-  const [search, setSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      setGames(await listFluxPlayGames());
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  const featured = games.find((game) => game.id === "flux-world") || games[0];
-  const visibleGames = useMemo(() => {
-    let next = games.filter((game) => {
-      const term = search.trim().toLowerCase();
-      return !term || `${game.title} ${game.description} ${game.tags.join(" ")}`.toLowerCase().includes(term);
-    });
-    if (filter === "Popular") next = [...next].sort((a, b) => b.plays - a.plays);
-    if (filter === "Adventure") next = next.filter((game) => game.mode === "adventure");
-    if (filter === "Obby") next = next.filter((game) => game.mode === "obby");
-    if (filter === "Social") next = next.filter((game) => game.mode === "hangout" || game.tags.includes("social"));
-    if (filter === "My Worlds") next = next.filter((game) => game.creatorUid === profile?.uid);
-    return next;
-  }, [filter, games, profile?.uid, search]);
-
-  const launch = (gameId: string) => router.push(`/play?gameId=${encodeURIComponent(gameId)}`);
-
   return (
-    <div className="min-h-screen pb-8">
+    <div className="min-h-screen pb-10">
       <header className="sticky top-0 z-30 hidden border-b border-border/70 px-5 py-3 glass-strong lg:block">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-black tracking-[-0.04em]">Flux Plays</h1>
-            <p className="text-xs text-muted-foreground">Play, create and share — all inside Flux.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative hidden w-64 md:block">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search games" className="h-10 rounded-full bg-muted/60 pl-10" />
-            </div>
-            <CreateGameDialog open={createOpen} setOpen={setCreateOpen} onCreated={(id) => { void load(); launch(id); }} />
-          </div>
-        </div>
+        <h1 className="text-xl font-black tracking-[-0.04em]">Games</h1>
+        <p className="text-xs text-muted-foreground">Original games built for Flux accounts.</p>
       </header>
 
       <div className="px-3 pt-3 sm:px-5 sm:pt-5">
-        <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#071126] shadow-[0_30px_90px_rgba(5,8,22,.28)] sm:rounded-[36px]">
-          {featured ? <img src={assetUrl(featured.thumbnailUrl)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" /> : null}
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,7,20,.98)_0%,rgba(4,7,20,.78)_42%,rgba(4,7,20,.12)_78%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_26%,rgba(69,140,255,.3),transparent_35%)]" />
-          <div className="relative flex min-h-[370px] max-w-2xl flex-col justify-end p-6 sm:min-h-[430px] sm:p-10">
-            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
-              <div className="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-200/90"><span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_18px_#67e8f9]" /> The new Flux gaming universe</div>
-              <h2 className="max-w-xl text-4xl font-black leading-[0.96] tracking-[-0.055em] text-white sm:text-6xl">Build it. Play it. <span className="text-gradient-brand">Share it.</span></h2>
-              <p className="mt-5 max-w-lg text-sm leading-6 text-white/68 sm:text-base">Shared 3D browser worlds where your Flux identity, friends and creations stay connected on mobile and PC.</p>
+        <section className="relative overflow-hidden rounded-[30px] border border-emerald-100/10 bg-[#10251a] shadow-[0_30px_90px_rgba(7,25,13,.34)] sm:rounded-[38px]">
+          <FarmArtwork />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,26,16,.98)_0%,rgba(10,26,16,.88)_44%,rgba(10,26,16,.1)_82%)]" />
+          <div className="relative flex min-h-[430px] max-w-2xl flex-col justify-end p-6 sm:min-h-[500px] sm:p-10">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <div className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200"><Sparkles className="h-4 w-4" /> First official Flux game</div>
+              <h2 className="text-5xl font-black leading-[0.92] tracking-[-0.065em] text-white sm:text-7xl">Flux <span className="text-emerald-300">Farm</span></h2>
+              <p className="mt-5 max-w-lg text-sm leading-6 text-white/65 sm:text-base">Restore an abandoned valley, grow crops, survive changing weather, hire farmers, expand your land and climb the real Flux rankings.</p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Button size="lg" variant="flux" className="rounded-full px-6" onClick={() => launch(featured?.id || "flux-world")}><Joystick className="h-5 w-5" /> Play Flux World</Button>
-                <CreateGameDialog open={createOpen} setOpen={setCreateOpen} onCreated={(id) => { void load(); launch(id); }} hero />
-              </div>
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-white/55">
-                <span className="flex items-center gap-1.5"><Globe2 className="h-4 w-4 text-cyan-300" /> Browser + mobile + PC</span>
-                <span className="flex items-center gap-1.5"><Users className="h-4 w-4 text-violet-300" /> Flux account sync</span>
-                <span className="flex items-center gap-1.5"><Zap className="h-4 w-4 text-amber-300" /> No separate login</span>
+                <Link href="/games/flux-farm" className="inline-flex h-13 items-center gap-2 rounded-full bg-gradient-to-r from-emerald-300 to-lime-300 px-7 text-sm font-black text-emerald-950 shadow-[0_16px_40px_rgba(74,222,128,.26)] transition hover:-translate-y-0.5"><Gamepad2 className="h-5 w-5" /> Play now <ArrowRight className="h-4 w-4" /></Link>
+                <span className="inline-flex h-13 items-center gap-2 rounded-full border border-white/15 bg-white/8 px-5 text-xs font-black text-white/75 backdrop-blur-xl"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" /> Browser · mobile · PC</span>
               </div>
             </motion.div>
           </div>
         </section>
 
-        <section className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard icon={Gamepad2} value={formatCount(games.reduce((sum, game) => sum + game.plays, 0))} label="Plays" />
-          <StatCard icon={Boxes} value={String(games.length)} label="Worlds" />
-          <StatCard icon={Users} value="Live" label="Multiplayer" />
-          <StatCard icon={WandSparkles} value="3D" label="Creator tools" />
+        <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {FEATURES.map(({ icon: Icon, label }) => (
+            <div key={label} className="flex min-h-24 flex-col justify-between rounded-[22px] border border-border/70 bg-card/80 p-4 shadow-soft backdrop-blur-xl">
+              <Icon className="h-5 w-5 text-emerald-500" />
+              <p className="mt-4 text-xs font-black">{label}</p>
+            </div>
+          ))}
         </section>
 
         <section className="mt-9">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div><h2 className="text-2xl font-black tracking-[-0.04em]">Explore worlds</h2><p className="mt-1 text-sm text-muted-foreground">Official experiences and games made by the Flux community.</p></div>
-            <div className="relative sm:hidden"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search Flux Plays" className="h-11 rounded-full bg-muted/60 pl-10" /></div>
+          <div className="flex items-end justify-between gap-4">
+            <div><h2 className="text-2xl font-black tracking-[-0.04em]">Flux originals</h2><p className="mt-1 text-sm text-muted-foreground">Real playable games — not a world-builder shell.</p></div>
+            <span className="rounded-full border border-border bg-card px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground">More games later</span>
           </div>
 
-          <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-2">
-            {FILTERS.map((item) => <button key={item} type="button" onClick={() => setFilter(item)} className={cn("whitespace-nowrap rounded-full border px-4 py-2 text-xs font-black transition", filter === item ? "border-transparent bg-foreground text-background shadow-lg" : "border-border bg-card text-muted-foreground hover:text-foreground")}>{item}</button>)}
-          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Link href="/games/flux-farm" className="group overflow-hidden rounded-[28px] border border-border/70 bg-card shadow-soft transition hover:-translate-y-1 hover:border-emerald-400/35 hover:shadow-[0_22px_60px_rgba(34,197,94,.14)]">
+              <div className="relative aspect-[16/10] overflow-hidden bg-[#335f39]"><FarmArtwork compact /><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" /><span className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/35 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white backdrop-blur-lg">Official</span><span className="absolute bottom-3 right-3 grid h-11 w-11 place-items-center rounded-full bg-white text-emerald-950 shadow-xl transition group-hover:scale-110"><ArrowRight className="h-5 w-5" /></span></div>
+              <div className="p-5"><div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">Flux Farm</h3><p className="mt-1 text-xs font-semibold text-muted-foreground">By Ripo Team</p></div><span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-[10px] font-black text-emerald-600">PLAYABLE</span></div><p className="mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">A story-driven 2D farming adventure with events, weather, progression, workers and online rankings.</p><div className="mt-4 flex flex-wrap gap-2 text-[10px] font-bold text-muted-foreground"><span className="rounded-full bg-muted px-2 py-1">Farming</span><span className="rounded-full bg-muted px-2 py-1">Story</span><span className="rounded-full bg-muted px-2 py-1">Simulation</span></div></div>
+            </Link>
 
-          {loading ? (
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-[24px] bg-muted" />)}</div>
-          ) : visibleGames.length ? (
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{visibleGames.map((game, index) => <GameCard key={game.id} game={game} index={index} onPlay={() => launch(game.id)} />)}</div>
-          ) : (
-            <div className="mt-5 rounded-[28px] border border-dashed border-border p-12 text-center"><Trophy className="mx-auto h-9 w-9 text-muted-foreground" /><h3 className="mt-3 font-black">No worlds found</h3><p className="mt-1 text-sm text-muted-foreground">Try another category or create the first one.</p></div>
-          )}
+            <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-dashed border-border bg-card/45 p-8 text-center"><div><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-muted"><MoonStar className="h-6 w-6 text-muted-foreground" /></div><h3 className="mt-4 font-black">Next Flux original</h3><p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">The games shelf is ready. Flux Farm comes first, then new full games can be added here.</p></div></div>
+          </div>
         </section>
       </div>
     </div>
   );
 }
 
-function GameCard({ game, index, onPlay }: { game: FluxPlayGame; index: number; onPlay: () => void }) {
+function FarmArtwork({ compact = false }: { compact?: boolean }) {
   return (
-    <motion.button type="button" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(index * 0.035, 0.28) }} whileHover={{ y: -4 }} onClick={onPlay} className="group overflow-hidden rounded-[22px] border border-border/70 bg-card text-left shadow-soft transition hover:border-primary/30 hover:shadow-[0_18px_50px_rgba(76,61,255,.12)] sm:rounded-[26px]">
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted"><img src={assetUrl(game.thumbnailUrl)} alt={game.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /><div className="absolute inset-0 bg-gradient-to-t from-black/62 via-transparent to-transparent" />{game.isOfficial ? <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full border border-white/15 bg-black/45 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white backdrop-blur-lg"><Sparkles className="h-3 w-3 text-cyan-300" /> Official</span> : null}<span className="absolute bottom-2.5 right-2.5 grid h-9 w-9 place-items-center rounded-full bg-white text-black opacity-0 shadow-xl transition group-hover:opacity-100"><ArrowRight className="h-4 w-4" /></span></div>
-      <div className="p-3.5 sm:p-4"><h3 className="truncate text-sm font-black sm:text-base">{game.title}</h3><p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">By {game.creatorName}</p><div className="mt-3 flex items-center gap-3 text-[10px] font-bold text-muted-foreground sm:text-[11px]"><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {formatCount(game.plays)}</span><span className="flex items-center gap-1"><Heart className="h-3.5 w-3.5" /> {formatCount(game.likes)}</span></div></div>
-    </motion.button>
-  );
-}
-
-function StatCard({ icon: Icon, value, label }: { icon: typeof Gamepad2; value: string; label: string }) {
-  return <div className="flex items-center gap-3 rounded-[22px] border border-border/70 bg-card/80 p-3 shadow-soft backdrop-blur-xl sm:p-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500/18 to-cyan-400/18 text-primary"><Icon className="h-5 w-5" /></span><div><p className="text-sm font-black sm:text-base">{value}</p><p className="text-[10px] font-semibold text-muted-foreground sm:text-xs">{label}</p></div></div>;
-}
-
-function CreateGameDialog({ open, setOpen, onCreated, hero = false }: { open: boolean; setOpen: (open: boolean) => void; onCreated: (id: string) => void; hero?: boolean }) {
-  const { profile } = useAuth();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [mode, setMode] = useState<FluxPlayMode>("sandbox");
-  const [saving, setSaving] = useState(false);
-
-  const create = async () => {
-    if (!profile) return;
-    if (title.trim().length < 3) return toast.error("Give your world a name");
-    setSaving(true);
-    try {
-      const id = await createFluxPlayGame(profile, { title, description: description || "A community-made world on Flux Plays.", mode, allowBuild: true });
-      setOpen(false);
-      setTitle("");
-      setDescription("");
-      toast.success("World created — launching now");
-      onCreated(id);
-    } catch {
-      toast.error("Could not create the world");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{hero ? <button type="button" className="flex h-12 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/16"><Plus className="h-4 w-4" /> Create a world</button> : <Button variant="flux" className="rounded-full"><Plus className="h-4 w-4" /> Create</Button>}</DialogTrigger>
-      <DialogContent className="overflow-hidden border-border/80 bg-card p-0 sm:max-w-lg sm:rounded-[30px]">
-        <div className="border-b border-border/70 bg-[radial-gradient(circle_at_80%_0%,rgba(14,165,233,.18),transparent_38%),radial-gradient(circle_at_10%_20%,rgba(124,58,237,.2),transparent_45%)] p-6"><DialogHeader><DialogTitle className="text-2xl font-black tracking-[-0.04em]">Create a Flux Plays world</DialogTitle></DialogHeader><p className="mt-2 text-sm leading-6 text-muted-foreground">Your Flux account becomes the creator automatically. The world works with keyboard and touch controls.</p></div>
-        <div className="space-y-5 p-6">
-          <label className="block"><span className="text-xs font-black uppercase tracking-wider text-muted-foreground">World name</span><Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={48} placeholder="My amazing world" className="mt-2 h-12 rounded-2xl" /></label>
-          <label className="block"><span className="text-xs font-black uppercase tracking-wider text-muted-foreground">Description</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={180} placeholder="What will players do here?" className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-ring" /></label>
-          <div><span className="text-xs font-black uppercase tracking-wider text-muted-foreground">Template</span><div className="mt-2 grid grid-cols-2 gap-2">{(["sandbox", "obby", "hangout", "adventure"] as FluxPlayMode[]).map((item) => <button type="button" key={item} onClick={() => setMode(item)} className={cn("rounded-2xl border p-3 text-left transition", mode === item ? "border-primary bg-primary/10" : "border-border hover:bg-muted")}><p className="text-sm font-black capitalize">{item}</p><p className="mt-1 text-[10px] text-muted-foreground">{item === "sandbox" ? "Build freely" : item === "obby" ? "Obstacle course" : item === "hangout" ? "Social space" : "Explore a world"}</p></button>)}</div></div>
-          <Button variant="flux" size="lg" className="w-full rounded-full" loading={saving} onClick={create}><WandSparkles className="h-4 w-4" /> Create and launch</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <div className={compact ? "absolute inset-0 overflow-hidden" : "absolute inset-0 overflow-hidden"} aria-hidden="true">
+      <div className="absolute inset-0 bg-[linear-gradient(#87c9e8_0_45%,#79b86c_45%)]" />
+      <div className="absolute left-[58%] top-[11%] h-24 w-24 rounded-full bg-amber-200/90 blur-[1px]" />
+      <div className="absolute left-[66%] top-[22%] h-28 w-48 rounded-full bg-white/50 blur-xl" />
+      <div className="absolute bottom-0 left-[42%] h-[52%] w-[58%] rotate-[-4deg] rounded-tl-[55%] bg-[#5f9a54]" />
+      <div className="absolute bottom-[12%] right-[4%] h-[33%] w-[48%] -rotate-3 rounded-[24px] bg-[#8a5a36] shadow-2xl">
+        {Array.from({ length: 15 }).map((_, index) => <span key={index} className="absolute h-5 w-2 rounded-full bg-amber-300 shadow-[0_0_0_3px_rgba(65,122,54,.85)]" style={{ left: `${8 + (index % 5) * 19}%`, top: `${13 + Math.floor(index / 5) * 31}%`, transform: `rotate(${index % 2 ? 7 : -6}deg)` }} />)}
+      </div>
+      <div className="absolute bottom-[23%] left-[8%] h-[29%] w-[26%] rounded-xl bg-[#f0d2a0] shadow-2xl"><div className="absolute -left-[8%] -top-[29%] h-[45%] w-[116%] -skew-x-12 bg-[#b64f43]" /><div className="absolute bottom-0 left-[42%] h-[48%] w-[24%] bg-[#6d352b]" /><div className="absolute left-[12%] top-[31%] h-[24%] w-[20%] bg-sky-200" /><div className="absolute right-[12%] top-[31%] h-[24%] w-[20%] bg-sky-200" /></div>
+      <div className="absolute bottom-[10%] left-[31%] h-[31%] w-[3%] rounded-full bg-[#6d472e]" /><div className="absolute bottom-[33%] left-[25%] h-[20%] w-[17%] rounded-full bg-[#2f7c45] shadow-[20px_8px_0_#3f8d4e,-18px_11px_0_#3f8d4e]" />
+      <div className="absolute bottom-[4%] left-[49%] h-[28%] w-[8%] rounded-[45%_45%_25%_25%] bg-[#6655df] shadow-2xl"><div className="absolute -top-[22%] left-[18%] h-[35%] w-[64%] rounded-full bg-[#efbd8e]" /></div>
+      <div className="absolute inset-x-0 bottom-0 h-[16%] bg-gradient-to-t from-black/20 to-transparent" />
+      {!compact ? <div className="absolute right-[12%] top-[8%] flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-3 py-2 text-[10px] font-black text-white backdrop-blur-xl"><Wind className="h-3.5 w-3.5" /> Living weather</div> : null}
+    </div>
   );
 }

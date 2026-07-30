@@ -3,10 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prepare:flux-farm": "node scripts/prepare-flux-farm.mjs",
-    "predev": "npm run prepare:flux-farm",
-    "prebuild": "npm run prepare:flux-farm",
-    "prelint": "npm run prepare:flux-farm",
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",

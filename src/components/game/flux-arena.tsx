@@ -160,7 +160,7 @@ export function FluxArena({
       } catch (e) {
         console.error(e);
         setJoining(false);
-        setJoinError("Flux Plays could not reach the room service.");
+        setJoinError("Flux games could not reach the room service.");
         toast.error("Could not join the room. You can retry without leaving the game.");
       }
     })();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Gamepad2, Newspaper, Sparkles, Users, Zap } from "lucide-react";
+import { ArrowRight, Gamepad2, Newspaper, Sparkles, Sprout, Users, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
@@ -13,15 +13,12 @@ import { getForYouFeed, getFollowingFeed } from "@/services/posts";
 import type { PostWithAuthor } from "@/types";
 import { Button } from "@/components/ui/button";
 import { PageTransition, StaggerItem, StaggerList } from "@/components/shared/page-transition";
-import { listFluxPlayGames, type FluxPlayGame } from "@/services/flux-plays";
-import { assetUrl } from "@/lib/asset-url";
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [tab, setTab] = useState("foryou");
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
-  const [games, setGames] = useState<FluxPlayGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
@@ -56,10 +53,6 @@ export default function HomePage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    listFluxPlayGames(6).then((items) => setGames(items.slice(0, 6))).catch(() => setGames([]));
-  }, []);
 
   useEffect(() => {
     if (tab !== "foryou" || !user) return;
@@ -114,37 +107,29 @@ export default function HomePage() {
       <PageTransition>
         <section className="mx-3 mt-3 overflow-hidden rounded-[26px] border border-border/70 bg-card/78 shadow-soft backdrop-blur-xl sm:mx-4 sm:mt-4 sm:rounded-[30px]">
           <div className="relative overflow-hidden p-5 sm:p-6">
-            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-violet-500/18 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-20 left-1/3 h-44 w-44 rounded-full bg-cyan-400/12 blur-3xl" />
+            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-emerald-500/18 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 left-1/3 h-44 w-44 rounded-full bg-lime-400/12 blur-3xl" />
             <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="max-w-md">
-                <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary"><Zap className="h-3.5 w-3.5" /> The biggest Flux update</div>
-                <h2 className="text-2xl font-black leading-tight tracking-[-0.05em] sm:text-3xl">Social meets <span className="text-gradient-brand">Flux Plays.</span></h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">Create posts, find friends, and jump into shared 3D worlds without leaving your account.</p>
+                <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-500"><Zap className="h-3.5 w-3.5" /> Now playable</div>
+                <h2 className="text-2xl font-black leading-tight tracking-[-0.05em] sm:text-3xl">The first Flux original: <span className="text-emerald-500">Flux Farm.</span></h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Grow crops, follow the valley story, survive weather, hire farmers and climb the Flux leaderboard.</p>
               </div>
-              <Button variant="flux" size="lg" className="shrink-0 rounded-full" onClick={() => router.push("/games")}><Gamepad2 className="h-5 w-5" /> Open Games <ArrowRight className="h-4 w-4" /></Button>
+              <Button variant="flux" size="lg" className="shrink-0 rounded-full" onClick={() => router.push("/games/flux-farm")}><Sprout className="h-5 w-5" /> Play Flux Farm <ArrowRight className="h-4 w-4" /></Button>
             </div>
           </div>
-          {games.length ? (
-            <div className="no-scrollbar flex gap-3 overflow-x-auto border-t border-border/70 px-4 py-4">
-              {games.map((game, index) => (
-                <motion.button
-                  key={game.id}
-                  type="button"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ y: -3 }}
-                  onClick={() => router.push(`/play?gameId=${encodeURIComponent(game.id)}`)}
-                  className="group flex min-w-[190px] items-center gap-3 rounded-2xl border border-border/70 bg-background/55 p-2 text-left transition hover:border-primary/25"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={assetUrl(game.thumbnailUrl)} alt="" className="h-12 w-12 rounded-xl object-cover transition group-hover:scale-105" />
-                  <div className="min-w-0"><p className="truncate text-xs font-black">{game.title}</p><p className="mt-0.5 truncate text-[10px] text-muted-foreground">Play now · {game.mode}</p></div>
-                </motion.button>
-              ))}
-            </div>
-          ) : null}
+          <motion.button
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            whileHover={{ y: -2 }}
+            onClick={() => router.push("/games")}
+            className="flex w-full items-center gap-4 border-t border-border/70 bg-[linear-gradient(90deg,rgba(34,197,94,.08),transparent)] px-5 py-4 text-left transition hover:bg-emerald-500/10"
+          >
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-600"><Gamepad2 className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1"><p className="font-black">Open the Games shelf</p><p className="truncate text-xs text-muted-foreground">Flux Farm is live. More full games can be added next.</p></div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          </motion.button>
         </section>
 
         <div className="mx-3 mt-3 hidden sm:block sm:mx-4 sm:mt-4">
