@@ -1,0 +1,36 @@
+name: Flux Games Audit
+
+on:
+  pull_request:
+    paths:
+      - "src/app/(main)/games/**"
+      - "src/app/games/play/**"
+      - "src/components/game/**"
+      - "src/data/browser-games.ts"
+      - "src/app/social-effects.css"
+      - "src/app/layout.tsx"
+      - "src/app/(main)/home/page.tsx"
+      - ".github/workflows/flux-games-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - name: Verify static game routes
+        run: |
+          test -f out/games/index.html
+          test -f out/games/play/index.html
+          test -f out/games/flux-farm/index.html
