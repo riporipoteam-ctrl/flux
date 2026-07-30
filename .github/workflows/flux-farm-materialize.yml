@@ -74,6 +74,16 @@ jobs:
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           for (const key of ['prepare:flux-farm', 'predev', 'prebuild', 'prelint']) delete pkg.scripts[key];
           fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+
+          const replacements = [
+            ['src/app/layout.tsx', 'Flux 2.0 is the social and gaming network by Ripo Team — connect, create, and play together in Flux Plays from any device.', 'Flux is the social and gaming network by Ripo Team — connect, create, and grow your farm from any device.'],
+            ['src/components/game/flux-arena.tsx', 'Flux Plays could not reach the room service.', 'Flux games could not reach the room service.'],
+          ];
+          for (const [file, before, after] of replacements) {
+            const source = fs.readFileSync(file, 'utf8');
+            if (!source.includes(before)) throw new Error(`Expected text not found in ${file}`);
+            fs.writeFileSync(file, source.replace(before, after));
+          }
           NODE
           rm -rf .github/flux-farm-source .github/flux-farm-payload
           rm -f .github/flux-farm-trigger.txt .github/workflows/flux-farm-apply.yml
