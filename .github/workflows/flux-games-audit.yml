@@ -20,14 +20,18 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      GITHUB_PAGES: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - name: Exclude server-only routes from static export
+        run: mv src/app/api .pages-api
       - run: npm run build
       - name: Verify static game routes
         run: |
