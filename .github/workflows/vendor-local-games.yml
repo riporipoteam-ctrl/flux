@@ -1,0 +1,71 @@
+name: Vendor local Flux games
+
+on:
+  push:
+    branches:
+      - fix/local-flux-games
+    paths:
+      - .github/workflows/vendor-local-games.yml
+      - scripts/vendor-local-games.sh
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vendor-local-flux-games
+  cancel-in-progress: false
+
+jobs:
+  vendor-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out Flux branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Vendor open-source games into Flux
+        run: bash scripts/vendor-local-games.sh
+
+      - name: Install Flux dependencies
+        run: npm ci
+
+      - name: Lint Flux
+        run: npm run lint
+
+      - name: Build static Flux site
+        run: npm run build
+
+      - name: Verify local game entry points
+        run: |
+          test -f public/games-library/tux-racer/index.html
+          test -f public/games-library/anti-gravity-pool/index.html
+          test -f public/games-library/xquest/index.html
+          test -f public/games-library/openpanzer/index.html
+          test -f public/games-library/progress-knight/index.html
+          test -f public/games-library/anxiety/index.html
+          grep -q '/games-library/tux-racer/index.html' src/data/browser-games.ts
+          ! grep -Eq 'window\.open\(game\.playUrl|src=\{game\.playUrl\}' src/components/game/browser-game-shell.tsx
+
+      - name: Commit vendored games and local launcher
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/games-library src/data/browser-games.ts src/components/game/browser-game-shell.tsx 'src/app/(main)/games/page.tsx'
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+            exit 0
+          fi
+          git commit -m "Host browser games directly inside Flux"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
