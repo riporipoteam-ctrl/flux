@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Gamepad2, Newspaper, Sparkles, Sprout, Users, Zap } from "lucide-react";
+import { ArrowRight, Gamepad2, Newspaper, ShieldCheck, Sparkles, Smartphone, Users, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ComposeBox } from "@/components/posts/compose-box";
@@ -13,9 +13,11 @@ import { getForYouFeed, getFollowingFeed } from "@/services/posts";
 import type { PostWithAuthor } from "@/types";
 import { Button } from "@/components/ui/button";
 import { PageTransition, StaggerItem, StaggerList } from "@/components/shared/page-transition";
+import { FEATURED_GAMES } from "@/data/browser-games";
 
 export default function HomePage() {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const { user } = useAuth();
   const [tab, setTab] = useState("foryou");
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
@@ -107,27 +109,59 @@ export default function HomePage() {
       <PageTransition>
         <section className="mx-3 mt-3 overflow-hidden rounded-[26px] border border-border/70 bg-card/78 shadow-soft backdrop-blur-xl sm:mx-4 sm:mt-4 sm:rounded-[30px]">
           <div className="relative overflow-hidden p-5 sm:p-6">
-            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-emerald-500/18 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-20 left-1/3 h-44 w-44 rounded-full bg-lime-400/12 blur-3xl" />
-            <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="max-w-md">
-                <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-500"><Zap className="h-3.5 w-3.5" /> Now playable</div>
-                <h2 className="text-2xl font-black leading-tight tracking-[-0.05em] sm:text-3xl">The first Flux original: <span className="text-emerald-500">Flux Farm.</span></h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">Grow crops, follow the valley story, survive weather, hire farmers and climb the Flux leaderboard.</p>
+            <motion.div
+              className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-cyan-400/18 blur-3xl"
+              animate={reduceMotion ? undefined : { x: [0, -18, 0], y: [0, 16, 0], scale: [1, 1.08, 1] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="pointer-events-none absolute -bottom-20 left-1/3 h-44 w-44 rounded-full bg-violet-500/14 blur-3xl"
+              animate={reduceMotion ? undefined : { x: [0, 14, 0], y: [0, -10, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-lg">
+                <div className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-500"><Zap className="h-3.5 w-3.5" /> Games hub live</div>
+                <h2 className="text-2xl font-black leading-tight tracking-[-0.05em] sm:text-3xl">Real browser games for <span className="text-gradient-brand">every screen.</span></h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Launch open-source racing, simulation, strategy, story, horror and puzzle games from mobile, tablet or PC—without a Flux VPS.</p>
+                <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/65 px-3 py-1.5"><Smartphone className="h-3.5 w-3.5 text-cyan-500" /> Touch controls</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/65 px-3 py-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Free + source available</span>
+                </div>
               </div>
-              <Button variant="flux" size="lg" className="shrink-0 rounded-full" onClick={() => router.push("/games/flux-farm")}><Sprout className="h-5 w-5" /> Play Flux Farm <ArrowRight className="h-4 w-4" /></Button>
+              <Button variant="flux" size="lg" className="shrink-0 rounded-full" onClick={() => router.push("/games")}><Gamepad2 className="h-5 w-5" /> Explore games <ArrowRight className="h-4 w-4" /></Button>
+            </div>
+
+            <div className="relative mt-5 grid grid-cols-3 gap-2">
+              {FEATURED_GAMES.slice(0, 3).map((game, index) => (
+                <motion.button
+                  key={game.slug}
+                  type="button"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: reduceMotion ? 0 : 0.08 * index }}
+                  whileHover={reduceMotion ? undefined : { y: -3, scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => router.push(`/games/play?game=${game.slug}`)}
+                  className="group relative min-h-24 overflow-hidden rounded-[20px] border border-white/10 p-3 text-left text-white shadow-lg sm:min-h-28 sm:p-4"
+                  style={{ background: `linear-gradient(140deg, ${game.palette[0]}, ${game.palette[1]})` }}
+                >
+                  <span className="absolute -right-3 -top-4 text-5xl opacity-35 transition group-hover:scale-110 group-hover:opacity-55 sm:text-6xl">{game.symbol}</span>
+                  <div className="relative flex h-full flex-col justify-end"><p className="truncate text-xs font-black sm:text-sm">{game.title}</p><p className="mt-1 hidden truncate text-[9px] font-bold text-white/55 sm:block">{game.categories.slice(0, 2).join(" · ")}</p></div>
+                </motion.button>
+              ))}
             </div>
           </div>
           <motion.button
             type="button"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            whileHover={{ y: -2 }}
+            whileHover={reduceMotion ? undefined : { y: -2 }}
             onClick={() => router.push("/games")}
-            className="flex w-full items-center gap-4 border-t border-border/70 bg-[linear-gradient(90deg,rgba(34,197,94,.08),transparent)] px-5 py-4 text-left transition hover:bg-emerald-500/10"
+            className="flex w-full items-center gap-4 border-t border-border/70 bg-[linear-gradient(90deg,rgba(6,182,212,.08),transparent)] px-5 py-4 text-left transition hover:bg-cyan-500/10"
           >
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-600"><Gamepad2 className="h-5 w-5" /></span>
-            <div className="min-w-0 flex-1"><p className="font-black">Open the Games shelf</p><p className="truncate text-xs text-muted-foreground">Flux Farm is live. More full games can be added next.</p></div>
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-cyan-500/15 text-cyan-600"><Gamepad2 className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1"><p className="font-black">Open Flux Games</p><p className="truncate text-xs text-muted-foreground">Favorites, recent games, sharing and safer launch screens are ready.</p></div>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
           </motion.button>
         </section>
