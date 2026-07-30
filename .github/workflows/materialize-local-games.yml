@@ -36,7 +36,9 @@ jobs:
           cache: npm
 
       - name: Vendor games into Flux
-        run: bash scripts/vendor-local-games.sh
+        run: |
+          sed 's/  npm ci/  npm install --no-audit --no-fund/' scripts/vendor-local-games.sh > /tmp/vendor-local-games.sh
+          bash /tmp/vendor-local-games.sh
 
       - name: Install and verify Flux
         run: |
