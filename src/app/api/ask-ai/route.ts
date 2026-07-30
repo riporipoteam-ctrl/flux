@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { groupPath } from "@/lib/routes";
 import { StreamThinkingFilter, stripThinkingText } from "@/lib/ai/strip-thinking";
 
 export const runtime = "nodejs";
