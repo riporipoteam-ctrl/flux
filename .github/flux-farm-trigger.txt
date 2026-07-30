@@ -1,1 +1,1 @@
-Trigger the hardened Flux Farm verification workflow.
+Trigger Flux Farm source materialization.
