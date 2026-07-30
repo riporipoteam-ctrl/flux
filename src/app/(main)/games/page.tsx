@@ -1,77 +1,223 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
-  CloudRain,
+  Clock3,
+  ExternalLink,
   Gamepad2,
-  MoonStar,
-  Save,
+  Heart,
+  Search,
+  ShieldCheck,
+  Smartphone,
   Sparkles,
-  Sun,
-  Trophy,
-  Users,
-  Wheat,
-  Wind,
+  Star,
+  X,
+  Zap,
 } from "lucide-react";
+import {
+  BROWSER_GAMES,
+  FEATURED_GAMES,
+  GAME_CATEGORIES,
+  type BrowserGame,
+  type GameCategoryFilter,
+} from "@/data/browser-games";
+import { GameCoverArt } from "@/components/game/game-cover-art";
 
-const FEATURES = [
-  { icon: Wheat, label: "Farming & crops" },
-  { icon: Sun, label: "Day and night" },
-  { icon: CloudRain, label: "Dynamic weather" },
-  { icon: Users, label: "Hire farmers" },
-  { icon: Trophy, label: "Flux leaderboard" },
-  { icon: Save, label: "Cloud saving" },
-];
+const FAVORITES_KEY = "flux-games-favorites";
+const RECENT_KEY = "flux-games-recent";
+
+function hrefForGame(game: BrowserGame) {
+  return game.internal ? game.playUrl : `/games/play?game=${encodeURIComponent(game.slug)}`;
+}
 
 export default function GamesPage() {
+  const reduceMotion = useReducedMotion();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<GameCategoryFilter>("All");
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [recent, setRecent] = useState<string[]>([]);
+  const hero = FEATURED_GAMES[0] ?? BROWSER_GAMES[0];
+
+  useEffect(() => {
+    const loadSaved = () => {
+      try {
+        setFavorites(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as string[]);
+        setRecent(JSON.parse(localStorage.getItem(RECENT_KEY) || "[]") as string[]);
+      } catch {
+        setFavorites([]);
+        setRecent([]);
+      }
+    };
+    loadSaved();
+    window.addEventListener("flux-games-updated", loadSaved);
+    window.addEventListener("storage", loadSaved);
+    return () => {
+      window.removeEventListener("flux-games-updated", loadSaved);
+      window.removeEventListener("storage", loadSaved);
+    };
+  }, []);
+
+  const filteredGames = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return BROWSER_GAMES.filter((game) => {
+      const matchesCategory = category === "All" || game.categories.includes(category);
+      const matchesSearch = !normalized || [game.title, game.author, game.shortDescription, game.description, ...game.categories]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalized);
+      return matchesCategory && matchesSearch;
+    });
+  }, [category, query]);
+
+  const recentGames = recent.map((slug) => BROWSER_GAMES.find((game) => game.slug === slug)).filter(Boolean) as BrowserGame[];
+  const favoriteGames = favorites.map((slug) => BROWSER_GAMES.find((game) => game.slug === slug)).filter(Boolean) as BrowserGame[];
+
+  const toggleFavorite = (slug: string) => {
+    setFavorites((current) => {
+      const next = current.includes(slug) ? current.filter((item) => item !== slug) : [slug, ...current];
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      } catch {
+        // The UI still works for the current visit if local storage is blocked.
+      }
+      return next;
+    });
+  };
+
   return (
-    <div className="min-h-screen pb-10">
-      <header className="sticky top-0 z-30 hidden border-b border-border/70 px-5 py-3 glass-strong lg:block">
-        <h1 className="text-xl font-black tracking-[-0.04em]">Games</h1>
-        <p className="text-xs text-muted-foreground">Original games built for Flux accounts.</p>
+    <div className="min-h-screen pb-12">
+      <header className="sticky top-0 z-40 hidden border-b border-border/70 px-5 py-3 glass-strong lg:block">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-black tracking-[-0.04em]">Flux Games</h1>
+            <p className="text-xs text-muted-foreground">Free browser games selected for mobile, tablet and PC.</p>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-emerald-500/15 bg-emerald-500/8 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-600">
+            <ShieldCheck className="h-3.5 w-3.5" /> No Flux VPS required
+          </div>
+        </div>
       </header>
 
       <div className="px-3 pt-3 sm:px-5 sm:pt-5">
-        <section className="relative overflow-hidden rounded-[30px] border border-emerald-100/10 bg-[#10251a] shadow-[0_30px_90px_rgba(7,25,13,.34)] sm:rounded-[38px]">
-          <FarmArtwork />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,26,16,.98)_0%,rgba(10,26,16,.88)_44%,rgba(10,26,16,.1)_82%)]" />
-          <div className="relative flex min-h-[430px] max-w-2xl flex-col justify-end p-6 sm:min-h-[500px] sm:p-10">
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200"><Sparkles className="h-4 w-4" /> First official Flux game</div>
-              <h2 className="text-5xl font-black leading-[0.92] tracking-[-0.065em] text-white sm:text-7xl">Flux <span className="text-emerald-300">Farm</span></h2>
-              <p className="mt-5 max-w-lg text-sm leading-6 text-white/65 sm:text-base">Restore an abandoned valley, grow crops, survive changing weather, hire farmers, expand your land and climb the real Flux rankings.</p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/games/flux-farm" className="inline-flex h-13 items-center gap-2 rounded-full bg-gradient-to-r from-emerald-300 to-lime-300 px-7 text-sm font-black text-emerald-950 shadow-[0_16px_40px_rgba(74,222,128,.26)] transition hover:-translate-y-0.5"><Gamepad2 className="h-5 w-5" /> Play now <ArrowRight className="h-4 w-4" /></Link>
-                <span className="inline-flex h-13 items-center gap-2 rounded-full border border-white/15 bg-white/8 px-5 text-xs font-black text-white/75 backdrop-blur-xl"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-300" /> Browser · mobile · PC</span>
-              </div>
-            </motion.div>
-          </div>
+        <section className="relative min-h-[510px] overflow-hidden rounded-[30px] border border-white/10 bg-[#07122d] shadow-[0_35px_100px_rgba(2,6,23,.35)] sm:min-h-[550px] sm:rounded-[40px]">
+          <GameCoverArt game={hero} />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,7,18,.97)_0%,rgba(3,7,18,.88)_47%,rgba(3,7,18,.18)_82%)]" />
+          <motion.div
+            className="relative flex min-h-[510px] max-w-3xl flex-col justify-end p-6 sm:min-h-[550px] sm:p-10"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.55, ease: "easeOut" }}
+          >
+            <div className="mb-4 flex w-fit items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/8 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200 backdrop-blur-xl">
+              <Sparkles className="h-3.5 w-3.5" /> Featured open-source game
+            </div>
+            <h2 className="max-w-xl text-5xl font-black leading-[0.9] tracking-[-0.07em] text-white sm:text-7xl">Race the mountain. <span className="text-cyan-300">Anywhere.</span></h2>
+            <p className="mt-5 max-w-xl text-sm leading-6 text-white/65 sm:text-base sm:leading-7">{hero.description}</p>
+            <div className="mt-5 flex flex-wrap gap-2 text-[10px] font-black text-white/70">
+              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 backdrop-blur-xl">Mobile touch</span>
+              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 backdrop-blur-xl">Keyboard</span>
+              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 backdrop-blur-xl">3D WebGL</span>
+              <span className="rounded-full border border-white/10 bg-white/8 px-3 py-1.5 backdrop-blur-xl">Free</span>
+            </div>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href={hrefForGame(hero)} className="inline-flex h-13 items-center gap-2 rounded-full bg-white px-7 text-sm font-black text-slate-950 shadow-[0_18px_50px_rgba(255,255,255,.16)] transition hover:-translate-y-0.5">
+                <Gamepad2 className="h-5 w-5" /> Play TuxRacer.js <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a href={hero.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex h-13 items-center gap-2 rounded-full border border-white/15 bg-white/8 px-6 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/14">
+                <ExternalLink className="h-5 w-5" /> Source
+              </a>
+            </div>
+          </motion.div>
         </section>
 
-        <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {FEATURES.map(({ icon: Icon, label }) => (
-            <div key={label} className="flex min-h-24 flex-col justify-between rounded-[22px] border border-border/70 bg-card/80 p-4 shadow-soft backdrop-blur-xl">
-              <Icon className="h-5 w-5 text-emerald-500" />
-              <p className="mt-4 text-xs font-black">{label}</p>
-            </div>
+        <section className="relative z-10 -mt-4 mx-2 grid grid-cols-2 gap-2 rounded-[26px] border border-border/70 bg-card/88 p-2 shadow-soft backdrop-blur-2xl sm:-mt-7 sm:mx-5 sm:grid-cols-4 sm:gap-3 sm:p-3">
+          {[
+            { icon: Smartphone, value: "Touch + PC", label: "Cross-device controls" },
+            { icon: ShieldCheck, value: "No paid files", label: "Free to launch" },
+            { icon: Zap, value: "Static", label: "No Flux game server" },
+            { icon: ExternalLink, value: `${BROWSER_GAMES.length} games`, label: "Source available" },
+          ].map(({ icon: Icon, value, label }) => (
+            <motion.div key={value} whileHover={reduceMotion ? undefined : { y: -3 }} className="rounded-[20px] border border-border/60 bg-background/55 p-4">
+              <Icon className="h-4.5 w-4.5 text-primary" />
+              <p className="mt-4 text-sm font-black">{value}</p>
+              <p className="mt-1 text-[10px] font-semibold text-muted-foreground">{label}</p>
+            </motion.div>
           ))}
         </section>
 
-        <section className="mt-9">
+        <section className="mt-7 rounded-[28px] border border-border/70 bg-card/72 p-3 shadow-soft backdrop-blur-xl sm:p-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search racing, story, horror, simulator…"
+              className="h-13 w-full rounded-2xl border border-border/70 bg-background/75 pl-11 pr-12 text-sm font-semibold outline-none transition placeholder:text-muted-foreground focus:border-primary/35 focus:ring-4 focus:ring-primary/8"
+            />
+            {query ? <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full hover:bg-muted" aria-label="Clear search"><X className="h-4 w-4" /></button> : null}
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {GAME_CATEGORIES.map((item) => {
+              const active = item === category;
+              const count = item === "All" ? BROWSER_GAMES.length : BROWSER_GAMES.filter((game) => game.categories.includes(item)).length;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCategory(item)}
+                  className={`shrink-0 rounded-full px-4 py-2 text-[11px] font-black transition ${active ? "bg-foreground text-background shadow-lg" : "border border-border/70 bg-background/55 text-muted-foreground hover:text-foreground"}`}
+                >
+                  {item} <span className={active ? "text-background/55" : "text-muted-foreground/60"}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {recentGames.length ? (
+          <GameRow title="Continue playing" subtitle="Recently launched on this device" icon={Clock3} games={recentGames.slice(0, 4)} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        ) : null}
+
+        {favoriteGames.length ? (
+          <GameRow title="Your favorites" subtitle="Saved locally on this device" icon={Heart} games={favoriteGames.slice(0, 4)} favorites={favorites} onToggleFavorite={toggleFavorite} />
+        ) : null}
+
+        <section className="mt-10">
           <div className="flex items-end justify-between gap-4">
-            <div><h2 className="text-2xl font-black tracking-[-0.04em]">Flux originals</h2><p className="mt-1 text-sm text-muted-foreground">Real playable games — not a world-builder shell.</p></div>
-            <span className="rounded-full border border-border bg-card px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground">More games later</span>
+            <div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-primary"><Star className="h-3.5 w-3.5" /> Curated for Flux</div>
+              <h2 className="mt-2 text-3xl font-black tracking-[-0.055em]">{category === "All" ? "All browser games" : category}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Good games only: cross-device, free to play and source available.</p>
+            </div>
+            <span className="hidden rounded-full border border-border bg-card px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground sm:block">{filteredGames.length} results</span>
           </div>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Link href="/games/flux-farm" className="group overflow-hidden rounded-[28px] border border-border/70 bg-card shadow-soft transition hover:-translate-y-1 hover:border-emerald-400/35 hover:shadow-[0_22px_60px_rgba(34,197,94,.14)]">
-              <div className="relative aspect-[16/10] overflow-hidden bg-[#335f39]"><FarmArtwork compact /><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" /><span className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/35 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white backdrop-blur-lg">Official</span><span className="absolute bottom-3 right-3 grid h-11 w-11 place-items-center rounded-full bg-white text-emerald-950 shadow-xl transition group-hover:scale-110"><ArrowRight className="h-5 w-5" /></span></div>
-              <div className="p-5"><div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-black">Flux Farm</h3><p className="mt-1 text-xs font-semibold text-muted-foreground">By Ripo Team</p></div><span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-[10px] font-black text-emerald-600">PLAYABLE</span></div><p className="mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">A story-driven 2D farming adventure with events, weather, progression, workers and online rankings.</p><div className="mt-4 flex flex-wrap gap-2 text-[10px] font-bold text-muted-foreground"><span className="rounded-full bg-muted px-2 py-1">Farming</span><span className="rounded-full bg-muted px-2 py-1">Story</span><span className="rounded-full bg-muted px-2 py-1">Simulation</span></div></div>
-            </Link>
+          <motion.div layout className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <AnimatePresence mode="popLayout">
+              {filteredGames.map((game, index) => (
+                <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={toggleFavorite} />
+              ))}
+            </AnimatePresence>
+          </motion.div>
 
-            <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-dashed border-border bg-card/45 p-8 text-center"><div><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-muted"><MoonStar className="h-6 w-6 text-muted-foreground" /></div><h3 className="mt-4 font-black">Next Flux original</h3><p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">The games shelf is ready. Flux Farm comes first, then new full games can be added here.</p></div></div>
+          {!filteredGames.length ? (
+            <div className="mt-5 grid min-h-64 place-items-center rounded-[28px] border border-dashed border-border bg-card/45 p-8 text-center">
+              <div><Search className="mx-auto h-8 w-8 text-muted-foreground" /><h3 className="mt-4 text-lg font-black">No matching game</h3><p className="mt-2 text-sm text-muted-foreground">Try another category or clear the search.</p></div>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-10 overflow-hidden rounded-[30px] border border-border/70 bg-[linear-gradient(135deg,rgba(124,58,237,.13),rgba(6,182,212,.08),transparent)] p-6 shadow-soft sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-violet-500"><Sparkles className="h-3.5 w-3.5" /> New Flux features</div>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.045em]">Favorites, recent games, sharing and safer launching.</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">Flux remembers your games on-device, lets you share a clean Flux game link and keeps source and license details visible before launch.</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 text-xs font-black"><ShieldCheck className="h-4 w-4 text-emerald-500" /> Verified catalog</div>
           </div>
         </section>
       </div>
@@ -79,21 +225,70 @@ export default function GamesPage() {
   );
 }
 
-function FarmArtwork({ compact = false }: { compact?: boolean }) {
+function GameRow({ title, subtitle, icon: Icon, games, favorites, onToggleFavorite }: {
+  title: string;
+  subtitle: string;
+  icon: typeof Clock3;
+  games: BrowserGame[];
+  favorites: string[];
+  onToggleFavorite: (slug: string) => void;
+}) {
   return (
-    <div className={compact ? "absolute inset-0 overflow-hidden" : "absolute inset-0 overflow-hidden"} aria-hidden="true">
-      <div className="absolute inset-0 bg-[linear-gradient(#87c9e8_0_45%,#79b86c_45%)]" />
-      <div className="absolute left-[58%] top-[11%] h-24 w-24 rounded-full bg-amber-200/90 blur-[1px]" />
-      <div className="absolute left-[66%] top-[22%] h-28 w-48 rounded-full bg-white/50 blur-xl" />
-      <div className="absolute bottom-0 left-[42%] h-[52%] w-[58%] rotate-[-4deg] rounded-tl-[55%] bg-[#5f9a54]" />
-      <div className="absolute bottom-[12%] right-[4%] h-[33%] w-[48%] -rotate-3 rounded-[24px] bg-[#8a5a36] shadow-2xl">
-        {Array.from({ length: 15 }).map((_, index) => <span key={index} className="absolute h-5 w-2 rounded-full bg-amber-300 shadow-[0_0_0_3px_rgba(65,122,54,.85)]" style={{ left: `${8 + (index % 5) * 19}%`, top: `${13 + Math.floor(index / 5) * 31}%`, transform: `rotate(${index % 2 ? 7 : -6}deg)` }} />)}
+    <section className="mt-9">
+      <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/10 text-primary"><Icon className="h-4.5 w-4.5" /></span><div><h2 className="text-xl font-black tracking-[-0.035em]">{title}</h2><p className="text-xs text-muted-foreground">{subtitle}</p></div></div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {games.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={onToggleFavorite} compact />)}
       </div>
-      <div className="absolute bottom-[23%] left-[8%] h-[29%] w-[26%] rounded-xl bg-[#f0d2a0] shadow-2xl"><div className="absolute -left-[8%] -top-[29%] h-[45%] w-[116%] -skew-x-12 bg-[#b64f43]" /><div className="absolute bottom-0 left-[42%] h-[48%] w-[24%] bg-[#6d352b]" /><div className="absolute left-[12%] top-[31%] h-[24%] w-[20%] bg-sky-200" /><div className="absolute right-[12%] top-[31%] h-[24%] w-[20%] bg-sky-200" /></div>
-      <div className="absolute bottom-[10%] left-[31%] h-[31%] w-[3%] rounded-full bg-[#6d472e]" /><div className="absolute bottom-[33%] left-[25%] h-[20%] w-[17%] rounded-full bg-[#2f7c45] shadow-[20px_8px_0_#3f8d4e,-18px_11px_0_#3f8d4e]" />
-      <div className="absolute bottom-[4%] left-[49%] h-[28%] w-[8%] rounded-[45%_45%_25%_25%] bg-[#6655df] shadow-2xl"><div className="absolute -top-[22%] left-[18%] h-[35%] w-[64%] rounded-full bg-[#efbd8e]" /></div>
-      <div className="absolute inset-x-0 bottom-0 h-[16%] bg-gradient-to-t from-black/20 to-transparent" />
-      {!compact ? <div className="absolute right-[12%] top-[8%] flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-3 py-2 text-[10px] font-black text-white backdrop-blur-xl"><Wind className="h-3.5 w-3.5" /> Living weather</div> : null}
-    </div>
+    </section>
+  );
+}
+
+function GameCard({ game, index, favorite, onToggleFavorite, compact = false }: {
+  game: BrowserGame;
+  index: number;
+  favorite: boolean;
+  onToggleFavorite: (slug: string) => void;
+  compact?: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: reduceMotion ? 0 : 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: reduceMotion ? 0 : 0.32, delay: Math.min(index * 0.035, 0.2) }}
+      whileHover={reduceMotion ? undefined : { y: -5 }}
+      className="group relative overflow-hidden rounded-[26px] border border-border/70 bg-card shadow-soft transition hover:border-primary/25 hover:shadow-[0_24px_70px_rgba(15,23,42,.15)]"
+    >
+      <Link href={hrefForGame(game)} className="block">
+        <div className={`relative overflow-hidden ${compact ? "aspect-[16/8]" : "aspect-[16/10]"}`}>
+          <GameCoverArt game={game} compact />
+          <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+            {game.categories.slice(0, compact ? 1 : 2).map((item) => <span key={item} className="rounded-full border border-white/15 bg-black/35 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.13em] text-white backdrop-blur-lg">{item}</span>)}
+          </div>
+          <button
+            type="button"
+            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleFavorite(game.slug); }}
+            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-black/35 text-white backdrop-blur-lg transition hover:scale-110 hover:bg-black/55"
+            aria-label={favorite ? `Remove ${game.title} from favorites` : `Add ${game.title} to favorites`}
+          >
+            <Heart className={`h-4 w-4 ${favorite ? "fill-rose-400 text-rose-400" : ""}`} />
+          </button>
+          <span className="absolute bottom-3 right-3 grid h-11 w-11 place-items-center rounded-full bg-white text-slate-950 shadow-xl transition group-hover:scale-110"><ArrowRight className="h-5 w-5" /></span>
+        </div>
+        <div className={compact ? "p-4" : "p-5"}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><h3 className={`${compact ? "text-base" : "text-xl"} truncate font-black tracking-[-0.035em]`}>{game.title}</h3><p className="mt-1 truncate text-[10px] font-bold text-muted-foreground">{game.author} · {game.status}</p></div>
+            {!compact ? <span className="shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[9px] font-black text-emerald-600">FREE</span> : null}
+          </div>
+          {!compact ? <p className="mt-4 line-clamp-2 text-sm leading-6 text-muted-foreground">{game.shortDescription}</p> : null}
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3 text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground">
+            <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> Mobile + PC</span>
+            <span className="flex items-center gap-1.5"><ExternalLink className="h-3.5 w-3.5" /> {game.license}</span>
+          </div>
+        </div>
+      </Link>
+    </motion.article>
   );
 }
