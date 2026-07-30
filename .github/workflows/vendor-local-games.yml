@@ -60,6 +60,7 @@ jobs:
           grep -q '/games-library/tux-racer/index.html' src/data/browser-games.ts
           ! grep -Eq 'window\.open\(game\.playUrl|src=\{game\.playUrl\}' src/components/game/browser-game-shell.tsx
 
+      # Vendored files are committed only after every Flux check passes.
       - name: Commit vendored games and local launcher
         run: |
           git config user.name "github-actions[bot]"
