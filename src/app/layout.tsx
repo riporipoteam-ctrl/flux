@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { MobileBoot } from "@/components/providers/mobile-boot";
 import "./globals.css";
+import "./social-effects.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -21,7 +22,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Flux 2.0 — Social, Games, Create",
   description:
-    "Flux is the social and gaming network by Ripo Team — connect, create, and grow your farm from any device.",
+    "Flux is the social and gaming network by Ripo Team — connect, create, share and play free browser games from mobile, tablet or PC.",
   applicationName: "Flux",
   authors: [{ name: "Ripo Team" }],
   manifest: `${basePath}/manifest.webmanifest`,
