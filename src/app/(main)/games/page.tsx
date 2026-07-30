@@ -8,7 +8,6 @@ import {
   Clock3,
   ExternalLink,
   Gamepad2,
-  Github,
   Heart,
   Search,
   ShieldCheck,
@@ -128,7 +127,7 @@ export default function GamesPage() {
                 <Gamepad2 className="h-5 w-5" /> Play TuxRacer.js <ArrowRight className="h-4 w-4" />
               </Link>
               <a href={hero.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex h-13 items-center gap-2 rounded-full border border-white/15 bg-white/8 px-6 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/14">
-                <Github className="h-5 w-5" /> Source
+                <ExternalLink className="h-5 w-5" /> Source
               </a>
             </div>
           </motion.div>
@@ -139,7 +138,7 @@ export default function GamesPage() {
             { icon: Smartphone, value: "Touch + PC", label: "Cross-device controls" },
             { icon: ShieldCheck, value: "No paid files", label: "Free to launch" },
             { icon: Zap, value: "Static", label: "No Flux game server" },
-            { icon: Github, value: `${BROWSER_GAMES.length} games`, label: "Source available" },
+            { icon: ExternalLink, value: `${BROWSER_GAMES.length} games`, label: "Source available" },
           ].map(({ icon: Icon, value, label }) => (
             <motion.div key={value} whileHover={reduceMotion ? undefined : { y: -3 }} className="rounded-[20px] border border-border/60 bg-background/55 p-4">
               <Icon className="h-4.5 w-4.5 text-primary" />
