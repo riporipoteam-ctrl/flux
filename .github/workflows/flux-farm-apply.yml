@@ -1,0 +1,136 @@
+name: Apply Flux Farm
+
+on:
+  push:
+    branches:
+      - feat/flux-farm
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    if: ${{ !contains(github.event.head_commit.message, '[flux-farm-applied]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/flux-farm
+          fetch-depth: 0
+
+      - name: Rebuild verified source archive
+        shell: bash
+        run: |
+          cat .github/flux-farm-source/part-* > /tmp/flux-farm-source.b64
+          test "$(wc -c < /tmp/flux-farm-source.b64)" = "36776"
+          echo "860a0fd8cb5cb0618314f34b94b3b4ac51a441ec0152d758ff86eda476fd295f  /tmp/flux-farm-source.b64" | sha256sum --check
+          base64 -d /tmp/flux-farm-source.b64 > /tmp/flux-farm-source.tar.gz
+          echo "8d4fcddd5e3c7662272904f34bd6325c1f3b647be2ca64e9af484242932a3541  /tmp/flux-farm-source.tar.gz" | sha256sum --check
+          tar -xzf /tmp/flux-farm-source.tar.gz -C .
+
+      - name: Replace Flux Plays security rules
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("firestore.rules")
+          source = path.read_text()
+          old = """    /* ---- Flux Plays: public game catalog and live 3D worlds ---- */
+              match /fluxPlayGames/{gameId} {
+                allow read: if resource.data.get('isPublic', true) == true
+                  || (isSignedIn() && resource.data.creatorUid == request.auth.uid);
+                allow create: if isSignedIn()
+                  && request.resource.data.creatorUid == request.auth.uid
+                  && request.resource.data.isOfficial != true;
+                allow update: if isSignedIn()
+                  && (
+                    resource.data.creatorUid == request.auth.uid
+                    || request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['plays', 'likes', 'activePlayers', 'updatedAt'])
+                  );
+                allow delete: if isOwner()
+                  || (isSignedIn() && resource.data.creatorUid == request.auth.uid);
+              }
+
+              match /fluxPlayWorlds/{gameId} {
+                allow read, create, update: if isSignedIn();
+                allow delete: if isAdmin();
+
+                match /players/{uid} {
+                  allow read: if isSignedIn();
+                  allow create, update, delete: if isSelf(uid);
+                }
+
+                match /blocks/{blockId} {
+                  allow read: if isSignedIn();
+                  allow create: if isSignedIn()
+                    && request.resource.data.creatorUid == request.auth.uid;
+                  allow update: if isSignedIn()
+                    && resource.data.creatorUid == request.auth.uid;
+                  allow delete: if isSignedIn()
+                    && (resource.data.creatorUid == request.auth.uid || isAdmin());
+                }
+              }
+          """
+          new = """    /* ---- Flux Farm: cloud saves and public player rankings ---- */
+              match /fluxFarmSaves/{uid} {
+                allow read: if true;
+                allow create, update: if isSelf(uid)
+                  && request.resource.data.uid == request.auth.uid
+                  && request.resource.data.xp is number
+                  && request.resource.data.xp >= 0
+                  && request.resource.data.coins is number
+                  && request.resource.data.coins >= 0
+                  && request.resource.data.day is number
+                  && request.resource.data.day >= 1;
+                allow delete: if isSelf(uid) || isAdmin();
+              }
+          """
+          if old not in source:
+              raise SystemExit("Expected Flux Plays rules block was not found")
+          path.write_text(source.replace(old, new))
+          PY
+
+      - name: Remove the retired Flux Plays runtime
+        shell: bash
+        run: |
+          rm -f src/app/play/page.tsx
+          rm -f src/components/game/flux-plays-world.tsx
+          rm -f src/services/flux-plays.ts
+          rm -f public/game-thumbs/flux-plays-hero.png
+          if grep -R -n -E "Flux Plays|flux-plays|fluxPlay" src firestore.rules; then
+            echo "Flux Plays references remain"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build GitHub Pages export
+        env:
+          GITHUB_PAGES: "true"
+          GITHUB_REPOSITORY: riporipoteam-ctrl/flux
+        run: npm run build
+
+      - name: Verify game routes
+        shell: bash
+        run: |
+          test -f out/games/index.html
+          test -f out/games/flux-farm/index.html
+
+      - name: Commit verified game
+        shell: bash
+        run: |
+          rm -rf .github/flux-farm-payload .github/flux-farm-source
+          rm -f .github/workflows/flux-farm-apply.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Build Flux Farm [flux-farm-applied]"
+          git push origin feat/flux-farm
