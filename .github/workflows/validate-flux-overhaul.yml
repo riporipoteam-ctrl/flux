@@ -36,6 +36,9 @@ jobs:
       - name: Recovery regression audit
         run: node scripts/recovery-audit.mjs
 
+      - name: Product redesign audit
+        run: node scripts/product-redesign-audit.mjs
+
       - name: TypeScript check
         run: npx tsc --noEmit
 
