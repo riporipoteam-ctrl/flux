@@ -17,6 +17,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { assertContentAllowed } from "@/lib/automod";
 import { getUser } from "./users";
 import { isFollowing } from "./follows";
 import type { UserProfile } from "@/types";
@@ -132,6 +133,7 @@ export async function createGroupConversation(input: {
   const members = [...new Set(input.memberIds.filter((uid) => uid && uid !== input.ownerId))];
   if (members.length < 2) throw new Error("Choose at least two friends for a group chat");
   if (members.length > 49) throw new Error("Group chats support up to 50 people");
+  assertContentAllowed(input.name, "group");
 
   const checks = await Promise.all(members.map((uid) => areFriends(input.ownerId, uid)));
   if (checks.some((allowed) => !allowed)) {
@@ -188,6 +190,7 @@ export async function sendMessage(
   const text = (payload.text || "").trim();
   const hasAttachment = !!(payload.mediaUrl || payload.sharedPostId || payload.sharedStoryId);
   if (!text && !hasAttachment) return;
+  if (text) assertContentAllowed(text, "message");
 
   const conversationRef = doc(db, "conversations", conversationId);
   const conversationSnap = await getDoc(conversationRef);
@@ -257,7 +260,7 @@ export function subscribeMessages(conversationId: string, cb: (messages: ChatMes
       const ids = [...new Set(messages.map((message) => message.senderId))];
       const users = await Promise.all(ids.map((id) => getUser(id)));
       const userMap = new Map(users.filter(Boolean).map((profile) => [profile!.uid, profile!]));
-      cb(messages.map((message) => ({ ...message, sender: userMap.get(message.senderId) ?? null })));
+      cb(messages.map((message) => ({ ...message, sender: userMap.get(message.senderId) ?? null }))
     },
     () => cb([])
   );
