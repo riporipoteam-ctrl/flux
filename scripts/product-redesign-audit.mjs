@@ -23,7 +23,7 @@ requireText(askAI, "Remote AskAI was unavailable", "AskAI failure fallback");
 requireText(askAI, "One input. Local first.", "AskAI product UI");
 
 const story = read("src/components/stories/story-studio-v3.tsx");
-for (const marker of ["addText", "beginGesture", "undo", "redo", "snapGuides", "showSafeArea", "Bring forward", "Hide layer", "Story draft autosave"]) {
+for (const marker of ["addText", "beginGesture", "undo", "redo", "snapGuides", "showSafeArea", "Bring forward", "Hide layer", "localStorage.setItem(DRAFT_KEY"]) {
   requireText(story, marker, "Story Studio v3");
 }
 const storyService = read("src/services/stories.ts");
