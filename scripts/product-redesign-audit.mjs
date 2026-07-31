@@ -33,7 +33,7 @@ requireText(storyViewer, "StoryLayerRenderer", "Story viewer layer rendering");
 requireText(storyViewer, "QUICK_REACTIONS", "Story reactions");
 
 const studio = read("src/components/studio/studio-product-v3.tsx");
-for (const marker of ["SceneWorkspace", "ObjectInspector", "runStudioCommand", "generateSceneCode", "beginDrag", "resize", "Visual version history"]) {
+for (const marker of ["SceneWorkspace", "ObjectInspector", "runStudioCommand", "generateSceneCode", "beginDrag", "resize", "Restore visual scene and code together."]) {
   requireText(studio, marker, "Studio v3");
 }
 
