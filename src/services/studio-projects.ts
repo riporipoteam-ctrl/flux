@@ -11,11 +11,40 @@ import {
 import { db } from "@/lib/firebase";
 
 export type GeneratedProjectKind = "game" | "website";
+export type StudioObjectType = "rectangle" | "circle" | "text" | "button" | "image";
+
+export interface StudioSceneObject {
+  id: string;
+  type: StudioObjectType;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  fill: string;
+  text: string;
+  textColor: string;
+  fontSize: number;
+  borderRadius: number;
+  opacity: number;
+  imageUrl?: string;
+  locked?: boolean;
+  hidden?: boolean;
+}
+
+export interface StudioScene {
+  background: string;
+  width: number;
+  height: number;
+  objects: StudioSceneObject[];
+}
 
 export interface StudioRevision {
   id: string;
   label: string;
   code: string;
+  scene?: StudioScene;
   createdAt: number;
 }
 
@@ -41,6 +70,7 @@ export interface GeneratedProject {
   selectedAssetIds: string[];
   assistantHistory?: StudioAssistantMessage[];
   revisions?: StudioRevision[];
+  scene?: StudioScene;
   createdAt: number;
   updatedAt: number;
   publishedId?: string | null;
@@ -68,6 +98,82 @@ function browserStorage(): Storage | null {
   return typeof window === "undefined" ? null : window.localStorage;
 }
 
+export function createDefaultScene(): StudioScene {
+  return {
+    background: "#0b1020",
+    width: 960,
+    height: 540,
+    objects: [
+      {
+        id: `text-${Date.now()}`,
+        type: "text",
+        name: "Title",
+        x: 220,
+        y: 92,
+        width: 520,
+        height: 80,
+        rotation: 0,
+        fill: "transparent",
+        text: "My Flux Game",
+        textColor: "#ffffff",
+        fontSize: 48,
+        borderRadius: 0,
+        opacity: 1,
+      },
+      {
+        id: `button-${Date.now() + 1}`,
+        type: "button",
+        name: "Play button",
+        x: 350,
+        y: 380,
+        width: 260,
+        height: 72,
+        rotation: 0,
+        fill: "#ffffff",
+        text: "Play",
+        textColor: "#111111",
+        fontSize: 24,
+        borderRadius: 36,
+        opacity: 1,
+      },
+    ],
+  };
+}
+
+function normalizeObject(value: StudioSceneObject, index: number): StudioSceneObject {
+  const type: StudioObjectType = ["rectangle", "circle", "text", "button", "image"].includes(value.type) ? value.type : "rectangle";
+  return {
+    id: value.id || `object-${Date.now()}-${index}`,
+    type,
+    name: value.name || `${type} ${index + 1}`,
+    x: clamp(Number(value.x || 0), 0, 1920),
+    y: clamp(Number(value.y || 0), 0, 1080),
+    width: clamp(Number(value.width || 120), 20, 1920),
+    height: clamp(Number(value.height || 80), 12, 1080),
+    rotation: clamp(Number(value.rotation || 0), -180, 180),
+    fill: value.fill || "#ffffff",
+    text: value.text || "",
+    textColor: value.textColor || "#111111",
+    fontSize: clamp(Number(value.fontSize || 20), 8, 160),
+    borderRadius: clamp(Number(value.borderRadius || 0), 0, 500),
+    opacity: clamp(Number(value.opacity ?? 1), .1, 1),
+    imageUrl: value.imageUrl || "",
+    locked: value.locked === true,
+    hidden: value.hidden === true,
+  };
+}
+
+function normalizeScene(scene?: StudioScene): StudioScene {
+  const fallback = createDefaultScene();
+  if (!scene) return fallback;
+  return {
+    background: scene.background || fallback.background,
+    width: clamp(Number(scene.width || 960), 320, 1920),
+    height: clamp(Number(scene.height || 540), 240, 1080),
+    objects: Array.isArray(scene.objects) ? scene.objects.slice(0, 100).map(normalizeObject) : fallback.objects,
+  };
+}
+
 function normalizeProject(project: GeneratedProject): GeneratedProject {
   return {
     ...project,
@@ -76,7 +182,8 @@ function normalizeProject(project: GeneratedProject): GeneratedProject {
     hashtags: Array.isArray(project.hashtags) ? project.hashtags : [],
     selectedAssetIds: Array.isArray(project.selectedAssetIds) ? project.selectedAssetIds : [],
     assistantHistory: Array.isArray(project.assistantHistory) ? project.assistantHistory.slice(-80) : [],
-    revisions: Array.isArray(project.revisions) ? project.revisions.slice(-30) : [],
+    revisions: Array.isArray(project.revisions) ? project.revisions.slice(-30).map((revision) => ({ ...revision, scene: revision.scene ? normalizeScene(revision.scene) : undefined })) : [],
+    scene: normalizeScene(project.scene),
     thumbnailFileName: project.thumbnailFileName || null,
     multiplayer: project.multiplayer === true,
     maxPlayers: Math.max(1, Math.min(50, Number(project.maxPlayers || 1))),
@@ -118,6 +225,7 @@ export function createProjectRevision(project: GeneratedProject, label: string):
     id: `revision-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     label: label.trim().slice(0, 80) || "Saved revision",
     code: project.code,
+    scene: project.scene ? structuredClone(project.scene) : undefined,
     createdAt: Date.now(),
   };
   return saveLocalProject({ ...project, revisions: [...(project.revisions || []), revision].slice(-30) });
@@ -126,7 +234,7 @@ export function createProjectRevision(project: GeneratedProject, label: string):
 export function restoreProjectRevision(project: GeneratedProject, revisionId: string): GeneratedProject {
   const revision = project.revisions?.find((item) => item.id === revisionId);
   if (!revision) return project;
-  return saveLocalProject({ ...project, code: revision.code });
+  return saveLocalProject({ ...project, code: revision.code, scene: revision.scene ? structuredClone(revision.scene) : project.scene });
 }
 
 export function deleteLocalProject(id: string): void {
@@ -156,6 +264,7 @@ export async function publishCommunityGame(project: GeneratedProject): Promise<s
     multiplayer: project.multiplayer,
     maxPlayers: Math.max(1, Math.min(50, project.maxPlayers || 1)),
     selectedAssetIds: project.selectedAssetIds.slice(0, 100),
+    scene: project.scene || null,
     visits: existing.exists() ? Number(existing.data().visits || 0) : 0,
     cheers: existing.exists() ? Number(existing.data().cheers || 0) : 0,
     createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(),
@@ -219,4 +328,8 @@ export async function recordCommunityGameVisit(id: string): Promise<void> {
 
 export async function cheerCommunityGame(id: string): Promise<void> {
   await updateDoc(doc(db, "publishedRooms", id), { cheers: increment(1), updatedAt: serverTimestamp() });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
