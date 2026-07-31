@@ -7,6 +7,7 @@ import { MobileBoot } from "@/components/providers/mobile-boot";
 import "./globals.css";
 import "./social-effects.css";
 import "./polish.css";
+import "./social-rebuild.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -21,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flux 2.0 — Social, Games, Create",
+  title: "Flux — Social, Games, Create",
   description:
     "Flux is the social and gaming network by Ripo Team — connect, create, share and play free browser games from mobile, tablet or PC.",
   applicationName: "Flux",
@@ -29,16 +30,16 @@ export const metadata: Metadata = {
   manifest: `${basePath}/manifest.webmanifest`,
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Flux",
   },
   icons: {
     icon: [
-      { url: `${basePath}/favicon.ico?v=flux-20260722`, type: "image/x-icon", sizes: "256x256" },
-      { url: `${basePath}/flux-icon.png?v=flux-20260722`, type: "image/png", sizes: "1024x1024" },
+      { url: `${basePath}/favicon.ico?v=flux-20260731`, type: "image/x-icon", sizes: "256x256" },
+      { url: `${basePath}/flux-icon.png?v=flux-20260731`, type: "image/png", sizes: "1024x1024" },
     ],
-    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-20260722`, type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: `${basePath}/flux-icon.png?v=flux-20260722`, type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-20260731`, type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: `${basePath}/flux-icon.png?v=flux-20260731`, type: "image/png", sizes: "180x180" }],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -47,8 +48,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f8fc" },
-    { media: "(prefers-color-scheme: dark)", color: "#060814" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
   width: "device-width",
   initialScale: 1,

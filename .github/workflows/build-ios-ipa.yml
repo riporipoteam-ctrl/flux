@@ -1,0 +1,88 @@
+name: Build Flux iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "capacitor.config.ts"
+      - "next.config.ts"
+      - "package*.json"
+      - ".github/workflows/build-ios-ipa.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flux-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      CAPACITOR_BUILD: "true"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Exclude server-only routes from the native static build
+        run: mv src/app/api .native-api
+
+      - name: Build bundled Flux web app
+        run: npm run build
+
+      - name: Generate and sync iOS project
+        run: |
+          rm -rf ios
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Build unsigned iPhone application
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="build/ios/Build/Products/Release-iphoneos/App.app"
+          test -d "$APP_PATH"
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/Flux.app
+          cd build
+          /usr/bin/zip -qry Flux-unsigned.ipa Payload
+          shasum -a 256 Flux-unsigned.ipa > Flux-unsigned.ipa.sha256
+
+      - name: Upload Flux IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Flux-iOS-unsigned
+          path: |
+            build/Flux-unsigned.ipa
+            build/Flux-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 30

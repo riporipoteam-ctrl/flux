@@ -19,7 +19,7 @@ export function UserAvatar({
 }: {
   user?: Pick<UserProfile, "displayName" | "avatarUrl" | "username"> | null;
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   ring?: boolean;
   animate?: boolean;
   clickable?: boolean;
@@ -27,6 +27,7 @@ export function UserAvatar({
 }) {
   const [open, setOpen] = useState(false);
   const sizes = {
+    xs: "h-6 w-6 text-[9px]",
     sm: "h-8 w-8 text-xs",
     md: "h-11 w-11 text-sm",
     lg: "h-14 w-14 text-base",
@@ -71,10 +72,7 @@ export function UserAvatar({
           )}
         >
           {user?.avatarUrl ? (
-            <AvatarImage
-              src={assetUrl(user.avatarUrl)}
-              alt={user.displayName || "User"}
-            />
+            <AvatarImage src={assetUrl(user.avatarUrl)} alt={user.displayName || "User"} />
           ) : null}
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
