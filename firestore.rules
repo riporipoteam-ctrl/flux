@@ -39,6 +39,11 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/calls/$(callId)).data.participantIds;
     }
 
+    function isLiveHost(streamId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/liveStreams/$(streamId)).data.hostId == request.auth.uid;
+    }
+
     match /users/{uid} {
       allow read: if true;
       allow create: if isSelf(uid)
@@ -288,19 +293,45 @@ service cloud.firestore {
     match /liveStreams/{streamId} {
       allow read: if true;
       allow create: if signedIn() && request.resource.data.hostId == request.auth.uid;
-      allow update, delete: if signedIn()
+      allow update: if signedIn() && (
+        resource.data.hostId == request.auth.uid
+        || isAdmin()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount'])
+      );
+      allow delete: if signedIn()
         && (resource.data.hostId == request.auth.uid || isAdmin());
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+        allow create: if signedIn()
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.text.size() <= 300;
         allow update, delete: if signedIn()
-          && (resource.data.authorId == request.auth.uid || isAdmin());
+          && (resource.data.authorId == request.auth.uid || isLiveHost(streamId) || isAdmin());
       }
 
       match /viewers/{uid} {
         allow read: if signedIn();
         allow create, update, delete: if isSelf(uid);
+      }
+
+      match /peers/{viewerId} {
+        allow read: if signedIn();
+        allow create: if isSelf(viewerId);
+        allow update: if signedIn() && (isSelf(viewerId) || isLiveHost(streamId));
+        allow delete: if signedIn() && (isSelf(viewerId) || isLiveHost(streamId) || isAdmin());
+
+        match /hostCandidates/{candidateId} {
+          allow read: if signedIn();
+          allow create: if isLiveHost(streamId);
+          allow update, delete: if false;
+        }
+
+        match /viewerCandidates/{candidateId} {
+          allow read: if signedIn();
+          allow create: if isSelf(viewerId);
+          allow update, delete: if false;
+        }
       }
     }
 
