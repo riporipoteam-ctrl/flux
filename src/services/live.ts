@@ -62,6 +62,8 @@ export interface LiveViewerAnalytics {
   activeViewers: number;
   uniqueViewers: number;
   totalWatchSeconds: number;
+  likesCount: number;
+  sharesCount: number;
 }
 
 function mapStream(id: string, data: DocumentData): FluxLiveStream {
@@ -188,7 +190,12 @@ export async function joinLiveStream(streamId: string, viewerId: string): Promis
     joinedAt: serverTimestamp(),
     lastSeenAt: serverTimestamp(),
     sessionsCount: increment(1),
-    ...(existing.exists() ? {} : { firstJoinedAt: serverTimestamp(), watchedSeconds: 0 }),
+    ...(existing.exists() ? {} : {
+      firstJoinedAt: serverTimestamp(),
+      watchedSeconds: 0,
+      liked: false,
+      sharesCount: 0,
+    }),
   }, { merge: true });
 }
 
@@ -217,26 +224,35 @@ export function subscribeLiveViewerAnalytics(
     const now = Date.now();
     let activeViewers = 0;
     let totalWatchSeconds = 0;
+    let likesCount = 0;
+    let sharesCount = 0;
 
     for (const viewer of snap.docs) {
       const data = viewer.data();
       const lastSeen = timestampMs(data.lastSeenAt);
       if (data.active === true && lastSeen > now - 70_000) activeViewers += 1;
       totalWatchSeconds += Number(data.watchedSeconds || 0);
+      if (data.liked === true) likesCount += 1;
+      sharesCount += Number(data.sharesCount || 0);
     }
 
     callback({
       activeViewers,
       uniqueViewers: snap.size,
       totalWatchSeconds,
+      likesCount,
+      sharesCount,
     });
-  }, () => callback({ activeViewers: 0, uniqueViewers: 0, totalWatchSeconds: 0 }));
+  }, () => callback({
+    activeViewers: 0,
+    uniqueViewers: 0,
+    totalWatchSeconds: 0,
+    likesCount: 0,
+    sharesCount: 0,
+  }));
 }
 
-export async function syncLiveAnalytics(
-  streamId: string,
-  analytics: LiveViewerAnalytics & { likesCount?: number; sharesCount?: number }
-): Promise<void> {
+export async function syncLiveAnalytics(streamId: string, analytics: LiveViewerAnalytics): Promise<void> {
   const ref = doc(db, "liveStreams", streamId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
@@ -246,35 +262,29 @@ export async function syncLiveAnalytics(
     peakViewers: peak,
     uniqueViewers: analytics.uniqueViewers,
     totalWatchSeconds: analytics.totalWatchSeconds,
-    ...(typeof analytics.likesCount === "number" ? { likesCount: analytics.likesCount } : {}),
-    ...(typeof analytics.sharesCount === "number" ? { sharesCount: analytics.sharesCount } : {}),
+    likesCount: analytics.likesCount,
+    sharesCount: analytics.sharesCount,
   });
 }
 
 export async function toggleLiveLike(streamId: string, uid: string): Promise<boolean> {
-  const ref = doc(db, "liveStreams", streamId, "hearts", uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    await deleteDoc(ref);
-    return false;
-  }
-  await setDoc(ref, { userId: uid, createdAt: serverTimestamp() });
-  return true;
-}
-
-export function subscribeLiveLikes(streamId: string, callback: (count: number) => void): Unsubscribe {
-  return onSnapshot(collection(db, "liveStreams", streamId, "hearts"), (snap) => callback(snap.size), () => callback(0));
+  const viewerRef = doc(db, "liveStreams", streamId, "viewers", uid);
+  const snap = await getDoc(viewerRef);
+  const liked = snap.data()?.liked === true;
+  await setDoc(viewerRef, {
+    viewerId: uid,
+    liked: !liked,
+    lastSeenAt: serverTimestamp(),
+  }, { merge: true });
+  return !liked;
 }
 
 export async function recordLiveShare(streamId: string, uid: string): Promise<void> {
-  await addDoc(collection(db, "liveStreams", streamId, "shares"), {
-    userId: uid,
-    createdAt: serverTimestamp(),
-  });
-}
-
-export function subscribeLiveShares(streamId: string, callback: (count: number) => void): Unsubscribe {
-  return onSnapshot(collection(db, "liveStreams", streamId, "shares"), (snap) => callback(snap.size), () => callback(0));
+  await setDoc(doc(db, "liveStreams", streamId, "viewers", uid), {
+    viewerId: uid,
+    sharesCount: increment(1),
+    lastSeenAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 export async function createLivePeer(streamId: string, viewerId: string): Promise<void> {
