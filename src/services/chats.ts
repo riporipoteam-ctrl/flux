@@ -133,7 +133,6 @@ export async function createGroupConversation(input: {
   const members = [...new Set(input.memberIds.filter((uid) => uid && uid !== input.ownerId))];
   if (members.length < 2) throw new Error("Choose at least two friends for a group chat");
   if (members.length > 49) throw new Error("Group chats support up to 50 people");
-  assertContentAllowed(input.name, "group");
 
   const checks = await Promise.all(members.map((uid) => areFriends(input.ownerId, uid)));
   if (checks.some((allowed) => !allowed)) {
@@ -226,7 +225,13 @@ export async function sendMessage(
     createdAt: serverTimestamp(),
   });
 
-  const preview = text || (payload.mediaType === "image" ? "Photo" : payload.mediaType === "video" ? "Video" : payload.mediaType === "gif" ? "GIF" : payload.sharedPostId ? "Shared a post" : payload.sharedStoryId ? "Shared a story" : "File");
+  const preview = text || (
+    payload.mediaType === "image" ? "Photo" :
+    payload.mediaType === "video" ? "Video" :
+    payload.mediaType === "gif" ? "GIF" :
+    payload.sharedPostId ? "Shared a post" :
+    payload.sharedStoryId ? "Shared a story" : "File"
+  );
   await updateDoc(conversationRef, {
     lastMessage: preview.slice(0, 200),
     lastMessageAt: serverTimestamp(),
@@ -260,7 +265,7 @@ export function subscribeMessages(conversationId: string, cb: (messages: ChatMes
       const ids = [...new Set(messages.map((message) => message.senderId))];
       const users = await Promise.all(ids.map((id) => getUser(id)));
       const userMap = new Map(users.filter(Boolean).map((profile) => [profile!.uid, profile!]));
-      cb(messages.map((message) => ({ ...message, sender: userMap.get(message.senderId) ?? null }))
+      cb(messages.map((message) => ({ ...message, sender: userMap.get(message.senderId) ?? null })));
     },
     () => cb([])
   );
