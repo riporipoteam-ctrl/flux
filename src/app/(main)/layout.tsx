@@ -18,8 +18,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isMessages = pathname?.startsWith("/messages");
   const isCall = pathname?.startsWith("/messages/call");
   const isGames = pathname?.startsWith("/games");
-  const isImmersive = isAskAI || isCall;
-  const hideRail = isAskAI || isMessages || isGames;
+  const isLive = pathname?.startsWith("/live");
+  const isLiveRoom = pathname?.startsWith("/live/create") || pathname?.startsWith("/live/view");
+  const isImmersive = isAskAI || isCall || isLiveRoom;
+  const hideRail = isAskAI || isMessages || isGames || isLive;
 
   useEffect(() => {
     if (loading) return;
