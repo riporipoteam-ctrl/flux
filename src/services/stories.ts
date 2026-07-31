@@ -18,15 +18,30 @@ import { getUser } from "@/services/users";
 import type { UserProfile } from "@/types";
 
 export type StoryMediaType = "image" | "video";
+export type StoryLayerKind = "emoji" | "label" | "text" | "shape";
+export type StoryShape = "rectangle" | "circle" | "pill" | "line";
+export type StoryFont = "sans" | "display" | "serif" | "mono";
+export type StoryAlign = "left" | "center" | "right";
 
 export interface StorySticker {
   id: string;
-  kind: "emoji" | "label";
+  kind: StoryLayerKind;
   value: string;
   x: number;
   y: number;
   scale: number;
   rotation: number;
+  width?: number;
+  opacity?: number;
+  color?: string;
+  background?: string;
+  fontSize?: number;
+  fontFamily?: StoryFont;
+  fontWeight?: number;
+  align?: StoryAlign;
+  shape?: StoryShape;
+  locked?: boolean;
+  hidden?: boolean;
 }
 
 export interface FluxStory {
@@ -68,6 +83,46 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
   return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
 }
 
+function storyLayerKind(value: unknown): StoryLayerKind {
+  return value === "label" || value === "text" || value === "shape" ? value : "emoji";
+}
+
+function storyShape(value: unknown): StoryShape {
+  return value === "circle" || value === "pill" || value === "line" ? value : "rectangle";
+}
+
+function storyFont(value: unknown): StoryFont {
+  return value === "display" || value === "serif" || value === "mono" ? value : "sans";
+}
+
+function storyAlign(value: unknown): StoryAlign {
+  return value === "left" || value === "right" ? value : "center";
+}
+
+function mapLayer(item: Record<string, unknown>, index: number): StorySticker {
+  const kind = storyLayerKind(item.kind);
+  return {
+    id: String(item.id || `layer-${index}`),
+    kind,
+    value: String(item.value || (kind === "shape" ? "" : kind === "text" ? "Text" : "✨")).slice(0, kind === "text" ? 240 : 40),
+    x: clampNumber(item.x, 2, 98, 50),
+    y: clampNumber(item.y, 2, 98, 50),
+    scale: clampNumber(item.scale, 0.15, 5, 1),
+    rotation: clampNumber(item.rotation, -180, 180, 0),
+    width: clampNumber(item.width, 12, 94, kind === "text" ? 72 : 36),
+    opacity: clampNumber(item.opacity, 0.1, 1, 1),
+    color: String(item.color || (kind === "shape" ? "#ffffff" : "#ffffff")).slice(0, 32),
+    background: String(item.background || (kind === "label" ? "#ffffff" : "transparent")).slice(0, 40),
+    fontSize: clampNumber(item.fontSize, 12, 96, kind === "text" ? 32 : 18),
+    fontFamily: storyFont(item.fontFamily),
+    fontWeight: clampNumber(item.fontWeight, 300, 900, kind === "text" ? 800 : 700),
+    align: storyAlign(item.align),
+    shape: storyShape(item.shape),
+    locked: item.locked === true,
+    hidden: item.hidden === true,
+  };
+}
+
 function mapStory(id: string, data: DocumentData): FluxStory {
   return {
     id,
@@ -84,16 +139,8 @@ function mapStory(id: string, data: DocumentData): FluxStory {
     stickers: Array.isArray(data.stickers)
       ? data.stickers
           .filter((item: unknown) => Boolean(item && typeof item === "object"))
-          .slice(0, 30)
-          .map((item: Record<string, unknown>, index: number) => ({
-            id: String(item.id || `sticker-${index}`),
-            kind: item.kind === "label" ? "label" : "emoji",
-            value: String(item.value || "✨").slice(0, 40),
-            x: clampNumber(item.x, 4, 96, 50),
-            y: clampNumber(item.y, 4, 96, 50),
-            scale: clampNumber(item.scale, 0.25, 4, 1),
-            rotation: clampNumber(item.rotation, -180, 180, 0),
-          }))
+          .slice(0, 40)
+          .map((item: Record<string, unknown>, index: number) => mapLayer(item, index))
       : [],
     viewsCount: Number(data.viewsCount || 0),
     createdAt: data.createdAt || null,
@@ -127,18 +174,11 @@ export async function createStory(input: {
 }): Promise<string> {
   const text = (input.text || "").trim().slice(0, 240);
   const stickers = (input.stickers || [])
-    .slice(0, 30)
-    .map((item) => ({
-      ...item,
-      value: item.value.slice(0, 40),
-      x: clampNumber(item.x, 4, 96, 50),
-      y: clampNumber(item.y, 4, 96, 50),
-      scale: clampNumber(item.scale, 0.25, 4, 1),
-      rotation: clampNumber(item.rotation, -180, 180, 0),
-    }));
+    .slice(0, 40)
+    .map((item, index) => mapLayer(item as unknown as Record<string, unknown>, index));
 
-  if (!input.file && !text && stickers.length === 0) {
-    throw new Error("Add a photo, video, text, or sticker first.");
+  if (!input.file && !text && stickers.filter((item) => !item.hidden).length === 0) {
+    throw new Error("Add a photo, video, text, shape, or sticker first.");
   }
 
   if (input.file && !input.file.type.startsWith("image/") && !input.file.type.startsWith("video/")) {
@@ -162,10 +202,7 @@ export async function createStory(input: {
     const extension = preparedFile.name.split(".").pop() || (mediaType === "video" ? "mp4" : "webp");
 
     try {
-      mediaUrl = await uploadImage(
-        `stories/${input.authorId}/${storyRef.id}/${Date.now()}.${extension}`,
-        preparedFile
-      );
+      mediaUrl = await uploadImage(`stories/${input.authorId}/${storyRef.id}/${Date.now()}.${extension}`, preparedFile);
       mediaStorage = "firebase";
     } catch (error) {
       if (mediaType === "video") {
@@ -193,6 +230,7 @@ export async function createStory(input: {
     designId: input.designId || (input.file ? null : "ocean"),
     musicId: input.musicId || null,
     stickers,
+    editorVersion: 3,
     viewsCount: 0,
     createdAt: serverTimestamp(),
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -236,14 +274,8 @@ export async function markStoryViewed(storyId: string, viewerId: string): Promis
     if (!storySnap.exists()) return;
 
     if (!viewSnap.exists()) {
-      transaction.set(viewRef, {
-        viewerId,
-        viewedAt: serverTimestamp(),
-        firstViewedAt: serverTimestamp(),
-      });
-      transaction.update(storyRef, {
-        viewsCount: Number(storySnap.data().viewsCount || 0) + 1,
-      });
+      transaction.set(viewRef, { viewerId, viewedAt: serverTimestamp(), firstViewedAt: serverTimestamp() });
+      transaction.update(storyRef, { viewsCount: Number(storySnap.data().viewsCount || 0) + 1 });
       return;
     }
 
@@ -252,13 +284,8 @@ export async function markStoryViewed(storyId: string, viewerId: string): Promis
 }
 
 export async function getStoryViewers(storyId: string): Promise<StoryViewerProfile[]> {
-  const snap = await getDocs(
-    query(collection(db, "stories", storyId, "views"), orderBy("viewedAt", "desc"), limit(250))
-  );
-  const rows = snap.docs.map((item) => ({
-    uid: String(item.data().viewerId || item.id),
-    viewedAt: (item.data().viewedAt || null) as Timestamp | null,
-  }));
+  const snap = await getDocs(query(collection(db, "stories", storyId, "views"), orderBy("viewedAt", "desc"), limit(250)));
+  const rows = snap.docs.map((item) => ({ uid: String(item.data().viewerId || item.id), viewedAt: (item.data().viewedAt || null) as Timestamp | null }));
   const profiles = await Promise.all(rows.map((item) => getUser(item.uid)));
   return rows.map((item, index) => ({ ...item, profile: profiles[index] || null }));
 }
