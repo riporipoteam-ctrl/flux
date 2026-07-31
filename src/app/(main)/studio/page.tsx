@@ -1,5 +1,5 @@
-import StudioWorkspaceV2 from "@/components/studio/studio-workspace-v2";
+import StudioProductV3 from "@/components/studio/studio-product-v3";
 
 export default function StudioPage() {
-  return <StudioWorkspaceV2 />;
+  return <StudioProductV3 />;
 }
