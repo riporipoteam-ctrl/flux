@@ -1,5 +1,5 @@
-import StoryStudioV2 from "@/components/stories/story-studio-v2";
+import StoryStudioV3 from "@/components/stories/story-studio-v3";
 
 export default function CreateStoryPage() {
-  return <StoryStudioV2 />;
+  return <StoryStudioV3 />;
 }
