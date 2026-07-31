@@ -1,3 +1,5 @@
+import { STORY_MUSIC } from "@/lib/story-music";
+
 export type StudioAssetKind = "3d" | "2d" | "texture" | "animation" | "sfx" | "music" | "template";
 
 export interface StudioMarketplaceAsset {
@@ -5,11 +7,12 @@ export interface StudioMarketplaceAsset {
   name: string;
   kind: StudioAssetKind;
   collection: string;
-  source: "Kenney" | "Quaternius" | "OpenGameArt";
+  source: "Kenney" | "Quaternius" | "OpenGameArt" | "FreePD";
   sourceUrl: string;
   license: string;
   tags: string[];
-  previewTone?: number;
+  previewUrl?: string;
+  artist?: string;
 }
 
 const PACKS: Array<{
@@ -89,9 +92,9 @@ const PACKS: Array<{
     collection: "Community Audio",
     sourceUrl: "https://opengameart.org/art-search-advanced?keys=&field_art_type_tid%5B%5D=13",
     license: "License varies per asset — verify before publishing",
-    kinds: ["sfx", "music"],
-    names: ["Menu Click", "Coin Pickup", "Power Up", "Explosion", "Footstep", "Jump", "Victory Loop", "Battle Loop", "Ambient Forest", "Space Ambience"],
-    tags: ["audio", "sound", "music"],
+    kinds: ["sfx"],
+    names: ["Menu Click", "Coin Pickup", "Power Up", "Explosion", "Footstep", "Jump", "Victory Stinger", "Battle Hit", "Forest Ambience", "Space Ambience"],
+    tags: ["audio", "sound", "sfx"],
   },
   {
     source: "Kenney",
@@ -131,7 +134,7 @@ const PACKS: Array<{
   },
 ];
 
-export const STUDIO_MARKETPLACE_ASSETS: StudioMarketplaceAsset[] = PACKS.flatMap((pack, packIndex) =>
+const PACK_ASSETS: StudioMarketplaceAsset[] = PACKS.flatMap((pack, packIndex) =>
   pack.names.map((name, index) => ({
     id: `${pack.source.toLowerCase()}-${packIndex}-${index}`,
     name,
@@ -141,11 +144,26 @@ export const STUDIO_MARKETPLACE_ASSETS: StudioMarketplaceAsset[] = PACKS.flatMap
     sourceUrl: pack.sourceUrl,
     license: pack.license,
     tags: [...pack.tags, name.toLowerCase()],
-    previewTone: pack.kinds[index % pack.kinds.length] === "sfx" || pack.kinds[index % pack.kinds.length] === "music"
-      ? 180 + ((packIndex * 97 + index * 53) % 620)
-      : undefined,
   }))
 );
+
+const FREE_MUSIC_ASSETS: StudioMarketplaceAsset[] = STORY_MUSIC.map((track) => ({
+  id: `freepd-${track.id}`,
+  name: track.title,
+  kind: "music",
+  collection: `${track.genre} Music`,
+  source: "FreePD",
+  sourceUrl: track.sourceUrl,
+  license: track.license,
+  tags: ["music", track.genre.toLowerCase(), track.mood.toLowerCase(), "cc0", "public domain"],
+  previewUrl: track.audioUrl,
+  artist: track.artist,
+}));
+
+export const STUDIO_MARKETPLACE_ASSETS: StudioMarketplaceAsset[] = [
+  ...FREE_MUSIC_ASSETS,
+  ...PACK_ASSETS,
+];
 
 export const STUDIO_ASSET_KINDS: Array<{ id: "all" | StudioAssetKind; label: string }> = [
   { id: "all", label: "All" },
@@ -154,6 +172,8 @@ export const STUDIO_ASSET_KINDS: Array<{ id: "all" | StudioAssetKind; label: str
   { id: "texture", label: "Textures" },
   { id: "animation", label: "Animations" },
   { id: "sfx", label: "SFX" },
-  { id: "music", label: "Music" },
+  { id: "music", label: `Music (${FREE_MUSIC_ASSETS.length})` },
   { id: "template", label: "Templates" },
 ];
+
+export const STUDIO_MUSIC_COUNT = FREE_MUSIC_ASSETS.length;
