@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/contexts/theme-context";
 import { MobileBoot } from "@/components/providers/mobile-boot";
 import "./globals.css";
 import "./social-effects.css";
+import "./polish.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
