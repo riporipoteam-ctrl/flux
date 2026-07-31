@@ -1,15 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import {
-  ImageIcon,
   BarChart3,
-  X,
-  Smile,
-  Loader2,
-  Sparkles,
   Film,
+  ImageIcon,
+  Loader2,
+  Smile,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -56,28 +55,41 @@ export function ComposeBox({
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [posting, setPosting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  
+  const previewRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    previewRef.current = previews;
+  }, [previews]);
+
+  useEffect(() => () => {
+    previewRef.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
 
   const remaining = MAX_POST_LENGTH - text.length;
   const progress = Math.min(1, text.length / MAX_POST_LENGTH);
   const mediaCount = files.length + gifMedia.length;
-  const canPost =
-    (text.trim().length > 0 || mediaCount > 0) &&
-    remaining >= 0 &&
-    !posting &&
-    !!user;
+  const canPost = (text.trim().length > 0 || mediaCount > 0) && remaining >= 0 && !posting && Boolean(user);
+
+  const replacePreviews = (nextFiles: File[]) => {
+    previewRef.current.forEach((url) => URL.revokeObjectURL(url));
+    const nextUrls = nextFiles.map((file) => URL.createObjectURL(file));
+    previewRef.current = nextUrls;
+    setPreviews(nextUrls);
+  };
 
   const onFiles = (list: FileList | null) => {
     if (!list) return;
     const room = Math.max(0, MAX_IMAGES_PER_POST - gifMedia.length);
-    const next = [...files, ...Array.from(list)].slice(0, room);
+    const accepted = Array.from(list).filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/")).slice(0, room);
+    const next = [...files, ...accepted].slice(0, room);
     setFiles(next);
-    setPreviews(next.map((f) => URL.createObjectURL(f)));
+    replacePreviews(next);
   };
 
-  const removeFile = (i: number) => {
-    setFiles((f) => f.filter((_, idx) => idx !== i));
-    setPreviews((p) => p.filter((_, idx) => idx !== i));
+  const removeFile = (index: number) => {
+    const next = files.filter((_, itemIndex) => itemIndex !== index);
+    setFiles(next);
+    replacePreviews(next);
   };
 
   const onGif = (gif: GifResult) => {
@@ -85,15 +97,20 @@ export function ComposeBox({
       toast.error(`Max ${MAX_IMAGES_PER_POST} media items`);
       return;
     }
-    setGifMedia((g) => [
-      ...g,
-      {
-        type: "gif",
-        url: gif.url,
-        width: gif.width,
-        height: gif.height,
-      },
-    ]);
+    setGifMedia((items) => [...items, { type: "gif", url: gif.url, width: gif.width, height: gif.height }]);
+    setShowGif(false);
+  };
+
+  const resetComposer = () => {
+    setText("");
+    clearDraft();
+    setFiles([]);
+    replacePreviews([]);
+    setGifMedia([]);
+    setShowPoll(false);
+    setShowEmoji(false);
+    setShowGif(false);
+    setPollOptions(["", ""]);
   };
 
   const submit = async () => {
@@ -110,41 +127,24 @@ export function ComposeBox({
         groupId: groupId ?? null,
         eventId: eventId ?? null,
         type: parentId ? "reply" : quoteOfId ? "quote" : "post",
-        poll: showPoll
-          ? { options: pollOptions.filter((o) => o.trim()) }
-          : null,
+        poll: showPoll ? { options: pollOptions.filter((option) => option.trim()) } : null,
       });
-      try {
-        await ensureHashtagsFromText(text);
-      } catch {
-        /* hashtags optional */
-      }
+      await ensureHashtagsFromText(text).catch(() => undefined);
       try {
         const { bumpChallengeProgress } = await import("@/services/shop");
         if (parentId) await bumpChallengeProgress(user.uid, "reply");
         else {
           await bumpChallengeProgress(user.uid, "post");
-          if (files.length || gifMedia.length)
-            await bumpChallengeProgress(user.uid, "media");
+          if (files.length || gifMedia.length) await bumpChallengeProgress(user.uid, "media");
         }
-      } catch {
-        /* optional */
-      }
-      setText("");
-      clearDraft();
-      setFiles([]);
-      setPreviews([]);
-      setGifMedia([]);
-      setShowPoll(false);
-      setShowEmoji(false);
-      setShowGif(false);
-      setPollOptions(["", ""]);
+      } catch {}
+      resetComposer();
       await refreshProfile();
       toast.success(parentId ? "Reply posted" : "Posted");
       onSuccess?.();
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to post. Check connection & permissions.");
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not post. Check your connection and permissions.");
     } finally {
       setPosting(false);
     }
@@ -152,242 +152,52 @@ export function ComposeBox({
 
   return (
     <div className="flex gap-3">
-      <UserAvatar user={profile} animate />
+      <UserAvatar user={profile} animate clickable={false} />
       <div className="relative min-w-0 flex-1">
-        <div className="relative">
-          <Textarea
-            value={text}
-            onChange={(e) =>
-              setText(e.target.value.slice(0, MAX_POST_LENGTH + 40))
-            }
-            placeholder={placeholder}
-            autoFocus={autofocus}
-            className="min-h-[100px] border-0 bg-transparent px-0 text-[17px] leading-relaxed shadow-none focus-visible:ring-0"
-          />
-          <HashtagSuggest
-            text={text}
-            onPick={(tag) => {
-              // replace trailing #fragment with full tag
-              const replaced = text.replace(
-                /#([a-zA-Z0-9_]*)$/,
-                `#${tag} `
-              );
-              setText(
-                replaced === text ? `${text}#${tag} ` : replaced
-              );
-            }}
-          />
-        </div>
+        <Textarea
+          value={text}
+          onChange={(event) => setText(event.target.value.slice(0, MAX_POST_LENGTH + 40))}
+          placeholder={placeholder}
+          autoFocus={autofocus}
+          className="min-h-[62px] resize-none border-0 bg-transparent px-0 py-1 text-[17px] leading-6 shadow-none placeholder:text-muted-foreground focus-visible:ring-0 sm:min-h-[84px] sm:text-[18px]"
+        />
+        <HashtagSuggest text={text} onPick={(tag) => {
+          const replaced = text.replace(/#([a-zA-Z0-9_]*)$/, `#${tag} `);
+          setText(replaced === text ? `${text}#${tag} ` : replaced);
+        }} />
 
-        {useDrafts && text.trim() ? (
-          <p className="mb-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Sparkles className="h-3 w-3" />
-            Draft saved on this device
-          </p>
+        {useDrafts && text.trim() ? <p className="mb-2 flex items-center gap-1 text-[10px] font-semibold text-muted-foreground"><Sparkles className="h-3 w-3" />Draft saved on this device</p> : null}
+
+        {previews.length || gifMedia.length ? (
+          <div className={cn("mb-3 grid gap-1.5 overflow-hidden rounded-2xl", previews.length + gifMedia.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+            {previews.map((src, index) => <MediaPreview key={src} src={src} onRemove={() => removeFile(index)} />)}
+            {gifMedia.map((media, index) => <MediaPreview key={`${media.url}-${index}`} src={media.url} label="GIF" onRemove={() => setGifMedia((items) => items.filter((_, itemIndex) => itemIndex !== index))} />)}
+          </div>
         ) : null}
-
-        <AnimatePresence>
-          {previews.length > 0 || gifMedia.length > 0 ? (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className={cn(
-                "mb-3 grid gap-2",
-                previews.length + gifMedia.length === 1
-                  ? "grid-cols-1"
-                  : "grid-cols-2"
-              )}
-            >
-              {previews.map((src, i) => (
-                <div
-                  key={src}
-                  className="relative overflow-hidden rounded-2xl border border-border"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="h-44 w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeFile(i)}
-                    className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-              {gifMedia.map((g, i) => (
-                <div
-                  key={g.url + i}
-                  className="relative overflow-hidden rounded-2xl border border-border"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={g.url} alt="" className="h-44 w-full object-cover" />
-                  <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                    GIF
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setGifMedia((all) => all.filter((_, idx) => idx !== i))
-                    }
-                    className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
 
         {showPoll ? (
-          <div className="mb-3 space-y-2 rounded-2xl border border-border bg-muted/30 p-3">
-            {pollOptions.map((opt, i) => (
-              <input
-                key={i}
-                value={opt}
-                onChange={(e) => {
-                  const next = [...pollOptions];
-                  next[i] = e.target.value;
-                  setPollOptions(next);
-                }}
-                placeholder={`Option ${i + 1}`}
-                className="h-10 w-full rounded-xl border border-input bg-card px-3 text-sm"
-              />
-            ))}
-            {pollOptions.length < 4 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setPollOptions((o) => [...o, ""])}
-              >
-                Add option
-              </Button>
-            ) : null}
+          <div className="mb-3 space-y-2 border-y border-border py-3">
+            {pollOptions.map((option, index) => <input key={index} value={option} onChange={(event) => setPollOptions((items) => items.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} placeholder={`Option ${index + 1}`} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary" />)}
+            {pollOptions.length < 4 ? <button type="button" onClick={() => setPollOptions((items) => [...items, ""])} className="text-xs font-bold text-primary">Add option</button> : null}
           </div>
         ) : null}
 
-        {showEmoji ? (
-          <div className="mb-3 flex flex-wrap gap-1.5 rounded-2xl border border-border bg-card p-2">
-            {QUICK_EMOJIS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => setText((t) => t + e)}
-                className="rounded-xl px-2 py-1 text-lg hover:bg-muted active:scale-90"
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        {showEmoji ? <div className="mb-3 flex flex-wrap gap-1 border-y border-border py-2">{QUICK_EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => setText((value) => value + emoji)} className="grid h-9 w-9 place-items-center rounded-full text-lg hover:bg-muted active:scale-90">{emoji}</button>)}</div> : null}
 
-        <GifPicker
-          open={showGif}
-          onClose={() => setShowGif(false)}
-          onSelect={onGif}
-        />
+        <GifPicker open={showGif} onClose={() => setShowGif(false)} onSelect={onGif} />
 
-        <div className="flex items-center justify-between border-t border-border/70 pt-3">
+        <div className="flex items-center justify-between border-t border-border pt-2.5">
           <div className="flex items-center gap-0.5">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*,video/*,.gif"
-              multiple
-              className="hidden"
-              onChange={(e) => onFiles(e.target.files)}
-            />
-            <ToolBtn onClick={() => fileRef.current?.click()} title="Media">
-              <ImageIcon className="h-5 w-5" />
-            </ToolBtn>
-            <ToolBtn
-              onClick={() => {
-                setShowGif((v) => !v);
-                setShowEmoji(false);
-              }}
-              title="GIF"
-              active={showGif}
-            >
-              <Film className="h-5 w-5" />
-            </ToolBtn>
-            <ToolBtn
-              onClick={() => setShowPoll((v) => !v)}
-              title="Poll"
-              active={showPoll}
-            >
-              <BarChart3 className="h-5 w-5" />
-            </ToolBtn>
-            <ToolBtn
-              onClick={() => {
-                setShowEmoji((v) => !v);
-                setShowGif(false);
-              }}
-              title="Emoji"
-              active={showEmoji}
-            >
-              <Smile className="h-5 w-5" />
-            </ToolBtn>
+            <input ref={fileRef} type="file" accept="image/*,video/*,.gif" multiple className="hidden" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
+            <ToolButton title="Photo or video" onClick={() => fileRef.current?.click()}><ImageIcon className="h-[19px] w-[19px]" /></ToolButton>
+            <ToolButton title="GIF" active={showGif} onClick={() => { setShowGif((value) => !value); setShowEmoji(false); }}><Film className="h-[19px] w-[19px]" /></ToolButton>
+            <ToolButton title="Poll" active={showPoll} onClick={() => setShowPoll((value) => !value)}><BarChart3 className="h-[19px] w-[19px]" /></ToolButton>
+            <ToolButton title="Emoji" active={showEmoji} onClick={() => { setShowEmoji((value) => !value); setShowGif(false); }}><Smile className="h-[19px] w-[19px]" /></ToolButton>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative h-7 w-7">
-              <svg className="h-7 w-7 -rotate-90" viewBox="0 0 36 36">
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  className="text-muted"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeDasharray={`${progress * 97} 97`}
-                  strokeLinecap="round"
-                  className={cn(
-                    remaining < 0
-                      ? "text-destructive"
-                      : remaining < 40
-                        ? "text-amber-500"
-                        : "text-[#1d9bf0]"
-                  )}
-                />
-              </svg>
-              {remaining < 40 ? (
-                <span
-                  className={cn(
-                    "absolute inset-0 flex items-center justify-center text-[9px] font-bold",
-                    remaining < 0
-                      ? "text-destructive"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {remaining}
-                </span>
-              ) : null}
-            </div>
-            <Button
-              onClick={submit}
-              disabled={!canPost}
-              variant="sky"
-              className="min-w-[92px]"
-            >
-              {posting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : parentId ? (
-                "Reply"
-              ) : (
-                "Post"
-              )}
-            </Button>
+          <div className="flex items-center gap-2.5">
+            {text.length > 0 ? <CharacterMeter progress={progress} remaining={remaining} /> : null}
+            <Button onClick={() => void submit()} disabled={!canPost} className="h-9 min-w-[76px] rounded-full px-4 text-sm font-extrabold sm:h-10 sm:min-w-[88px]">{posting ? <Loader2 className="h-4 w-4 animate-spin" /> : parentId ? "Reply" : "Post"}</Button>
           </div>
         </div>
       </div>
@@ -395,28 +205,14 @@ export function ComposeBox({
   );
 }
 
-function ToolBtn({
-  children,
-  onClick,
-  title,
-  active,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  title: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className={cn(
-        "rounded-full p-2 text-[#1d9bf0] transition-colors hover:bg-[#1d9bf0]/10 active:scale-95",
-        active && "bg-[#1d9bf0]/15"
-      )}
-    >
-      {children}
-    </button>
-  );
+function MediaPreview({ src, label, onRemove }: { src: string; label?: string; onRemove: () => void }) {
+  return <div className="relative min-h-36 overflow-hidden bg-muted sm:min-h-44"><img src={src} alt="" className="h-44 w-full object-cover sm:h-56" />{label ? <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{label}</span> : null}<button type="button" onClick={onRemove} className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/65 text-white" aria-label="Remove media"><X className="h-4 w-4" /></button></div>;
+}
+
+function CharacterMeter({ progress, remaining }: { progress: number; remaining: number }) {
+  return <div className="relative h-7 w-7"><svg className="h-7 w-7 -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" /><circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray={`${progress * 97} 97`} strokeLinecap="round" className={remaining < 0 ? "text-destructive" : remaining < 40 ? "text-amber-500" : "text-primary"} /></svg>{remaining < 40 ? <span className={cn("absolute inset-0 grid place-items-center text-[8px] font-bold", remaining < 0 ? "text-destructive" : "text-muted-foreground")}>{remaining}</span> : null}</div>;
+}
+
+function ToolButton({ children, onClick, title, active }: { children: React.ReactNode; onClick: () => void; title: string; active?: boolean }) {
+  return <button type="button" title={title} aria-label={title} onClick={onClick} className={cn("grid h-9 w-9 place-items-center rounded-full text-primary transition hover:bg-primary/10 active:scale-95", active && "bg-primary/12")}>{children}</button>;
 }
