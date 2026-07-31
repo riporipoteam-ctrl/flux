@@ -58,11 +58,14 @@ export interface StoryViewerProfile {
   profile: UserProfile | null;
 }
 
+const TEXT_STORY_MEDIA =
+  "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width='9'%20height='16'%20viewBox='0%200%209%2016'%3E%3Crect%20width='9'%20height='16'%20fill='transparent'%2F%3E%3C%2Fsvg%3E";
+
 function mapStory(id: string, data: DocumentData): FluxStory {
   return {
     id,
     authorId: String(data.authorId || ""),
-    mediaUrl: String(data.mediaUrl || ""),
+    mediaUrl: String(data.mediaUrl || TEXT_STORY_MEDIA),
     mediaType: data.mediaType === "video" ? "video" : "image",
     text: String(data.text || ""),
     textColor: String(data.textColor || "#ffffff"),
@@ -99,9 +102,13 @@ function storyExpiryMs(value: FluxStory["expiresAt"]): number {
   return 0;
 }
 
+export function isTextOnlyStory(story: Pick<FluxStory, "mediaUrl">): boolean {
+  return story.mediaUrl.startsWith("data:image/svg+xml");
+}
+
 export async function createStory(input: {
   authorId: string;
-  file: File;
+  file?: File | null;
   text?: string;
   textColor?: string;
   textStyle?: FluxStory["textStyle"];
@@ -110,31 +117,50 @@ export async function createStory(input: {
   musicId?: string | null;
   stickers?: StorySticker[];
 }): Promise<string> {
-  if (!input.file.type.startsWith("image/") && !input.file.type.startsWith("video/")) {
+  const text = (input.text || "").trim().slice(0, 240);
+  const stickers = (input.stickers || []).slice(0, 20);
+
+  if (!input.file && !text && stickers.length === 0) {
+    throw new Error("Add a photo, video, text, or sticker first");
+  }
+
+  if (
+    input.file &&
+    !input.file.type.startsWith("image/") &&
+    !input.file.type.startsWith("video/")
+  ) {
     throw new Error("Stories support images and videos only");
   }
-  if (input.file.size > 40 * 1024 * 1024) {
+  if (input.file && input.file.size > 40 * 1024 * 1024) {
     throw new Error("Story media must be under 40 MB");
   }
 
   const storyRef = doc(collection(db, "stories"));
-  const extension = input.file.name.split(".").pop() || (input.file.type.startsWith("video/") ? "mp4" : "jpg");
-  const mediaUrl = await uploadImage(
-    `stories/${input.authorId}/${storyRef.id}/${Date.now()}.${extension}`,
-    input.file
-  );
+  let mediaUrl = TEXT_STORY_MEDIA;
+  let mediaType: StoryMediaType = "image";
+
+  if (input.file) {
+    const extension =
+      input.file.name.split(".").pop() ||
+      (input.file.type.startsWith("video/") ? "mp4" : "jpg");
+    mediaUrl = await uploadImage(
+      `stories/${input.authorId}/${storyRef.id}/${Date.now()}.${extension}`,
+      input.file
+    );
+    mediaType = input.file.type.startsWith("video/") ? "video" : "image";
+  }
 
   await setDoc(storyRef, {
     authorId: input.authorId,
     mediaUrl,
-    mediaType: input.file.type.startsWith("video/") ? "video" : "image",
-    text: (input.text || "").slice(0, 240),
+    mediaType,
+    text,
     textColor: input.textColor || "#ffffff",
     textStyle: input.textStyle || "clean",
     textPosition: input.textPosition || "center",
-    designId: input.designId || null,
+    designId: input.designId || (input.file ? null : "ocean"),
     musicId: input.musicId || null,
-    stickers: (input.stickers || []).slice(0, 20),
+    stickers,
     viewsCount: 0,
     createdAt: serverTimestamp(),
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -144,7 +170,9 @@ export async function createStory(input: {
 }
 
 export async function getActiveStories(max = 100): Promise<StoryGroup[]> {
-  const snap = await getDocs(query(collection(db, "stories"), orderBy("createdAt", "desc"), limit(max)));
+  const snap = await getDocs(
+    query(collection(db, "stories"), orderBy("createdAt", "desc"), limit(max))
+  );
   const now = Date.now();
   const stories = snap.docs
     .map((item) => mapStory(item.id, item.data()))
@@ -152,7 +180,9 @@ export async function getActiveStories(max = 100): Promise<StoryGroup[]> {
 
   const authors = [...new Set(stories.map((story) => story.authorId))];
   const profiles = await Promise.all(authors.map((uid) => getUser(uid)));
-  const profileMap = new Map(profiles.filter(Boolean).map((profile) => [profile!.uid, profile!]));
+  const profileMap = new Map(
+    profiles.filter(Boolean).map((profile) => [profile!.uid, profile!])
+  );
   const grouped = new Map<string, FluxStory[]>();
 
   for (const story of stories) {
@@ -165,12 +195,17 @@ export async function getActiveStories(max = 100): Promise<StoryGroup[]> {
     authorId,
     author: profileMap.get(authorId) || null,
     stories: list.sort(
-      (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0)
+      (a, b) =>
+        (a.createdAt?.toMillis?.() || 0) -
+        (b.createdAt?.toMillis?.() || 0)
     ),
   }));
 }
 
-export async function markStoryViewed(storyId: string, viewerId: string): Promise<void> {
+export async function markStoryViewed(
+  storyId: string,
+  viewerId: string
+): Promise<void> {
   const viewRef = doc(db, "stories", storyId, "views", viewerId);
   const storyRef = doc(db, "stories", storyId);
 
@@ -180,20 +215,42 @@ export async function markStoryViewed(storyId: string, viewerId: string): Promis
     if (!storySnap.exists()) return;
 
     if (!viewSnap.exists()) {
-      transaction.set(viewRef, { viewerId, viewedAt: serverTimestamp() });
-      transaction.update(storyRef, { viewsCount: Number(storySnap.data().viewsCount || 0) + 1 });
-    } else {
-      transaction.set(viewRef, { viewerId, viewedAt: serverTimestamp() }, { merge: true });
+      transaction.set(viewRef, {
+        viewerId,
+        viewedAt: serverTimestamp(),
+        firstViewedAt: serverTimestamp(),
+      });
+      transaction.update(storyRef, {
+        viewsCount: Number(storySnap.data().viewsCount || 0) + 1,
+      });
+      return;
     }
+
+    transaction.set(
+      viewRef,
+      { viewerId, viewedAt: serverTimestamp() },
+      { merge: true }
+    );
   });
 }
 
-export async function getStoryViewers(storyId: string): Promise<StoryViewerProfile[]> {
-  const snap = await getDocs(query(collection(db, "stories", storyId, "views"), orderBy("viewedAt", "desc"), limit(250)));
+export async function getStoryViewers(
+  storyId: string
+): Promise<StoryViewerProfile[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, "stories", storyId, "views"),
+      orderBy("viewedAt", "desc"),
+      limit(250)
+    )
+  );
   const rows = snap.docs.map((item) => ({
     uid: String(item.data().viewerId || item.id),
     viewedAt: (item.data().viewedAt || null) as Timestamp | null,
   }));
   const profiles = await Promise.all(rows.map((item) => getUser(item.uid)));
-  return rows.map((item, index) => ({ ...item, profile: profiles[index] || null }));
+  return rows.map((item, index) => ({
+    ...item,
+    profile: profiles[index] || null,
+  }));
 }
