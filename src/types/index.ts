@@ -7,6 +7,22 @@ export type PostType = "post" | "reply" | "quote" | "repost";
 export type MediaType = "image" | "video" | "gif";
 export type Visibility = "public" | "followers" | "group";
 export type ModerationStatus = "active" | "warned" | "timeout" | "banned";
+export type FluxPlanTier = "free" | "basic" | "premium";
+
+export interface AskAIUsage {
+  used: number;
+  limit: number;
+  resetAt: Timestamp | Date | null;
+}
+
+export interface FluxAgent {
+  id: string;
+  name: string;
+  instructions: string;
+  status: "idle" | "working" | "paused";
+  currentTask?: string | null;
+  createdAt: number;
+}
 
 export interface SocialLinks {
   instagram?: string;
@@ -75,6 +91,11 @@ export interface UserProfile {
   accountType: AccountType;
   businessName?: string | null;
   coins: number;
+  planTier: FluxPlanTier;
+  planExpiresAt: Timestamp | Date | null;
+  askAIUsage: AskAIUsage;
+  aiAgents: FluxAgent[];
+  lastRewardClaimKey: string | null;
   followersCount: number;
   followingCount: number;
   postsCount: number;
@@ -244,7 +265,7 @@ export interface ShopItem {
   id: string;
   name: string;
   description: string;
-  type: "badge" | "banner" | "theme" | "frame" | "group_deco" | "effect";
+  type: "badge" | "banner" | "theme" | "frame" | "group_deco" | "effect" | "gift" | "sticker";
   price: number;
   previewUrl: string;
   imageUrl?: string | null;
