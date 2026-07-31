@@ -1,9 +1,6 @@
 name: Validate Flux Overhaul
 
 on:
-  push:
-    branches:
-      - feature/flux-platform-overhaul
   pull_request:
     branches:
       - main
