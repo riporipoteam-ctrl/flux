@@ -8,6 +8,7 @@ import "./globals.css";
 import "./social-effects.css";
 import "./polish.css";
 import "./social-rebuild.css";
+import "@/styles/editor-surfaces.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
