@@ -188,7 +188,7 @@ export default function CreateLivePage() {
           <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-3 rounded-full bg-black/55 p-2 backdrop-blur-xl">
             <button type="button" onClick={toggleMic} className={micOn ? "grid h-11 w-11 place-items-center rounded-full bg-white/15" : "grid h-11 w-11 place-items-center rounded-full bg-white text-black"}>{micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button>
             <button type="button" onClick={toggleCamera} className={cameraOn ? "grid h-11 w-11 place-items-center rounded-full bg-white/15" : "grid h-11 w-11 place-items-center rounded-full bg-white text-black"}>{cameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}</button>
-            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}${process.env.NEXT_PUBLIC_BASE_PATH || ""}/live/${streamId}`).then(() => toast.success("Live link copied"))} className="grid h-11 w-11 place-items-center rounded-full bg-white/15"><Copy className="h-5 w-5" /></button>
+            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}${process.env.NEXT_PUBLIC_BASE_PATH || ""}/live/view?id=${encodeURIComponent(streamId)}`).then(() => toast.success("Live link copied"))} className="grid h-11 w-11 place-items-center rounded-full bg-white/15"><Copy className="h-5 w-5" /></button>
           </div>
         </section>
 
