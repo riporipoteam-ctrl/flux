@@ -87,8 +87,12 @@ export function subscribeCall(callId: string, callback: (call: FluxCall | null) 
 }
 
 export function subscribeIncomingCalls(uid: string, callback: (calls: FluxCall[]) => void): Unsubscribe {
-  const callsQuery = query(collection(db, "calls"), where("calleeId", "==", uid), where("status", "==", "ringing"));
-  return onSnapshot(callsQuery, (snap) => callback(snap.docs.map((item) => mapCall(item.id, item.data()))), () => callback([]));
+  const callsQuery = query(collection(db, "calls"), where("calleeId", "==", uid));
+  return onSnapshot(
+    callsQuery,
+    (snap) => callback(snap.docs.map((item) => mapCall(item.id, item.data())).filter((call) => call.status === "ringing")),
+    () => callback([])
+  );
 }
 
 export async function setCallOffer(callId: string, offer: RTCSessionDescriptionInit): Promise<void> {
@@ -106,15 +110,8 @@ export async function setCallStatus(callId: string, status: CallStatus): Promise
   });
 }
 
-export async function addCallCandidate(
-  callId: string,
-  side: "caller" | "callee",
-  candidate: RTCIceCandidateInit
-): Promise<void> {
-  await addDoc(collection(db, "calls", callId, `${side}Candidates`), {
-    candidate,
-    createdAt: serverTimestamp(),
-  });
+export async function addCallCandidate(callId: string, side: "caller" | "callee", candidate: RTCIceCandidateInit): Promise<void> {
+  await addDoc(collection(db, "calls", callId, `${side}Candidates`), { candidate, createdAt: serverTimestamp() });
 }
 
 export function subscribeCallCandidates(
