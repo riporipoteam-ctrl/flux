@@ -36,6 +36,11 @@ service firebase.storage {
       allow write: if isOwner(uid) && isImage() && underSize(8);
     }
 
+    match /stickers/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(uid) && isImage() && underSize(5);
+    }
+
     match /posts/{uid}/{postId}/{fileName} {
       allow read: if true;
       allow write: if isOwner(uid) && (isImage() || isVideo()) && underSize(50);
