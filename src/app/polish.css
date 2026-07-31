@@ -1,0 +1,56 @@
+/* Flux product polish: calmer surfaces, sharper hierarchy, fewer synthetic effects. */
+:root {
+  --radius: 1.1rem;
+  --shadow-soft: 0 10px 30px rgba(28, 31, 54, 0.07), 0 1px 2px rgba(17, 20, 38, 0.05);
+}
+.dark {
+  --shadow-soft: 0 14px 36px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% -15%, color-mix(in oklab, var(--primary) 8%, transparent), transparent 34rem),
+    var(--background);
+}
+body::before { opacity: .12; background-size: 56px 56px; }
+
+.surface-card,
+.post-row {
+  background: color-mix(in oklab, var(--card) 98%, transparent);
+  border-color: color-mix(in oklab, var(--border) 92%, transparent) !important;
+  box-shadow: var(--shadow-soft);
+}
+.surface-card::before { display: none; }
+.surface-card:hover,
+.post-row:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--foreground) 13%, var(--border)) !important;
+  box-shadow: 0 16px 42px rgba(24, 27, 50, .1);
+}
+
+button,
+[role="button"],
+a { -webkit-tap-highlight-color: transparent; }
+button,
+.pressable,
+.nav-item { transition-duration: 160ms; }
+
+input,
+textarea,
+select { background: color-mix(in oklab, var(--background) 88%, var(--card)); }
+
+[data-slot="tabs-list"] { gap: .25rem; padding: .25rem; }
+
+.text-gradient,
+.text-gradient-brand {
+  animation: none;
+  background: linear-gradient(100deg, var(--primary), #22b8cf);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.bg-gradient-brand { animation: none; background: var(--foreground); }
+
+@media (max-width: 1023px) {
+  .post-row { margin: 7px 8px; border-radius: 18px; }
+  .surface-card { border-radius: 18px; }
+}
