@@ -69,7 +69,40 @@ export async function imageToFirestoreFallback(file: File): Promise<string> {
   throw new Error("This image is too large for the emergency Story fallback. Choose a smaller image or try again after Storage is restored.");
 }
 
-function fileToDataUrl(file: File): Promise<string> {
+export async function studioThumbnailToDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image for the game thumbnail.");
+  const image = await loadImage(file);
+  const targetWidth = 960;
+  const targetHeight = 540;
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const context = canvas.getContext("2d", { alpha: false });
+  if (!context) throw new Error("Flux could not prepare the thumbnail canvas.");
+
+  const sourceRatio = image.naturalWidth / image.naturalHeight;
+  const targetRatio = targetWidth / targetHeight;
+  let sourceWidth = image.naturalWidth;
+  let sourceHeight = image.naturalHeight;
+  let sourceX = 0;
+  let sourceY = 0;
+  if (sourceRatio > targetRatio) {
+    sourceWidth = image.naturalHeight * targetRatio;
+    sourceX = (image.naturalWidth - sourceWidth) / 2;
+  } else {
+    sourceHeight = image.naturalWidth / targetRatio;
+    sourceY = (image.naturalHeight - sourceHeight) / 2;
+  }
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
+  const blob = await canvasBlob(canvas, "image/webp", 0.76);
+  if (blob.size > 420_000) {
+    const smaller = await canvasBlob(canvas, "image/webp", 0.58);
+    return fileToDataUrl(new File([smaller], "thumbnail.webp", { type: "image/webp" }));
+  }
+  return fileToDataUrl(new File([blob], "thumbnail.webp", { type: "image/webp" }));
+}
+
+export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
