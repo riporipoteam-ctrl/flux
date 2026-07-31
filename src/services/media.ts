@@ -7,7 +7,7 @@ export async function uploadImage(
 ): Promise<string> {
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, file, {
-    contentType: file.type,
+    contentType: file.type || "application/octet-stream",
     customMetadata: { originalName: file.name },
   });
   return getDownloadURL(storageRef);
@@ -31,6 +31,16 @@ export async function uploadPostMedia(
 ): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
   return uploadImage(`posts/${uid}/${postId}/${index}-${Date.now()}.${ext}`, file);
+}
+
+export async function uploadChatMedia(
+  uid: string,
+  conversationId: string,
+  file: File
+): Promise<string> {
+  if (file.size > 50 * 1024 * 1024) throw new Error("Chat files must be under 50 MB");
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-100) || "file";
+  return uploadImage(`chats/${conversationId}/${uid}/${Date.now()}-${safeName}`, file);
 }
 
 export function fileToMediaType(file: File): "image" | "video" | "gif" {
