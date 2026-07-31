@@ -57,8 +57,8 @@ export default function LiveViewer() {
     if (!id || !user || stream?.status !== "live" || stream.hostId === user.uid || peerRef.current) return;
     let cancelled = false;
     let heartbeat = 0;
-    let candidateUnsub = () => undefined;
-    let peerUnsub = () => undefined;
+    let candidateUnsub: () => void = () => {};
+    let peerUnsub: () => void = () => {};
 
     const leave = () => {
       const watched = joinedAt.current ? Math.max(0, Math.floor((Date.now() - joinedAt.current) / 1000)) : 0;
@@ -115,8 +115,14 @@ export default function LiveViewer() {
       cancelled = true;
       window.removeEventListener("pagehide", leave);
       if (heartbeat) window.clearInterval(heartbeat);
-      candidateUnsub(); peerUnsub(); cleanupRef.current.forEach((fn) => fn()); cleanupRef.current = [];
-      leave(); peerRef.current?.close(); peerRef.current = null; joinedAt.current = null;
+      candidateUnsub();
+      peerUnsub();
+      cleanupRef.current.forEach((fn) => fn());
+      cleanupRef.current = [];
+      leave();
+      peerRef.current?.close();
+      peerRef.current = null;
+      joinedAt.current = null;
     };
   }, [id, stream?.hostId, stream?.status, user]);
 
