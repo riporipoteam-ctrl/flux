@@ -1,5 +1,5 @@
-import AskAICommandCenter from "@/components/ask-ai/ask-ai-command-center";
+import AskAIUnified from "@/components/ask-ai/ask-ai-unified";
 
 export default function AskAIPage() {
-  return <AskAICommandCenter />;
+  return <AskAIUnified />;
 }

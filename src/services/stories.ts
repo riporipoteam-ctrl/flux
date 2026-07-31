@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { uploadImage } from "@/services/media";
+import { imageToFirestoreFallback, processStoryImage } from "@/lib/media-processing";
 import { getUser } from "@/services/users";
 import type { UserProfile } from "@/types";
 
@@ -33,6 +34,7 @@ export interface FluxStory {
   authorId: string;
   mediaUrl: string;
   mediaType: StoryMediaType;
+  mediaStorage?: "firebase" | "firestore-fallback" | "none";
   text: string;
   textColor: string;
   textStyle: "clean" | "bold" | "serif" | "mono";
@@ -61,30 +63,36 @@ export interface StoryViewerProfile {
 const TEXT_STORY_MEDIA =
   "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width='9'%20height='16'%20viewBox='0%200%209%2016'%3E%3Crect%20width='9'%20height='16'%20fill='transparent'%2F%3E%3C%2Fsvg%3E";
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
 function mapStory(id: string, data: DocumentData): FluxStory {
   return {
     id,
     authorId: String(data.authorId || ""),
     mediaUrl: String(data.mediaUrl || TEXT_STORY_MEDIA),
     mediaType: data.mediaType === "video" ? "video" : "image",
+    mediaStorage: data.mediaStorage === "firebase" || data.mediaStorage === "firestore-fallback" ? data.mediaStorage : "none",
     text: String(data.text || ""),
     textColor: String(data.textColor || "#ffffff"),
-    textStyle: data.textStyle || "clean",
-    textPosition: data.textPosition || "center",
+    textStyle: data.textStyle === "bold" || data.textStyle === "serif" || data.textStyle === "mono" ? data.textStyle : "clean",
+    textPosition: data.textPosition === "top" || data.textPosition === "bottom" ? data.textPosition : "center",
     designId: data.designId || null,
     musicId: data.musicId || null,
     stickers: Array.isArray(data.stickers)
       ? data.stickers
           .filter((item: unknown) => Boolean(item && typeof item === "object"))
-          .slice(0, 20)
+          .slice(0, 30)
           .map((item: Record<string, unknown>, index: number) => ({
             id: String(item.id || `sticker-${index}`),
             kind: item.kind === "label" ? "label" : "emoji",
             value: String(item.value || "✨").slice(0, 40),
-            x: Math.min(92, Math.max(8, Number(item.x || 50))),
-            y: Math.min(92, Math.max(8, Number(item.y || 50))),
-            scale: Math.min(2.5, Math.max(0.55, Number(item.scale || 1))),
-            rotation: Math.min(180, Math.max(-180, Number(item.rotation || 0))),
+            x: clampNumber(item.x, 4, 96, 50),
+            y: clampNumber(item.y, 4, 96, 50),
+            scale: clampNumber(item.scale, 0.25, 4, 1),
+            rotation: clampNumber(item.rotation, -180, 180, 0),
           }))
       : [],
     viewsCount: Number(data.viewsCount || 0),
@@ -118,42 +126,66 @@ export async function createStory(input: {
   stickers?: StorySticker[];
 }): Promise<string> {
   const text = (input.text || "").trim().slice(0, 240);
-  const stickers = (input.stickers || []).slice(0, 20);
+  const stickers = (input.stickers || [])
+    .slice(0, 30)
+    .map((item) => ({
+      ...item,
+      value: item.value.slice(0, 40),
+      x: clampNumber(item.x, 4, 96, 50),
+      y: clampNumber(item.y, 4, 96, 50),
+      scale: clampNumber(item.scale, 0.25, 4, 1),
+      rotation: clampNumber(item.rotation, -180, 180, 0),
+    }));
 
   if (!input.file && !text && stickers.length === 0) {
-    throw new Error("Add a photo, video, text, or sticker first");
+    throw new Error("Add a photo, video, text, or sticker first.");
   }
 
-  if (
-    input.file &&
-    !input.file.type.startsWith("image/") &&
-    !input.file.type.startsWith("video/")
-  ) {
-    throw new Error("Stories support images and videos only");
+  if (input.file && !input.file.type.startsWith("image/") && !input.file.type.startsWith("video/")) {
+    throw new Error("Stories support images and videos only.");
   }
   if (input.file && input.file.size > 40 * 1024 * 1024) {
-    throw new Error("Story media must be under 40 MB");
+    throw new Error("Story media must be under 40 MB.");
   }
 
   const storyRef = doc(collection(db, "stories"));
   let mediaUrl = TEXT_STORY_MEDIA;
   let mediaType: StoryMediaType = "image";
+  let mediaStorage: FluxStory["mediaStorage"] = "none";
+  let uploadWarning: string | null = null;
 
   if (input.file) {
-    const extension =
-      input.file.name.split(".").pop() ||
-      (input.file.type.startsWith("video/") ? "mp4" : "jpg");
-    mediaUrl = await uploadImage(
-      `stories/${input.authorId}/${storyRef.id}/${Date.now()}.${extension}`,
-      input.file
-    );
     mediaType = input.file.type.startsWith("video/") ? "video" : "image";
+    const preparedFile = mediaType === "image"
+      ? (await processStoryImage(input.file, { maxDimension: 1920, quality: 0.84 })).file
+      : input.file;
+    const extension = preparedFile.name.split(".").pop() || (mediaType === "video" ? "mp4" : "webp");
+
+    try {
+      mediaUrl = await uploadImage(
+        `stories/${input.authorId}/${storyRef.id}/${Date.now()}.${extension}`,
+        preparedFile
+      );
+      mediaStorage = "firebase";
+    } catch (error) {
+      if (mediaType === "video") {
+        throw new Error(error instanceof Error
+          ? `${error.message} Video Stories require Firebase Storage, so this Story was not published.`
+          : "Video Stories require Firebase Storage, and the upload failed.");
+      }
+      mediaUrl = await imageToFirestoreFallback(input.file);
+      mediaStorage = "firestore-fallback";
+      uploadWarning = error instanceof Error ? error.message : "Firebase Storage was unavailable.";
+      console.warn("Flux Story used the Firestore image fallback:", uploadWarning);
+    }
   }
 
   await setDoc(storyRef, {
     authorId: input.authorId,
     mediaUrl,
     mediaType,
+    mediaStorage,
+    uploadWarning,
     text,
     textColor: input.textColor || "#ffffff",
     textStyle: input.textStyle || "clean",
@@ -170,9 +202,7 @@ export async function createStory(input: {
 }
 
 export async function getActiveStories(max = 100): Promise<StoryGroup[]> {
-  const snap = await getDocs(
-    query(collection(db, "stories"), orderBy("createdAt", "desc"), limit(max))
-  );
+  const snap = await getDocs(query(collection(db, "stories"), orderBy("createdAt", "desc"), limit(max)));
   const now = Date.now();
   const stories = snap.docs
     .map((item) => mapStory(item.id, item.data()))
@@ -180,9 +210,7 @@ export async function getActiveStories(max = 100): Promise<StoryGroup[]> {
 
   const authors = [...new Set(stories.map((story) => story.authorId))];
   const profiles = await Promise.all(authors.map((uid) => getUser(uid)));
-  const profileMap = new Map(
-    profiles.filter(Boolean).map((profile) => [profile!.uid, profile!])
-  );
+  const profileMap = new Map(profiles.filter(Boolean).map((profile) => [profile!.uid, profile!]));
   const grouped = new Map<string, FluxStory[]>();
 
   for (const story of stories) {
@@ -194,18 +222,11 @@ export async function getActiveStories(max = 100): Promise<StoryGroup[]> {
   return [...grouped.entries()].map(([authorId, list]) => ({
     authorId,
     author: profileMap.get(authorId) || null,
-    stories: list.sort(
-      (a, b) =>
-        (a.createdAt?.toMillis?.() || 0) -
-        (b.createdAt?.toMillis?.() || 0)
-    ),
+    stories: list.sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0)),
   }));
 }
 
-export async function markStoryViewed(
-  storyId: string,
-  viewerId: string
-): Promise<void> {
+export async function markStoryViewed(storyId: string, viewerId: string): Promise<void> {
   const viewRef = doc(db, "stories", storyId, "views", viewerId);
   const storyRef = doc(db, "stories", storyId);
 
@@ -226,31 +247,18 @@ export async function markStoryViewed(
       return;
     }
 
-    transaction.set(
-      viewRef,
-      { viewerId, viewedAt: serverTimestamp() },
-      { merge: true }
-    );
+    transaction.set(viewRef, { viewerId, viewedAt: serverTimestamp() }, { merge: true });
   });
 }
 
-export async function getStoryViewers(
-  storyId: string
-): Promise<StoryViewerProfile[]> {
+export async function getStoryViewers(storyId: string): Promise<StoryViewerProfile[]> {
   const snap = await getDocs(
-    query(
-      collection(db, "stories", storyId, "views"),
-      orderBy("viewedAt", "desc"),
-      limit(250)
-    )
+    query(collection(db, "stories", storyId, "views"), orderBy("viewedAt", "desc"), limit(250))
   );
   const rows = snap.docs.map((item) => ({
     uid: String(item.data().viewerId || item.id),
     viewedAt: (item.data().viewedAt || null) as Timestamp | null,
   }));
   const profiles = await Promise.all(rows.map((item) => getUser(item.uid)));
-  return rows.map((item, index) => ({
-    ...item,
-    profile: profiles[index] || null,
-  }));
+  return rows.map((item, index) => ({ ...item, profile: profiles[index] || null }));
 }

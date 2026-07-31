@@ -4,7 +4,6 @@ import {
   getDoc,
   getDocs,
   increment,
-  limit,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -12,6 +11,20 @@ import {
 import { db } from "@/lib/firebase";
 
 export type GeneratedProjectKind = "game" | "website";
+
+export interface StudioRevision {
+  id: string;
+  label: string;
+  code: string;
+  createdAt: number;
+}
+
+export interface StudioAssistantMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: number;
+}
 
 export interface GeneratedProject {
   id: string;
@@ -22,9 +35,12 @@ export interface GeneratedProject {
   hashtags: string[];
   code: string;
   thumbnail: string;
+  thumbnailFileName?: string | null;
   multiplayer: boolean;
   maxPlayers: number;
   selectedAssetIds: string[];
+  assistantHistory?: StudioAssistantMessage[];
+  revisions?: StudioRevision[];
   createdAt: number;
   updatedAt: number;
   publishedId?: string | null;
@@ -52,12 +68,29 @@ function browserStorage(): Storage | null {
   return typeof window === "undefined" ? null : window.localStorage;
 }
 
+function normalizeProject(project: GeneratedProject): GeneratedProject {
+  return {
+    ...project,
+    title: project.title || "Untitled project",
+    description: project.description || "",
+    hashtags: Array.isArray(project.hashtags) ? project.hashtags : [],
+    selectedAssetIds: Array.isArray(project.selectedAssetIds) ? project.selectedAssetIds : [],
+    assistantHistory: Array.isArray(project.assistantHistory) ? project.assistantHistory.slice(-80) : [],
+    revisions: Array.isArray(project.revisions) ? project.revisions.slice(-30) : [],
+    thumbnailFileName: project.thumbnailFileName || null,
+    multiplayer: project.multiplayer === true,
+    maxPlayers: Math.max(1, Math.min(50, Number(project.maxPlayers || 1))),
+    createdAt: Number(project.createdAt || Date.now()),
+    updatedAt: Number(project.updatedAt || Date.now()),
+  };
+}
+
 export function listLocalProjects(): GeneratedProject[] {
   const storage = browserStorage();
   if (!storage) return [];
   try {
     const value = JSON.parse(storage.getItem(STORAGE_KEY) || "[]") as GeneratedProject[];
-    return Array.isArray(value) ? value.sort((a, b) => b.updatedAt - a.updatedAt) : [];
+    return Array.isArray(value) ? value.map(normalizeProject).sort((a, b) => b.updatedAt - a.updatedAt) : [];
   } catch {
     return [];
   }
@@ -69,7 +102,7 @@ export function getLocalProject(id: string): GeneratedProject | null {
 
 export function saveLocalProject(project: GeneratedProject): GeneratedProject {
   const storage = browserStorage();
-  const next = { ...project, updatedAt: Date.now() };
+  const next = normalizeProject({ ...project, updatedAt: Date.now() });
   if (!storage) return next;
   const projects = listLocalProjects();
   const index = projects.findIndex((item) => item.id === next.id);
@@ -78,6 +111,22 @@ export function saveLocalProject(project: GeneratedProject): GeneratedProject {
   storage.setItem(STORAGE_KEY, JSON.stringify(projects.slice(0, 30)));
   window.dispatchEvent(new CustomEvent("flux-studio-projects-updated"));
   return next;
+}
+
+export function createProjectRevision(project: GeneratedProject, label: string): GeneratedProject {
+  const revision: StudioRevision = {
+    id: `revision-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: label.trim().slice(0, 80) || "Saved revision",
+    code: project.code,
+    createdAt: Date.now(),
+  };
+  return saveLocalProject({ ...project, revisions: [...(project.revisions || []), revision].slice(-30) });
+}
+
+export function restoreProjectRevision(project: GeneratedProject, revisionId: string): GeneratedProject {
+  const revision = project.revisions?.find((item) => item.id === revisionId);
+  if (!revision) return project;
+  return saveLocalProject({ ...project, code: revision.code });
 }
 
 export function deleteLocalProject(id: string): void {
@@ -103,6 +152,7 @@ export async function publishCommunityGame(project: GeneratedProject): Promise<s
     hashtags: project.hashtags.slice(0, 12),
     sourceCode: project.code,
     thumbnail: project.thumbnail,
+    thumbnailFileName: project.thumbnailFileName || null,
     multiplayer: project.multiplayer,
     maxPlayers: Math.max(1, Math.min(50, project.maxPlayers || 1)),
     selectedAssetIds: project.selectedAssetIds.slice(0, 100),

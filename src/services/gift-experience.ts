@@ -16,11 +16,12 @@ import { getUser } from "@/services/users";
 import type { UserProfile } from "@/types";
 
 export type GiftContextType = "user" | "post" | "story" | "live";
+export type GiftVisual = "heart" | "orb" | "rocket" | "coins" | "dragon" | "galaxy" | "crown" | "titan";
 
 export interface AnimatedGiftDefinition {
   id: string;
   name: string;
-  emoji: string;
+  visual: GiftVisual;
   price: number;
   creatorValue: number;
   rarity: "common" | "rare" | "epic" | "legendary";
@@ -29,14 +30,14 @@ export interface AnimatedGiftDefinition {
 }
 
 export const ANIMATED_GIFTS: AnimatedGiftDefinition[] = [
-  { id: "flux-heart", name: "Flux Heart", emoji: "💜", price: 25, creatorValue: 18, rarity: "common", animation: "pulse", description: "A bright thank-you for a creator." },
-  { id: "energy-orb", name: "Energy Orb", emoji: "🔮", price: 75, creatorValue: 55, rarity: "common", animation: "float", description: "Charge the moment with Flux energy." },
-  { id: "rocket-launch", name: "Rocket Launch", emoji: "🚀", price: 180, creatorValue: 130, rarity: "rare", animation: "burst", description: "Launch a creator toward their next milestone." },
-  { id: "coin-storm", name: "Coin Storm", emoji: "🪙", price: 350, creatorValue: 260, rarity: "rare", animation: "rain", description: "A shower of Flux Coins." },
-  { id: "neon-dragon", name: "Neon Dragon", emoji: "🐉", price: 900, creatorValue: 675, rarity: "epic", animation: "spin", description: "A legendary-looking entrance for big moments." },
-  { id: "galaxy", name: "Pocket Galaxy", emoji: "🌌", price: 1_750, creatorValue: 1_320, rarity: "epic", animation: "burst", description: "Turn the screen into a miniature universe." },
-  { id: "creator-crown", name: "Creator Crown", emoji: "👑", price: 4_000, creatorValue: 3_100, rarity: "legendary", animation: "float", description: "Crown a creator during a great post, Story, or Live." },
-  { id: "flux-titan", name: "Flux Titan", emoji: "🤖", price: 10_000, creatorValue: 8_000, rarity: "legendary", animation: "pulse", description: "The largest creator-support gift in Flux." },
+  { id: "flux-heart", name: "Flux Heart", visual: "heart", price: 25, creatorValue: 18, rarity: "common", animation: "pulse", description: "A hand-drawn neon heart that pulses across the screen." },
+  { id: "energy-orb", name: "Energy Orb", visual: "orb", price: 75, creatorValue: 55, rarity: "common", animation: "float", description: "A rotating cyan-violet energy sphere with orbiting rings." },
+  { id: "rocket-launch", name: "Rocket Launch", visual: "rocket", price: 180, creatorValue: 130, rarity: "rare", animation: "burst", description: "A custom rocket scene with animated exhaust and stars." },
+  { id: "coin-storm", name: "Coin Storm", visual: "coins", price: 350, creatorValue: 260, rarity: "rare", animation: "rain", description: "A shower of individually animated Flux coins." },
+  { id: "neon-dragon", name: "Neon Dragon", visual: "dragon", price: 900, creatorValue: 675, rarity: "epic", animation: "spin", description: "An original neon dragon silhouette with glowing fire." },
+  { id: "galaxy", name: "Pocket Galaxy", visual: "galaxy", price: 1_750, creatorValue: 1_320, rarity: "epic", animation: "spin", description: "A rotating miniature galaxy with stars and an orbital ring." },
+  { id: "creator-crown", name: "Creator Crown", visual: "crown", price: 4_000, creatorValue: 3_100, rarity: "legendary", animation: "float", description: "A jeweled golden crown with animated light bursts." },
+  { id: "flux-titan", name: "Flux Titan", visual: "titan", price: 10_000, creatorValue: 8_000, rarity: "legendary", animation: "pulse", description: "A custom armored Flux robot with alternating neon eyes." },
 ];
 
 export interface FluxGift {
@@ -93,6 +94,7 @@ export async function sendAnimatedGift(input: {
       contextType: input.contextType || "user",
       contextId: input.contextId || null,
       animation: definition.animation,
+      visual: definition.visual,
       createdAt: serverTimestamp(),
     });
   });
