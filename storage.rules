@@ -17,6 +17,11 @@ service firebase.storage {
       return request.resource.contentType.matches('video/.*');
     }
 
+    function isDocument() {
+      return request.resource.contentType.matches('application/.*')
+        || request.resource.contentType.matches('text/.*');
+    }
+
     function underSize(mb) {
       return request.resource.size < mb * 1024 * 1024;
     }
@@ -34,6 +39,23 @@ service firebase.storage {
     match /posts/{uid}/{postId}/{fileName} {
       allow read: if true;
       allow write: if isOwner(uid) && (isImage() || isVideo()) && underSize(50);
+    }
+
+    match /stories/{uid}/{storyId}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(uid) && (isImage() || isVideo()) && underSize(40);
+    }
+
+    match /chats/{conversationId}/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid)
+        && (isImage() || isVideo() || isDocument())
+        && underSize(50);
+    }
+
+    match /live/{uid}/{streamId}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(uid) && (isImage() || isVideo()) && underSize(20);
     }
 
     match /groups/{groupId}/{fileName} {
