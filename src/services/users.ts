@@ -26,6 +26,7 @@ import { COIN_REWARDS } from "@/lib/constants";
 import { DEFAULT_AVATARS } from "@/lib/default-avatars";
 
 const OWNER_EMAILS = ["ripo.ripoteam@gmail.com"];
+const DEFAULT_AI_LIMIT = 20;
 
 function isOwnerEmail(email: string) {
   return OWNER_EMAILS.includes(email.toLowerCase().trim());
@@ -33,13 +34,10 @@ function isOwnerEmail(email: string) {
 
 function mapUser(id: string, data: DocumentData): UserProfile {
   const email = data.email ?? "";
-  // Older accounts can have a username but be missing the completion flag.
-  // A real username is proof that onboarding finished, so repair that legacy
-  // state instead of sending the user through onboarding forever.
   const onboardingComplete =
     data.onboardingComplete === true || Boolean(String(data.username || "").trim());
-  // ONLY owner email is admin — ignore isAdmin flag on other accounts
   const owner = isOwnerEmail(email);
+  const planTier = data.planTier === "premium" || data.planTier === "basic" ? data.planTier : "free";
   return {
     uid: id,
     email,
@@ -62,6 +60,15 @@ function mapUser(id: string, data: DocumentData): UserProfile {
     accountType: data.accountType === "business" ? "business" : "personal",
     businessName: data.businessName ?? null,
     coins: data.coins ?? 0,
+    planTier,
+    planExpiresAt: data.planExpiresAt ?? null,
+    askAIUsage: {
+      used: Number(data.askAIUsage?.used || 0),
+      limit: Number(data.askAIUsage?.limit || DEFAULT_AI_LIMIT),
+      resetAt: data.askAIUsage?.resetAt ?? null,
+    },
+    aiAgents: Array.isArray(data.aiAgents) ? data.aiAgents.slice(0, 12) : [],
+    lastRewardClaimKey: data.lastRewardClaimKey ?? null,
     followersCount: data.followersCount ?? 0,
     followingCount: data.followingCount ?? 0,
     postsCount: data.postsCount ?? 0,
@@ -92,15 +99,9 @@ export async function getUser(uid: string): Promise<UserProfile | null> {
   return mapUser(snap.id, snap.data());
 }
 
-export async function getUserByUsername(
-  username: string
-): Promise<UserProfile | null> {
+export async function getUserByUsername(username: string): Promise<UserProfile | null> {
   const uname = formatUsername(username);
-  const q = query(
-    collection(db, "users"),
-    where("username", "==", uname),
-    limit(1)
-  );
+  const q = query(collection(db, "users"), where("username", "==", uname), limit(1));
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
@@ -120,7 +121,6 @@ export async function ensureUserDocument(
   if (existing.exists()) {
     const data = existing.data() || {};
     const repair: Record<string, unknown> = {};
-    // Owner always admin; strip admin from everyone else
     if (owner) {
       if (!data.isAdmin || !data.isOwner) {
         repair.isAdmin = true;
@@ -132,27 +132,22 @@ export async function ensureUserDocument(
       repair.isAdmin = false;
       repair.isOwner = false;
     }
-    if (
-      data.onboardingComplete !== true &&
-      Boolean(String(data.username || "").trim())
-    ) {
+    if (data.onboardingComplete !== true && Boolean(String(data.username || "").trim())) {
       repair.onboardingComplete = true;
     }
+    if (!data.planTier) repair.planTier = "free";
+    if (!data.askAIUsage) {
+      repair.askAIUsage = { used: 0, limit: DEFAULT_AI_LIMIT, resetAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) };
+    }
+    if (!Array.isArray(data.aiAgents)) repair.aiAgents = [];
     if (Object.keys(repair).length) {
       try {
         await updateDoc(ref, { ...repair, updatedAt: serverTimestamp() });
       } catch (error) {
-        // A profile read should not trap an authenticated user on onboarding
-        // just because a legacy repair write was rejected by Firestore rules.
         console.warn("Could not repair legacy user profile", error);
       }
     }
-    return mapUser(existing.id, {
-      ...data,
-      ...repair,
-      isAdmin: owner,
-      isOwner: owner,
-    });
+    return mapUser(existing.id, { ...data, ...repair, isAdmin: owner, isOwner: owner });
   }
 
   const payload = stripUndefined({
@@ -177,6 +172,15 @@ export async function ensureUserDocument(
     accountType: "personal",
     businessName: null,
     coins: COIN_REWARDS.welcomeBonus,
+    planTier: "free",
+    planExpiresAt: null,
+    askAIUsage: {
+      used: 0,
+      limit: DEFAULT_AI_LIMIT,
+      resetAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+    aiAgents: [],
+    lastRewardClaimKey: null,
     followersCount: 0,
     followingCount: 0,
     postsCount: 0,
@@ -211,10 +215,7 @@ export async function isUsernameAvailable(username: string): Promise<boolean> {
   return !snap.exists();
 }
 
-export async function claimUsername(
-  uid: string,
-  username: string
-): Promise<void> {
+export async function claimUsername(uid: string, username: string): Promise<void> {
   const uname = formatUsername(username);
   if (!/^[a-z0-9_]{3,20}$/.test(uname)) {
     throw new Error("Username must be 3–20 characters (letters, numbers, _)");
@@ -223,30 +224,14 @@ export async function claimUsername(
   await runTransaction(db, async (tx) => {
     const nameRef = doc(db, "usernames", uname);
     const nameSnap = await tx.get(nameRef);
-    if (nameSnap.exists()) {
-      // A retry for the same account is safe. Firestore rules deliberately
-      // forbid updating username documents, so do not write the same owner
-      // document again; only a different owner is a conflict.
-      if (nameSnap.data()?.uid !== uid) {
-        throw new Error("Username is already taken");
-      }
-    }
+    if (nameSnap.exists() && nameSnap.data()?.uid !== uid) throw new Error("Username is already taken");
 
     const userRef = doc(db, "users", uid);
     const userSnap = await tx.get(userRef);
     const oldUsername = (userSnap.data()?.username as string) || "";
-
-    if (oldUsername && oldUsername !== uname) {
-      tx.delete(doc(db, "usernames", oldUsername));
-    }
-
-    if (!nameSnap.exists()) {
-      tx.set(nameRef, { uid });
-    }
-    tx.update(userRef, {
-      username: uname,
-      updatedAt: serverTimestamp(),
-    });
+    if (oldUsername && oldUsername !== uname) tx.delete(doc(db, "usernames", oldUsername));
+    if (!nameSnap.exists()) tx.set(nameRef, { uid });
+    tx.update(userRef, { username: uname, updatedAt: serverTimestamp() });
   });
 }
 
@@ -273,11 +258,14 @@ export async function updateUserProfile(
     isPrivate: boolean;
     isVerified: boolean;
     verifiedType: UserProfile["verifiedType"];
+    planTier: UserProfile["planTier"];
+    planExpiresAt: UserProfile["planExpiresAt"];
+    askAIUsage: UserProfile["askAIUsage"];
+    aiAgents: UserProfile["aiAgents"];
+    lastRewardClaimKey: string | null;
   }>
 ): Promise<void> {
-  const payload: Record<string, unknown> = {
-    updatedAt: serverTimestamp(),
-  };
+  const payload: Record<string, unknown> = { updatedAt: serverTimestamp() };
 
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) continue;
@@ -285,7 +273,7 @@ export async function updateUserProfile(
       payload.socialLinks = cleanSocialLinks(value as SocialLinks);
       continue;
     }
-    if (key === "settings") continue; // handled below
+    if (key === "settings") continue;
     payload[key] = value;
   }
 
@@ -308,15 +296,10 @@ export async function updateUserProfile(
     });
   }
 
-  // Ensure avatar defaults
-  if (payload.avatarUrl === "" || payload.avatarUrl === undefined) {
-    payload.avatarUrl = DEFAULT_AVATARS[0].src;
-  }
-
+  if (payload.avatarUrl === "" || payload.avatarUrl === undefined) payload.avatarUrl = DEFAULT_AVATARS[0].src;
   await updateDoc(doc(db, "users", uid), stripUndefined(payload));
 }
 
-/** Lightweight presence heartbeat used for mutual-friend online status. */
 export async function touchUserPresence(uid: string): Promise<void> {
   await updateDoc(doc(db, "users", uid), { lastActiveAt: serverTimestamp() });
 }
@@ -343,58 +326,25 @@ export async function completeOnboarding(
   });
 }
 
-export async function getSuggestedUsers(
-  excludeUid: string,
-  max = 8
-): Promise<UserProfile[]> {
+export async function getSuggestedUsers(excludeUid: string, max = 8): Promise<UserProfile[]> {
   try {
-    const q = query(
-      collection(db, "users"),
-      where("onboardingComplete", "==", true),
-      orderBy("followersCount", "desc"),
-      limit(max + 5)
-    );
+    const q = query(collection(db, "users"), where("onboardingComplete", "==", true), orderBy("followersCount", "desc"), limit(max + 5));
     const snap = await getDocs(q);
-    return snap.docs
-      .map((d) => mapUser(d.id, d.data()))
-      .filter((u) => u.uid !== excludeUid)
-      .slice(0, max);
+    return snap.docs.map((d) => mapUser(d.id, d.data())).filter((u) => u.uid !== excludeUid).slice(0, max);
   } catch {
-    const snap = await getDocs(
-      query(
-        collection(db, "users"),
-        where("onboardingComplete", "==", true),
-        limit(max + 5)
-      )
-    );
-    return snap.docs
-      .map((d) => mapUser(d.id, d.data()))
-      .filter((u) => u.uid !== excludeUid)
-      .slice(0, max);
+    const snap = await getDocs(query(collection(db, "users"), where("onboardingComplete", "==", true), limit(max + 5)));
+    return snap.docs.map((d) => mapUser(d.id, d.data())).filter((u) => u.uid !== excludeUid).slice(0, max);
   }
 }
 
-export async function searchUsers(
-  term: string,
-  max = 20
-): Promise<UserProfile[]> {
+export async function searchUsers(term: string, max = 20): Promise<UserProfile[]> {
   const t = formatUsername(term);
   if (!t && !term.trim()) return [];
-  const snap = await getDocs(
-    query(
-      collection(db, "users"),
-      where("onboardingComplete", "==", true),
-      limit(60)
-    )
-  );
+  const snap = await getDocs(query(collection(db, "users"), where("onboardingComplete", "==", true), limit(60)));
   const lower = term.toLowerCase();
   return snap.docs
     .map((d) => mapUser(d.id, d.data()))
-    .filter(
-      (u) =>
-        u.username.includes(t || lower) ||
-        u.displayName.toLowerCase().includes(lower)
-    )
+    .filter((u) => u.username.includes(t || lower) || u.displayName.toLowerCase().includes(lower))
     .slice(0, max);
 }
 
@@ -403,27 +353,13 @@ export async function muteUser(uid: string, targetId: string): Promise<void> {
   if (!user) return;
   const muted = new Set(user.mutedUserIds || []);
   muted.add(targetId);
-  await updateDoc(
-    doc(db, "users", uid),
-    stripUndefined({
-      mutedUserIds: [...muted],
-      updatedAt: serverTimestamp(),
-    })
-  );
+  await updateDoc(doc(db, "users", uid), stripUndefined({ mutedUserIds: [...muted], updatedAt: serverTimestamp() }));
 }
 
 export async function blockUser(blockerId: string, blockedId: string): Promise<void> {
   if (blockerId === blockedId) return;
   const id = `${blockerId}_${blockedId}`;
-  await setDoc(
-    doc(db, "blocks", id),
-    stripUndefined({
-      blockerId,
-      blockedId,
-      createdAt: serverTimestamp(),
-    })
-  );
-  // also unfollow both ways best-effort
+  await setDoc(doc(db, "blocks", id), stripUndefined({ blockerId, blockedId, createdAt: serverTimestamp() }));
   try {
     const { unfollowUser } = await import("./follows");
     await unfollowUser(blockerId, blockedId);
@@ -433,10 +369,7 @@ export async function blockUser(blockerId: string, blockedId: string): Promise<v
   }
 }
 
-export async function isBlocked(
-  a: string,
-  b: string
-): Promise<boolean> {
+export async function isBlocked(a: string, b: string): Promise<boolean> {
   const snap1 = await getDoc(doc(db, "blocks", `${a}_${b}`));
   const snap2 = await getDoc(doc(db, "blocks", `${b}_${a}`));
   return snap1.exists() || snap2.exists();

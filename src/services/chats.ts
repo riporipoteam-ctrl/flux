@@ -17,6 +17,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { assertContentAllowed } from "@/lib/automod";
 import { getUser } from "./users";
 import { isFollowing } from "./follows";
 import type { UserProfile } from "@/types";
@@ -188,6 +189,7 @@ export async function sendMessage(
   const text = (payload.text || "").trim();
   const hasAttachment = !!(payload.mediaUrl || payload.sharedPostId || payload.sharedStoryId);
   if (!text && !hasAttachment) return;
+  if (text) assertContentAllowed(text, "message");
 
   const conversationRef = doc(db, "conversations", conversationId);
   const conversationSnap = await getDoc(conversationRef);
@@ -223,7 +225,13 @@ export async function sendMessage(
     createdAt: serverTimestamp(),
   });
 
-  const preview = text || (payload.mediaType === "image" ? "Photo" : payload.mediaType === "video" ? "Video" : payload.mediaType === "gif" ? "GIF" : payload.sharedPostId ? "Shared a post" : payload.sharedStoryId ? "Shared a story" : "File");
+  const preview = text || (
+    payload.mediaType === "image" ? "Photo" :
+    payload.mediaType === "video" ? "Video" :
+    payload.mediaType === "gif" ? "GIF" :
+    payload.sharedPostId ? "Shared a post" :
+    payload.sharedStoryId ? "Shared a story" : "File"
+  );
   await updateDoc(conversationRef, {
     lastMessage: preview.slice(0, 200),
     lastMessageAt: serverTimestamp(),

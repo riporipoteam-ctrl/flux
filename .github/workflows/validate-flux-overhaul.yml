@@ -1,21 +1,25 @@
-name: Validate Flux Overhaul
+name: Validate Flux
 
 on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: flux-overhaul-${{ github.ref }}
+  group: flux-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
