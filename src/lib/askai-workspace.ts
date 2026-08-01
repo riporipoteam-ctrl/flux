@@ -82,6 +82,7 @@ const MINIAPPS_KEY = "flux-askai-miniapps-v2";
 const MEMORY_KEY = "flux-askai-memory-v2";
 const FILES_KEY = "flux-askai-files-v2";
 const SETTINGS_KEY = "flux-askai-settings-v2";
+const VALID_TOOLS = new Set<AskAIToolId>(["web", "flux-search", "code", "studio", "social", "files", "memory"]);
 
 const DEFAULT_AGENTS: AskAIWorkspaceAgent[] = [
   {
@@ -207,12 +208,13 @@ function createId(prefix: string): string {
 }
 
 function normalizeAgent(agent: Partial<AskAIWorkspaceAgent> & Pick<AskAIWorkspaceAgent, "id" | "name">): AskAIWorkspaceAgent {
+  const tools = [...new Set((agent.tools || ["files", "memory"]).filter((tool): tool is AskAIToolId => VALID_TOOLS.has(tool as AskAIToolId)))].slice(0, 12);
   return {
     id: agent.id,
     name: agent.name.trim().slice(0, 48) || "New agent",
     description: String(agent.description || "Workspace specialist").trim().slice(0, 180),
     instructions: String(agent.instructions || "Help with the assigned workspace task.").trim().slice(0, 4000),
-    tools: [...new Set(agent.tools || ["files", "memory"])].slice(0, 12),
+    tools: tools.length ? tools : ["files", "memory"],
     color: agent.color || "#7468ff",
     icon: agent.icon || "✦",
     isDefault: agent.isDefault,
@@ -275,7 +277,7 @@ export function routeAskAIAgent(prompt: string, preferredId = "askai"): AskAIAge
   const preferred = agents.find((agent) => agent.id === preferredId);
   if (preferred && preferred.id !== "askai") return { agent: preferred, reason: "You selected this specialist." };
   const lower = prompt.toLowerCase();
-  const route = /\b(code|bug|error|typescript|javascript|css|html|github|build failure|debug)\b/.test(lower)
+  const route: [string, string] = /\b(code|bug|error|typescript|javascript|css|html|github|build failure|debug)\b/.test(lower)
     ? ["code", "The request is primarily code or debugging work."]
     : /\b(game|website|studio|engine|product|feature|prototype|architecture|build|create an app)\b/.test(lower)
       ? ["builder", "The request is product or creation work."]
