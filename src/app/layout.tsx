@@ -11,6 +11,7 @@ import "@/styles/flux-engine.css";
 import "@/styles/askai-workspace.css";
 import "@/styles/askai-workspace-v2.css";
 import "@/styles/flux-v8.css";
+import "@/styles/flux-v8-tokens.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
