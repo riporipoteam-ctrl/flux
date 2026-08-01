@@ -49,7 +49,8 @@ requireText(local, "I’m doing well", "Instant local conversation");
 forbidText(local, "The main focus appears to be", "Instant local AskAI");
 
 const mainLayout = read("src/app/(main)/layout.tsx");
-requireText(mainLayout, "isStudio || isImmersive", "Immersive AskAI shell");
+requireText(mainLayout, "if (isStudio)", "Immersive Studio shell");
+requireText(mainLayout, "if (isImmersive)", "Immersive AskAI shell");
 
 const rootLayout = read("src/app/layout.tsx");
 requireText(rootLayout, "askai-workspace.css", "AskAI styles");
