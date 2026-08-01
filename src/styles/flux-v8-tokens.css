@@ -20,28 +20,30 @@
   --input: var(--v8-line-strong);
   --ring: var(--v8-accent);
   --success: var(--v8-green);
-  --like: #ec4899;
+  --like: #f91880;
   --repost: var(--v8-green);
-  --sidebar: var(--v8-nav);
+  --sidebar: var(--v8-panel);
   --link: var(--v8-accent);
-  --feed-max: 760px;
+  --feed-max: 600px;
   --radius: 1rem;
-  --shadow-soft: var(--v8-shadow-sm);
-  --shadow-glow: 0 18px 54px color-mix(in srgb, var(--v8-accent) 18%, transparent);
+  --shadow-soft: none;
+  --shadow-glow: none;
 }
 
 .post-row:not(.flux8-post-wrap .post-row) {
-  margin: 0 0 10px !important;
+  margin: 0 !important;
   overflow: hidden;
-  border: 1px solid var(--v8-line) !important;
-  border-radius: 18px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--v8-line) !important;
+  border-radius: 0 !important;
   background: var(--v8-panel) !important;
-  box-shadow: var(--v8-shadow-sm) !important;
+  box-shadow: none !important;
 }
 
 .social-row:not(.flux8-post-wrap),
 .surface-card {
   border-color: var(--v8-line) !important;
+  box-shadow: none !important;
 }
 
 [role="dialog"] {
@@ -66,7 +68,7 @@ select:focus-visible {
 
 @media (max-width: 1023px) {
   .post-row:not(.flux8-post-wrap .post-row) {
-    margin-inline: 6px !important;
-    border-radius: 14px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
   }
 }
