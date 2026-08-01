@@ -12,11 +12,12 @@ import { groupPath, postPath, profilePath } from "@/lib/routes";
 import { getUser } from "@/services/users";
 
 export type FluxSearchKind = "person" | "group" | "post";
+export type FluxSearchCardType = "user" | "group" | "post";
 
 export interface FluxSearchResult {
   id: string;
   kind: FluxSearchKind;
-  type: FluxSearchKind;
+  type: FluxSearchCardType;
   title: string;
   subtitle: string;
   description: string;
@@ -63,7 +64,7 @@ function mapPeople(docs: Array<{ id: string; data: () => DocumentData }>, queryT
       return {
         id: item.id,
         kind: "person" as const,
-        type: "person" as const,
+        type: "user" as const,
         title: String(data.displayName || data.username || "Flux user"),
         subtitle: `@${String(data.username || "user")}`,
         description: String(data.bio || data.businessName || "Flux member").slice(0, 180),
