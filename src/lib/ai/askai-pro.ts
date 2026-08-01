@@ -1,5 +1,5 @@
 export interface AskAIProMessage {
-  role: "user" | "assistant" | "system";
+  role: string;
   content: string;
 }
 
