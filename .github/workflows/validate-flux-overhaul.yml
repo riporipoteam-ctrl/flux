@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -38,6 +38,9 @@ jobs:
 
       - name: Product redesign audit
         run: node scripts/product-redesign-audit.mjs
+
+      - name: Flux Engine 100-feature audit
+        run: node scripts/flux-engine-audit.mjs
 
       - name: TypeScript check
         run: npx tsc --noEmit
