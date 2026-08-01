@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Newspaper, Users } from "lucide-react";
+import { Newspaper, RefreshCw, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { ComposeBox } from "@/components/posts/compose-box";
 import { PostCard } from "@/components/posts/post-card";
@@ -84,21 +84,24 @@ export default function HomePage() {
   }, [tab, user]);
 
   return (
-    <main className="social-feed pb-20 lg:pb-4">
+    <main className="social-feed flux-home-feed pb-20 lg:pb-6">
       <header className="social-page-header hidden lg:flex">
-        <h1 className="text-xl font-extrabold">Home</h1>
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+          <div><h1>Home</h1><p className="mt-0.5 text-[9px] text-muted-foreground">Your people, communities and creator updates</p></div>
+          <button type="button" onClick={() => void load()} className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted" aria-label="Refresh feed"><RefreshCw className="h-4 w-4" /></button>
+        </div>
       </header>
 
-      <div className="sticky top-[53px] z-30 grid h-[53px] grid-cols-2 border-b border-border bg-background/96 backdrop-blur-xl lg:top-[56px]">
+      <div className="flux-feed-tabs sticky top-[54px] z-30 grid h-[51px] grid-cols-2 lg:top-[58px]">
         <FeedTab active={tab === "foryou"} onClick={() => setTab("foryou")}>For you</FeedTab>
         <FeedTab active={tab === "following"} onClick={() => setTab("following")}>Following</FeedTab>
       </div>
 
-      <section className="social-row px-3 py-3 sm:px-4 sm:py-4">
+      <section className="flux-compose-surface social-row px-3 py-3 sm:px-4 sm:py-4">
         <ComposeBox onSuccess={() => void load()} />
       </section>
 
-      <StoryRail />
+      <section className="flux-story-shelf"><StoryRail /></section>
 
       <FeedList
         loading={loading}
@@ -115,7 +118,7 @@ export default function HomePage() {
 }
 
 function FeedTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className="relative grid place-items-center text-sm font-bold transition-colors hover:bg-muted/40"><span className={active ? "text-foreground" : "text-muted-foreground"}>{children}</span>{active ? <span className="absolute bottom-0 h-1 w-14 rounded-full bg-primary" /> : null}</button>;
+  return <button type="button" onClick={onClick} className="relative grid place-items-center text-[12px] font-semibold transition-colors hover:bg-muted/40"><span className={active ? "text-foreground" : "text-muted-foreground"}>{children}</span>{active ? <span className="absolute bottom-0 h-[3px] w-12 rounded-t-full bg-primary" /> : null}</button>;
 }
 
 function FeedList({ loading, posts, emptyTitle, emptyDescription, emptyIcon = Newspaper, onRefresh, setPosts, loadingMore = false }: {
@@ -134,5 +137,5 @@ function FeedList({ loading, posts, emptyTitle, emptyDescription, emptyIcon = Ne
 
   if (!posts.length) return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={<Button variant="outline" onClick={onRefresh}>Refresh</Button>} />;
 
-  return <>{posts.map((post) => <div key={post.id} className="social-row"><PostCard post={post} onChange={(updated) => setPosts((previous) => updated.isDeleted ? previous.filter((item) => item.id !== updated.id) : previous.map((item) => item.id === updated.id ? updated : item))} /></div>)}{loadingMore ? <div className="social-row py-6 text-center text-xs font-semibold text-muted-foreground">Loading more…</div> : null}</>;
+  return <>{posts.map((post) => <div key={post.id} className="social-row"><PostCard post={post} onChange={(updated) => setPosts((previous) => updated.isDeleted ? previous.filter((item) => item.id !== updated.id) : previous.map((item) => item.id === updated.id ? updated : item))} /></div>)}{loadingMore ? <div className="social-row py-6 text-center text-[10px] font-semibold text-muted-foreground">Loading more…</div> : null}</>;
 }
