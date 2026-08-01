@@ -32,7 +32,6 @@ type WebLLMModule = {
 
 type NavigatorWithAIHints = Navigator & {
   gpu?: unknown;
-  deviceMemory?: number;
   connection?: {
     saveData?: boolean;
     effectiveType?: string;
@@ -55,18 +54,16 @@ export interface LocalAskAIStatus {
   error: string | null;
 }
 
-const BALANCED_MODEL = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC";
-const LITE_MODEL = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
+const INSTANT_MODEL = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
 const WEB_LLM_URL = "https://esm.run/@mlc-ai/web-llm@0.2.84";
 const STATUS_EVENT = "flux-local-askai-status";
-const MODEL_CACHE_KEY = "flux-local-askai-model-v3";
+const MODEL_CACHE_KEY = "flux-askai-instant-model-v1";
 
 let enginePromise: Promise<LocalEngine> | null = null;
 let activeEngine: LocalEngine | null = null;
-let activeModelId: string | null = null;
 let currentStatus: LocalAskAIStatus = {
   phase: "idle",
-  label: "Local model has not started yet.",
+  label: "AskAI 1.0 Instant has not started yet.",
   progress: null,
   modelId: null,
   error: null,
@@ -86,10 +83,7 @@ export function getLocalAskAIStatus(): LocalAskAIStatus {
 
 export function subscribeLocalAskAIStatus(listener: (status: LocalAskAIStatus) => void): () => void {
   if (typeof window === "undefined") return () => undefined;
-  const handle = (event: Event) => {
-    const custom = event as CustomEvent<LocalAskAIStatus>;
-    listener(custom.detail);
-  };
+  const handle = (event: Event) => listener((event as CustomEvent<LocalAskAIStatus>).detail);
   window.addEventListener(STATUS_EVENT, handle);
   listener(currentStatus);
   return () => window.removeEventListener(STATUS_EVENT, handle);
@@ -108,18 +102,6 @@ export function shouldWarmLocalAskAI(): boolean {
   return navigator.onLine !== false;
 }
 
-function preferredModels(): string[] {
-  if (typeof navigator === "undefined") return [BALANCED_MODEL, LITE_MODEL];
-  const hints = navigator as NavigatorWithAIHints;
-  const remembered = typeof localStorage !== "undefined" ? localStorage.getItem(MODEL_CACHE_KEY) : null;
-  const constrained = (typeof hints.deviceMemory === "number" && hints.deviceMemory < 4) || navigator.hardwareConcurrency <= 4;
-  const ordered = constrained ? [LITE_MODEL, BALANCED_MODEL] : [BALANCED_MODEL, LITE_MODEL];
-  if (remembered && ordered.includes(remembered)) {
-    return [remembered, ...ordered.filter((model) => model !== remembered)];
-  }
-  return ordered;
-}
-
 async function loadWebLLM(): Promise<WebLLMModule> {
   // Keep GitHub Pages static while loading the browser runtime only on capable devices.
   // eslint-disable-next-line no-new-func
@@ -127,75 +109,33 @@ async function loadWebLLM(): Promise<WebLLMModule> {
   return importRemote(WEB_LLM_URL);
 }
 
-async function createEngine(
-  modelId: string,
-  onProgress: (label: string, progress?: number) => void
-): Promise<LocalEngine> {
-  const webllm = await loadWebLLM();
-  publishStatus({
-    phase: "downloading",
-    label: `Preparing ${friendlyModelName(modelId)}…`,
-    modelId,
-    progress: 0,
-    error: null,
-  });
-  return webllm.CreateMLCEngine(modelId, {
-    initProgressCallback: (progress) => {
-      const percent = typeof progress.progress === "number" ? Math.round(progress.progress * 100) : undefined;
-      const label = progress.text || `Preparing ${friendlyModelName(modelId)}…`;
-      publishStatus({ phase: "downloading", label, modelId, progress: percent ?? null, error: null });
-      onProgress(label, percent);
-    },
-  });
-}
-
 async function getEngine(onProgress: (label: string, progress?: number) => void): Promise<LocalEngine> {
   if (activeEngine) {
-    onProgress(`${friendlyModelName(activeModelId || LITE_MODEL)} is ready.`, 100);
+    onProgress("AskAI 1.0 Instant is ready.", 100);
     return activeEngine;
   }
   if (enginePromise) return enginePromise;
 
   enginePromise = (async () => {
-    publishStatus({ phase: "checking", label: "Checking this device for private local AI…", progress: null, error: null });
-    let lastError: unknown = null;
-    for (const modelId of preferredModels()) {
-      try {
-        const engine = await createEngine(modelId, onProgress);
-        activeEngine = engine;
-        activeModelId = modelId;
-        if (typeof localStorage !== "undefined") localStorage.setItem(MODEL_CACHE_KEY, modelId);
-        publishStatus({
-          phase: "ready",
-          label: `${friendlyModelName(modelId)} is ready on this device.`,
-          progress: 100,
-          modelId,
-          error: null,
-        });
-        return engine;
-      } catch (error) {
-        lastError = error;
-        publishStatus({
-          phase: "checking",
-          label: `${friendlyModelName(modelId)} could not start. Trying a lighter model…`,
-          progress: null,
-          modelId,
-          error: error instanceof Error ? error.message : "Model loading failed.",
-        });
-      }
-    }
-    throw lastError instanceof Error ? lastError : new Error("No local model could start on this device.");
+    publishStatus({ phase: "checking", label: "Checking this device for AskAI 1.0 Instant…", progress: null, error: null });
+    const webllm = await loadWebLLM();
+    publishStatus({ phase: "downloading", label: "Preparing AskAI 1.0 Instant…", progress: 0, modelId: INSTANT_MODEL, error: null });
+    const engine = await webllm.CreateMLCEngine(INSTANT_MODEL, {
+      initProgressCallback: (progress) => {
+        const percent = typeof progress.progress === "number" ? Math.round(progress.progress * 100) : undefined;
+        const label = progress.text || "Preparing AskAI 1.0 Instant…";
+        publishStatus({ phase: "downloading", label, progress: percent ?? null, modelId: INSTANT_MODEL, error: null });
+        onProgress(label, percent);
+      },
+    });
+    activeEngine = engine;
+    localStorage.setItem(MODEL_CACHE_KEY, INSTANT_MODEL);
+    publishStatus({ phase: "ready", label: "AskAI 1.0 Instant is ready on this device.", progress: 100, modelId: INSTANT_MODEL, error: null });
+    return engine;
   })().catch((error) => {
     enginePromise = null;
     activeEngine = null;
-    activeModelId = null;
-    publishStatus({
-      phase: "error",
-      label: "Private local AI could not start.",
-      progress: null,
-      modelId: null,
-      error: error instanceof Error ? error.message : "Model loading failed.",
-    });
+    publishStatus({ phase: "error", label: "The browser model could not start. Instant tools are still available.", progress: null, modelId: null, error: error instanceof Error ? error.message : "Model loading failed." });
     throw error;
   });
 
@@ -206,13 +146,7 @@ export async function warmLocalAskAI(
   onProgress: (label: string, progress?: number) => void = () => undefined
 ): Promise<LocalAskAIStatus> {
   if (!localAskAISupported()) {
-    return publishStatus({
-      phase: "error",
-      label: "This browser does not expose WebGPU, so Flux will use Instant Local.",
-      progress: null,
-      modelId: null,
-      error: "WebGPU unavailable",
-    });
+    return publishStatus({ phase: "error", label: "WebGPU is unavailable, so AskAI will use its instant text tools.", progress: null, modelId: null, error: "WebGPU unavailable" });
   }
   try {
     await navigator.storage?.persist?.().catch(() => false);
@@ -231,48 +165,30 @@ export async function streamLocalAskAI(input: {
   onToken: (token: string) => void;
 }): Promise<string> {
   if (!localAskAISupported()) {
-    throw new Error("Local AskAI needs a browser with WebGPU. Flux will use Instant Local instead.");
+    throw new Error("AskAI 1.0 Instant needs WebGPU for model chat. Flux will use its instant local tools instead.");
   }
 
   const engine = await getEngine(input.onProgress);
   if (input.signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
-  const system: LocalMessage = {
-    role: "system",
-    content: input.systemPrompt ||
-      "You are AskAI by Ripo Team inside Flux. Act like a capable workspace coordinator, not a canned chatbot. Give direct, natural answers. Use the supplied thread, agent instructions, workspace memory and files. Never claim a tool ran unless the application actually reports that it ran. Do not reveal hidden reasoning. Do not pretend to have current web access unless a web-search result was supplied.",
-  };
   const messages: LocalMessage[] = [
-    system,
+    {
+      role: "system",
+      content: input.systemPrompt || "You are AskAI 1.0 Instant inside Flux. Give fast, direct, natural answers. Never claim live web access or tool results unless they are supplied. Do not reveal hidden reasoning.",
+    },
     ...input.messages
       .filter((message) => message.role === "user" || message.role === "assistant")
-      .slice(-14)
-      .map((message) => ({
-        role: message.role as "user" | "assistant",
-        content: String(message.content || "").slice(0, 5000),
-      })),
+      .slice(-12)
+      .map((message) => ({ role: message.role as "user" | "assistant", content: String(message.content || "").slice(0, 4500) })),
   ];
 
   const abort = () => engine.interruptGenerate?.();
   input.signal?.addEventListener("abort", abort, { once: true });
 
   try {
-    const modelId = activeModelId || LITE_MODEL;
-    publishStatus({
-      phase: "generating",
-      label: `${friendlyModelName(modelId)} is responding…`,
-      progress: null,
-      modelId,
-      error: null,
-    });
-    input.onProgress(`${friendlyModelName(modelId)} is responding…`);
-    const stream = await engine.chat.completions.create({
-      messages,
-      temperature: 0.72,
-      max_tokens: 1100,
-      stream: true,
-    });
-
+    publishStatus({ phase: "generating", label: "AskAI 1.0 Instant is responding…", progress: null, modelId: INSTANT_MODEL, error: null });
+    input.onProgress("AskAI 1.0 Instant is responding…");
+    const stream = await engine.chat.completions.create({ messages, temperature: 0.68, max_tokens: 850, stream: true });
     let full = "";
     for await (const chunk of stream) {
       if (input.signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -284,19 +200,6 @@ export async function streamLocalAskAI(input: {
     return full.trim();
   } finally {
     input.signal?.removeEventListener("abort", abort);
-    if (activeModelId) {
-      publishStatus({
-        phase: "ready",
-        label: `${friendlyModelName(activeModelId)} is ready on this device.`,
-        progress: 100,
-        modelId: activeModelId,
-        error: null,
-      });
-    }
+    publishStatus({ phase: "ready", label: "AskAI 1.0 Instant is ready on this device.", progress: 100, modelId: INSTANT_MODEL, error: null });
   }
-}
-
-function friendlyModelName(modelId: string): string {
-  if (modelId.includes("1.5B")) return "AskAI Local 1.5B";
-  return "AskAI Local Lite";
 }
