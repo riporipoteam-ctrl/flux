@@ -22,7 +22,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isStudio = pathname?.startsWith("/studio");
   const isLiveRoom = pathname?.startsWith("/live/create") || pathname?.startsWith("/live/view");
   const isImmersive = isAskAI || isCall || isLiveRoom;
-  const hideRail = isAskAI || isMessages || isGames || isLive;
+  const hideRail = isMessages || isGames || isLive;
 
   useEffect(() => {
     if (loading) return;
@@ -48,9 +48,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (!profile.onboardingComplete) return <LoadingScreen label="Continuing setup" />;
 
-  if (isStudio || isImmersive) {
+  if (isStudio) {
     return (
-      <div className={isStudio ? "h-[100dvh] w-full overflow-hidden bg-[#0a0c0f]" : "h-[100dvh] w-full overflow-hidden bg-background"}>
+      <div className="h-[100dvh] w-full overflow-hidden bg-[#0a0c0f]">
+        <IncomingCallBanner />
+        {children}
+      </div>
+    );
+  }
+
+  if (isImmersive) {
+    return (
+      <div className="h-[100dvh] w-full overflow-hidden bg-background">
         <IncomingCallBanner />
         {children}
       </div>
