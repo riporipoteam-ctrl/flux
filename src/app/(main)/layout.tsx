@@ -48,9 +48,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (!profile.onboardingComplete) return <LoadingScreen label="Continuing setup" />;
 
-  if (isStudio) {
+  if (isStudio || isImmersive) {
     return (
-      <div className="h-[100dvh] w-full overflow-hidden bg-[#0a0c0f]">
+      <div className={isStudio ? "h-[100dvh] w-full overflow-hidden bg-[#0a0c0f]" : "h-[100dvh] w-full overflow-hidden bg-background"}>
         <IncomingCallBanner />
         {children}
       </div>
@@ -58,15 +58,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-[1440px] overflow-x-clip">
+    <div className="flux-app-shell mx-auto flex min-h-[100dvh] max-w-[1480px] overflow-x-clip">
       <IncomingCallBanner />
       <Sidebar />
-      <main className={isImmersive ? "flex min-h-[100dvh] min-w-0 flex-1 flex-col bg-background lg:border-x lg:border-border" : "flex min-h-[100dvh] min-w-0 flex-1 flex-col border-x border-border bg-background pb-[calc(58px+env(safe-area-inset-bottom))] lg:pb-0"}>
+      <main className="flux-main-column flex min-h-[100dvh] min-w-0 flex-1 flex-col bg-background pb-[calc(62px+env(safe-area-inset-bottom))] lg:pb-0">
         <MobileAppHeader />
-        <div className={isImmersive ? "min-h-0 min-w-0 flex-1" : "min-w-0 flex-1"}>{children}</div>
+        <div className="min-w-0 flex-1">{children}</div>
       </main>
       {!hideRail ? <RightRail /> : null}
-      {!isImmersive ? <MobileNav /> : null}
+      <MobileNav />
     </div>
   );
 }
