@@ -1,4 +1,5 @@
 export type LocalAskAIIntent =
+  | "conversation"
   | "flux-help"
   | "rewrite"
   | "summarize"
@@ -26,35 +27,42 @@ const STOP_WORDS = new Set([
 const FLUX_HELP: Array<{ test: RegExp; answer: string }> = [
   {
     test: /\b(story|stories)\b/i,
-    answer: "Open Stories, tap Create Story, add media or a background, then add movable text, stickers, shapes and music. Every layer can be selected from the layer panel, reordered, hidden, locked, duplicated, resized and rotated before publishing.",
+    answer: "Open Stories and choose Create Story. Add media or a background, then add movable text, stickers, shapes and music. Select any layer to move, resize, rotate, reorder, lock, hide, duplicate or delete it before publishing.",
   },
   {
     test: /\b(live|stream|screen share)\b/i,
     answer: "Flux Live supports camera and microphone in secure browsers. Desktop browsers can also expose screen capture. iPhone and iPad web browsers do not provide normal webpage screen broadcasting, so Flux hides that unavailable control instead of pretending it works.",
   },
   {
-    test: /\b(studio|game|website)\b/i,
-    answer: "Flux Studio lets you start blank, build a 2D scene visually, edit project metadata and thumbnail, adjust objects in an inspector, preview different devices and edit the generated HTML, CSS and JavaScript. Local Studio commands can add, restyle, duplicate and arrange scene objects without a remote model.",
+    test: /\b(studio|engine|game|website)\b/i,
+    answer: "Flux Studio now contains Flux Engine: a real Babylon.js WebGL editor with a 3D viewport, hierarchy, transform gizmos, materials, lights, physics, scripts, play mode, GLB importing, project versions and publishing into Flux Games.",
   },
   {
     test: /\b(group|community)\b/i,
-    answer: "Groups are Flux community spaces for focused posts and members. AskAI can create your owned group, or you can open Groups from the organized menu and manage it manually.",
+    answer: "Groups are Flux community spaces for focused posts and members. AskAI can create your owned group after you approve the action, or you can open Groups and manage it manually.",
   },
   {
     test: /\b(gift|coin|reward|premium)\b/i,
-    answer: "Flux Gifts use Flux Coins. The sender chooses an animated vector gift and recipient; the recipient claims the creator value from their own inbox. Premium and Rewards are organized inside the Coins section of the menu.",
+    answer: "Flux Gifts use Flux Coins. The sender chooses an animated vector gift and recipient; the recipient claims the creator value from their own inbox. Premium and Rewards live in the Coins section of the menu.",
   },
   {
     test: /\b(message|chat|dm)\b/i,
-    answer: "Messages supports direct and group conversations. Story replies open Messages with the Story context attached so the reply is not disconnected from what the person shared.",
+    answer: "Messages supports direct and group conversations. Story replies open Messages with the Story context attached so the reply stays connected to what the person shared.",
+  },
+  {
+    test: /\b(askai|agent|job|miniapp|memory)\b/i,
+    answer: "AskAI is a workspace rather than one fixed chat. You can select or create agents, attach files, save memory, build miniapps, save repeatable jobs and review every tool action. It can use a connected model, a private WebGPU model in your browser or an instant local fallback.",
   },
 ];
 
 export function runLocalAskAI(prompt: string): LocalAskAIResult {
   const clean = prompt.trim();
-  const lower = clean.toLowerCase();
+  const lower = clean.toLowerCase().replace(/[!?.,]+$/g, "").trim();
 
-  if (/\b(how (do|can) i|where (is|are)|help (me )?(with|use)|what is flux)\b/.test(lower)) {
+  const conversation = conversationalResponse(lower);
+  if (conversation) return conversation;
+
+  if (/\b(how (do|can) i|where (is|are)|help (me )?(with|use)|what is flux|what can flux)\b/.test(lower)) {
     return fluxHelp(clean);
   }
   if (/^(rewrite|rephrase|improve|fix grammar|make this sound)/i.test(clean)) {
@@ -75,20 +83,64 @@ export function runLocalAskAI(prompt: string): LocalAskAIResult {
   if (/\b(plan|roadmap|steps|break down|checklist)\b/i.test(clean)) {
     return createPlan(extractPayload(clean));
   }
-  if (/^(explain|what does|how does|why does|what are)/i.test(clean)) {
+  if (/^(explain|what does|how does|why does|what are|what is)/i.test(clean)) {
     return explain(clean);
   }
   return generalResponse(clean);
 }
 
+function conversationalResponse(lower: string): LocalAskAIResult | null {
+  if (/^(hi|hello|hey|yo|sup|what's up|whats up|good morning|good afternoon|good evening)$/.test(lower)) {
+    return {
+      intent: "conversation",
+      title: "Hello",
+      answer: "Hey! 👋 I’m here. What are we working on—Flux, a game, a post, research, code, or something completely different?",
+      suggestions: ["Help me improve Flux", "Brainstorm a game", "Write a post"],
+    };
+  }
+  if (/^(how are you|how are you doing|you good|are you okay)$/.test(lower)) {
+    return {
+      intent: "conversation",
+      title: "Doing well",
+      answer: "I’m doing well—awake, ready, and significantly less dramatic than a broken Firebase upload. 😄 What do you need?",
+      suggestions: ["Help me with Flux", "Give me ideas", "Explain something"],
+    };
+  }
+  if (/^(thanks|thank you|thx|ty|appreciate it)$/.test(lower)) {
+    return {
+      intent: "conversation",
+      title: "Anytime",
+      answer: "Anytime. What’s next?",
+      suggestions: ["Start a new task", "Create a plan", "Write a caption"],
+    };
+  }
+  if (/^(who are you|what are you|what is askai)$/.test(lower)) {
+    return {
+      intent: "conversation",
+      title: "AskAI",
+      answer: "I’m AskAI, the AI workspace inside Flux. I can chat, work with attached files, remember project context, use specialist agents, search public Flux content, create editable Studio projects, build miniapps and prepare approved Flux actions.",
+      suggestions: ["Show me your features", "Create an agent", "Build a miniapp"],
+    };
+  }
+  if (/^(bye|goodbye|see you|cya)$/.test(lower)) {
+    return {
+      intent: "conversation",
+      title: "See you",
+      answer: "See you soon 👋 Your threads, workspace memory and local tools will still be here.",
+      suggestions: ["Start another thread", "Open Jobs", "Open Memory"],
+    };
+  }
+  return null;
+}
+
 function fluxHelp(prompt: string): LocalAskAIResult {
   const item = FLUX_HELP.find((entry) => entry.test.test(prompt));
-  const answer = item?.answer || "Flux combines posts, Stories, Live, Messages, Groups, Games, Studio, AskAI, gifts and creator tools in one account. Use AskAI as the single command surface, Studio for creation and the organized menu for secondary pages.";
+  const answer = item?.answer || "Flux combines posts, Stories, Live, Messages, Groups, Games, Studio, AskAI, gifts and creator tools in one account. Use AskAI as the command workspace, Studio for creation and the main navigation for social features.";
   return {
     intent: "flux-help",
     title: "Flux help",
     answer,
-    suggestions: ["Show me how Stories work", "What can I build in Studio?", "How does Flux Live work?"],
+    suggestions: ["Show me how Stories work", "What can I build in Studio?", "What can AskAI do?"],
   };
 }
 
@@ -165,7 +217,7 @@ function brainstorm(text: string): LocalAskAIResult {
     `A short behind-the-scenes thread about how ${topic} was made`,
     `A Live session where people can ask questions about ${topic}`,
     `A community challenge built around ${topic}`,
-    `A carousel-style sequence: problem, process, result and next step`,
+    `A carousel sequence: problem, process, result and next step`,
     `A “three things I learned” post about ${topic}`,
   ];
   return {
@@ -196,12 +248,12 @@ function createPlan(text: string): LocalAskAIResult {
 }
 
 function explain(text: string): LocalAskAIResult {
-  const topic = text.replace(/^(explain|what does|how does|why does|what are)\s+/i, "").replace(/[?]+$/, "").trim();
+  const topic = text.replace(/^(explain|what does|how does|why does|what are|what is)\s+/i, "").replace(/[?]+$/, "").trim();
   return {
     intent: "explain",
     title: topic ? `About ${topic}` : "Explanation",
     answer: topic
-      ? `${capitalize(topic)} can be understood by separating it into three parts: what it is, what it changes and what can go wrong. Locally, I can help structure the explanation, rewrite it, summarize supplied text and connect it to Flux features. For current facts outside Flux, a connected remote model or web search is still needed.`
+      ? `I can structure an explanation of **${topic}** from information already in the conversation or text you provide. For current outside facts, use a connected model or a research tool; the instant local engine will not invent live information.`
       : "Send the topic or paste the text you want explained.",
     suggestions: ["Explain it more simply", "Give me an example", "Turn this into notes"],
   };
@@ -212,9 +264,9 @@ function generalResponse(text: string): LocalAskAIResult {
   const focus = keywords.slice(0, 3).join(", ") || "your request";
   return {
     intent: "general",
-    title: "Local AskAI",
-    answer: `I can work with this locally. The main focus appears to be **${focus}**. I can rewrite or summarize supplied text, create captions and hashtags, brainstorm ideas, build a step-by-step plan, explain Flux features, search public Flux content and create editable Studio starters. A connected remote model is only needed for open-ended outside knowledge or full generative coding.`,
-    suggestions: ["Rewrite my message", "Brainstorm ideas", "Make a step-by-step plan"],
+    title: "Instant local answer",
+    answer: `I understand that this is about **${focus}**, but the instant local engine does not have enough information to give you a trustworthy open-ended answer. Add details, attach a file, ask me to rewrite or plan something, or switch the composer to **Smart local** so the browser can run the private WebGPU model.`,
+    suggestions: ["Make a step-by-step plan", "Attach a file", "Use Smart local"],
   };
 }
 
