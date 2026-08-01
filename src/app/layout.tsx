@@ -11,6 +11,8 @@ import "./social-rebuild.css";
 import "@/styles/editor-surfaces.css";
 import "@/styles/flux-v5.css";
 import "@/styles/flux-engine.css";
+import "@/styles/flux-social-2027.css";
+import "@/styles/askai-workspace.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -38,11 +40,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: `${basePath}/favicon.ico?v=flux-20260731`, type: "image/x-icon", sizes: "256x256" },
-      { url: `${basePath}/flux-icon.png?v=flux-20260731`, type: "image/png", sizes: "1024x1024" },
+      { url: `${basePath}/favicon.ico?v=flux-20260801`, type: "image/x-icon", sizes: "256x256" },
+      { url: `${basePath}/flux-icon.png?v=flux-20260801`, type: "image/png", sizes: "1024x1024" },
     ],
-    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-20260731`, type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: `${basePath}/flux-icon.png?v=flux-20260731`, type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-20260801`, type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: `${basePath}/flux-icon.png?v=flux-20260801`, type: "image/png", sizes: "180x180" }],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -51,8 +53,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f6f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090b" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -67,9 +69,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="light" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}>
         <ThemeProvider>
           <AuthProvider>
             <MobileBoot />
@@ -78,9 +78,7 @@ export default function RootLayout({
               position="top-center"
               richColors
               closeButton
-              toastOptions={{
-                className: "border border-border shadow-soft",
-              }}
+              toastOptions={{ className: "border border-border shadow-soft" }}
             />
           </AuthProvider>
         </ThemeProvider>
