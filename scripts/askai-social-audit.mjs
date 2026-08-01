@@ -25,7 +25,6 @@ for (const marker of [
   "searchFlux",
   "Kimi K3",
   "reasoning",
-  "NEXT_PUBLIC_ASKAI_SEARCH_ENDPOINT",
 ]) requireText(workspace, marker, "AskAI two-model workspace");
 for (const legacy of ["Auto route", "Smart local WebGPU", "Connected endpoint", "AskAI Workspace"]) {
   forbidText(workspace, legacy, "AskAI model selection");
@@ -36,6 +35,7 @@ for (const marker of [
   'model: "kimi-k3"',
   'reasoning_effort: "max"',
   "NEXT_PUBLIC_KIMI_K3_ENDPOINT",
+  "NEXT_PUBLIC_ASKAI_SEARCH_ENDPOINT",
   "searchConnectedWeb",
   "CONNECTED RESEARCH SOURCES",
 ]) requireText(pro, marker, "AskAI Pro connector");
