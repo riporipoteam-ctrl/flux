@@ -50,34 +50,34 @@ import {
 const primaryItems: Array<{ href: string; label: string; icon: LucideIcon; badge?: "notifications" }> = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/explore", label: "Explore", icon: Search },
+  { href: "/notifications", label: "Notifications", icon: Bell, badge: "notifications" },
+  { href: "/messages", label: "Messages", icon: Mail },
   { href: "/stories", label: "Stories", icon: Images },
   { href: "/groups", label: "Communities", icon: Users },
+  { href: "/live", label: "Live", icon: Radio },
   { href: "/games", label: "Games", icon: Gamepad2 },
-  { href: "/ask-ai", label: "AskAI", icon: Sparkles },
   { href: "/studio", label: "Studio", icon: Boxes },
-  { href: "/messages", label: "Messages", icon: Mail },
-  { href: "/notifications", label: "Notifications", icon: Bell, badge: "notifications" },
+  { href: "/ask-ai", label: "AskAI", icon: Sparkles },
 ];
 
 const menuSections: Array<{ label: string; items: Array<{ href: string; label: string; icon: LucideIcon; description?: string }> }> = [
   {
     label: "Create",
     items: [
-      { href: "/stories/create", label: "Create Story", icon: Images, description: "Media, text, stickers and music" },
-      { href: "/live/create", label: "Go Live", icon: Radio, description: "Camera or desktop screen capture" },
-      { href: "/stickers", label: "Sticker Lab", icon: Sticker, description: "Reusable Flux stickers" },
+      { href: "/stories/create", label: "Story Studio", icon: Images, description: "Create layered photo and video stories" },
+      { href: "/live/create", label: "Go live", icon: Radio, description: "Camera and desktop broadcasting" },
+      { href: "/stickers", label: "Sticker Lab", icon: Sticker, description: "Create reusable stickers" },
     ],
   },
   {
     label: "Discover",
     items: [
-      { href: "/live", label: "Live", icon: Radio },
       { href: "/events", label: "Events", icon: CalendarDays },
       { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
     ],
   },
   {
-    label: "Coins and rewards",
+    label: "Flux Coins",
     items: [
       { href: "/gifts", label: "Gifts", icon: Gift },
       { href: "/premium", label: "Premium", icon: Crown },
@@ -109,49 +109,52 @@ export function Sidebar() {
   }, [pathname, user]);
 
   return (
-    <aside className="flux-sidebar sticky top-0 hidden h-[100dvh] w-[82px] shrink-0 flex-col lg:flex xl:w-[256px]">
-      <Link href="/home" className="flux-sidebar-brand" aria-label="Flux home">
-        <Logo showWordmark className="hidden xl:flex" size={36} />
-        <Logo showWordmark={false} className="xl:hidden" size={36} />
+    <aside className="flux8-sidebar hidden lg:flex">
+      <Link href="/home" className="flux8-sidebar-brand" aria-label="Flux home">
+        <Logo showWordmark className="hidden 2xl:flex" size={35} />
+        <Logo showWordmark={false} className="2xl:hidden" size={35} />
       </Link>
 
-      <nav className="flux-sidebar-nav no-scrollbar">
+      <nav className="flux8-sidebar-nav no-scrollbar" aria-label="Primary navigation">
         {primaryItems.map((item) => {
           const active = isNavPathActive(pathname, item.href);
           const Icon = item.icon;
           const badge = item.badge === "notifications" ? unread : 0;
           return (
-            <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={cn("flux-nav-link", active && "is-active")}>
-              <span><Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.45 : 2} />{badge > 0 ? <em>{badge > 99 ? "99+" : badge}</em> : null}</span>
+            <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={cn("flux8-sidebar-link", active && "is-active")}>
+              <span className="flux8-sidebar-icon"><Icon className="h-[20px] w-[20px]" strokeWidth={active ? 2.45 : 2} />{badge > 0 ? <em>{badge > 99 ? "99+" : badge}</em> : null}</span>
               <strong>{item.label}</strong>
+              {item.href === "/studio" ? <small>NEW</small> : null}
+              {item.href === "/ask-ai" ? <small>AI</small> : null}
             </Link>
           );
         })}
 
-        <Link href={profileHref} className={cn("flux-nav-link", (pathname.startsWith("/profile") || pathname === profileHref) && "is-active")}>
-          <span><User className="h-[21px] w-[21px]" /></span><strong>Profile</strong>
+        <Link href={profileHref} className={cn("flux8-sidebar-link", (pathname.startsWith("/profile") || pathname === profileHref) && "is-active")}>
+          <span className="flux8-sidebar-icon"><User className="h-[20px] w-[20px]" /></span>
+          <strong>Profile</strong>
         </Link>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="flux-nav-link w-full">
-              <span><Menu className="h-[21px] w-[21px]" /></span><strong>More</strong>
+            <button type="button" className="flux8-sidebar-link w-full">
+              <span className="flux8-sidebar-icon"><Menu className="h-[20px] w-[20px]" /></span><strong>More</strong>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="right" align="end" className="flux-more-menu max-h-[min(720px,calc(100dvh-24px))] w-[310px] overflow-y-auto p-2">
-            <div className="flux-more-intro"><Logo showWordmark={false} size={29} /><div><strong>Flux menu</strong><span>Creation, rewards and account tools</span></div></div>
-            {menuSections.map((section, sectionIndex) => <div key={section.label}>{sectionIndex ? <DropdownMenuSeparator /> : null}<DropdownMenuLabel>{section.label}</DropdownMenuLabel>{section.items.map(({ href, label, icon: Icon, description }) => <DropdownMenuItem key={href} asChild><Link href={href} className="flux-more-item"><span><Icon className="h-4 w-4" /></span><div><strong>{label}</strong>{description ? <small>{description}</small> : null}</div></Link></DropdownMenuItem>)}</div>)}
-            {profile?.isAdmin ? <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href="/admin" className="flux-more-item"><span className="danger"><Shield className="h-4 w-4" /></span><div><strong>Admin</strong><small>Moderation and platform controls</small></div></Link></DropdownMenuItem></> : null}
+          <DropdownMenuContent side="right" align="end" className="flux8-more-menu max-h-[min(760px,calc(100dvh-24px))] w-[320px] overflow-y-auto p-2">
+            <div className="flux8-more-intro"><Logo showWordmark={false} size={31} /><div><strong>Everything in Flux</strong><span>Creation, communities, coins and account tools</span></div></div>
+            {menuSections.map((section, sectionIndex) => <div key={section.label}>{sectionIndex ? <DropdownMenuSeparator /> : null}<DropdownMenuLabel>{section.label}</DropdownMenuLabel>{section.items.map(({ href, label, icon: Icon, description }) => <DropdownMenuItem key={href} asChild><Link href={href} className="flux8-more-item"><span><Icon className="h-4 w-4" /></span><div><strong>{label}</strong>{description ? <small>{description}</small> : null}</div></Link></DropdownMenuItem>)}</div>)}
+            {profile?.isAdmin ? <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href="/admin" className="flux8-more-item"><span className="danger"><Shield className="h-4 w-4" /></span><div><strong>Admin</strong><small>Moderation and platform controls</small></div></Link></DropdownMenuItem></> : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </nav>
 
       <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-        <DialogTrigger asChild><button type="button" className="flux-compose-button"><PenSquare className="h-5 w-5" /><span>Post</span></button></DialogTrigger>
-        <DialogContent className="max-w-xl overflow-hidden p-0 sm:rounded-2xl"><DialogHeader className="border-b border-border px-5 py-4"><DialogTitle>Create post</DialogTitle></DialogHeader><div className="p-4"><ComposeBox onSuccess={() => setComposeOpen(false)} autofocus /></div></DialogContent>
+        <DialogTrigger asChild><button type="button" className="flux8-sidebar-create"><PenSquare className="h-[19px] w-[19px]" /><span>Create post</span></button></DialogTrigger>
+        <DialogContent className="flux8-dialog max-w-xl overflow-hidden p-0"><DialogHeader className="border-b border-border px-5 py-4"><DialogTitle>Create post</DialogTitle></DialogHeader><div className="p-4"><ComposeBox onSuccess={() => setComposeOpen(false)} autofocus /></div></DialogContent>
       </Dialog>
 
-      {profile ? <Link href={profileHref} className="flux-sidebar-profile"><UserAvatar user={profile} size="sm" decorations={profile.decorations} clickable={false} /><div><strong>{profile.displayName}</strong><span>@{profile.username || "…"}</span></div><em><Coins className="h-3.5 w-3.5" />{formatCount(profile.coins)}</em></Link> : null}
+      {profile ? <Link href={profileHref} className="flux8-sidebar-profile"><UserAvatar user={profile} size="sm" decorations={profile.decorations} clickable={false} /><div><strong>{profile.displayName}</strong><span>@{profile.username || "…"}</span></div><em><Coins className="h-3.5 w-3.5" />{formatCount(profile.coins)}</em></Link> : null}
     </aside>
   );
 }

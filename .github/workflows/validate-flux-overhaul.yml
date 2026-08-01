@@ -45,8 +45,8 @@ jobs:
       - name: AskAI and social redesign audit
         run: node scripts/askai-social-audit.mjs
 
-      - name: Flux V2 release audit
-        run: node scripts/flux-v2-release-audit.mjs
+      - name: Flux V8 redesign audit
+        run: node scripts/flux-v8-audit.mjs
 
       - name: TypeScript check
         run: npx tsc --noEmit

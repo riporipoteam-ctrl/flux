@@ -1,0 +1,72 @@
+:root,
+.dark {
+  --background: var(--v8-bg);
+  --foreground: var(--v8-text);
+  --card: var(--v8-panel);
+  --card-foreground: var(--v8-text);
+  --popover: var(--v8-panel);
+  --popover-foreground: var(--v8-text);
+  --primary: var(--v8-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--v8-panel-3);
+  --secondary-foreground: var(--v8-text);
+  --muted: var(--v8-panel-2);
+  --muted-foreground: var(--v8-muted);
+  --accent: var(--v8-accent-soft);
+  --accent-foreground: var(--v8-accent);
+  --destructive: var(--v8-red);
+  --destructive-foreground: #ffffff;
+  --border: var(--v8-line);
+  --input: var(--v8-line-strong);
+  --ring: var(--v8-accent);
+  --success: var(--v8-green);
+  --like: #ec4899;
+  --repost: var(--v8-green);
+  --sidebar: var(--v8-nav);
+  --link: var(--v8-accent);
+  --feed-max: 760px;
+  --radius: 1rem;
+  --shadow-soft: var(--v8-shadow-sm);
+  --shadow-glow: 0 18px 54px color-mix(in srgb, var(--v8-accent) 18%, transparent);
+}
+
+.post-row:not(.flux8-post-wrap .post-row) {
+  margin: 0 0 10px !important;
+  overflow: hidden;
+  border: 1px solid var(--v8-line) !important;
+  border-radius: 18px !important;
+  background: var(--v8-panel) !important;
+  box-shadow: var(--v8-shadow-sm) !important;
+}
+
+.social-row:not(.flux8-post-wrap),
+.surface-card {
+  border-color: var(--v8-line) !important;
+}
+
+[role="dialog"] {
+  border-color: var(--v8-line) !important;
+  background: var(--v8-panel) !important;
+  color: var(--v8-text) !important;
+}
+
+[data-sonner-toast] {
+  border-color: var(--v8-line) !important;
+  background: var(--v8-panel) !important;
+  color: var(--v8-text) !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-color: var(--v8-accent) !important;
+}
+
+@media (max-width: 1023px) {
+  .post-row:not(.flux8-post-wrap .post-row) {
+    margin-inline: 6px !important;
+    border-radius: 14px !important;
+  }
+}

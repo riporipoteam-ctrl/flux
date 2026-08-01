@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PenSquare, Search } from "lucide-react";
+import { Bell, PenSquare, Search } from "lucide-react";
 import { useState } from "react";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { Logo } from "@/components/shared/logo";
@@ -20,7 +20,6 @@ function sectionLabel(pathname: string): string {
   if (pathname.startsWith("/bookmarks")) return "Bookmarks";
   if (pathname.startsWith("/groups") || pathname.startsWith("/group")) return "Communities";
   if (pathname.startsWith("/events") || pathname.startsWith("/event")) return "Events";
-  if (pathname.startsWith("/games/flux-farm")) return "Flux Farm";
   if (pathname.startsWith("/games")) return "Games";
   if (pathname.startsWith("/shop")) return "Shop";
   if (pathname.startsWith("/settings")) return "Settings";
@@ -37,22 +36,23 @@ export function MobileAppHeader() {
 
   return (
     <>
-      <header className="flux-mobile-header sticky top-0 z-50 shrink-0 pt-[env(safe-area-inset-top)] lg:hidden">
-        <div className="flux-mobile-header-row">
-          <button type="button" onClick={() => setDrawerOpen(true)} className="flux-mobile-header-action" aria-label="Open navigation menu" aria-expanded={drawerOpen}>
+      <header className="flux8-mobile-header lg:hidden">
+        <div className="flux8-mobile-header-row">
+          <button type="button" onClick={() => setDrawerOpen(true)} className="flux8-mobile-avatar" aria-label="Open navigation menu" aria-expanded={drawerOpen}>
             <UserAvatar user={profile} size="sm" clickable={false} decorations={profile?.decorations} />
           </button>
 
-          <Link href="/home" className="flux-mobile-header-title" aria-label="Flux home">
+          <Link href="/home" className="flux8-mobile-title" aria-label="Flux home">
             <Logo showWordmark={false} size={25} />
-            <strong>{sectionLabel(pathname)}</strong>
+            <div><strong>{sectionLabel(pathname)}</strong><span>Flux</span></div>
           </Link>
 
-          <div className="flux-mobile-header-actions">
-            <Link href="/explore" className="flux-mobile-header-action" aria-label="Search Flux"><Search className="h-[19px] w-[19px]" /></Link>
+          <div className="flux8-mobile-header-actions">
+            <Link href="/explore" aria-label="Search Flux"><Search className="h-[18px] w-[18px]" /></Link>
+            <Link href="/notifications" aria-label="Notifications"><Bell className="h-[18px] w-[18px]" /></Link>
             <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-              <DialogTrigger asChild><button type="button" className="flux-mobile-header-action" aria-label="Create post"><PenSquare className="h-[19px] w-[19px]" /></button></DialogTrigger>
-              <DialogContent className="max-w-lg overflow-hidden p-0 sm:rounded-2xl"><DialogHeader className="border-b border-border px-4 py-3"><DialogTitle>New post</DialogTitle></DialogHeader><div className="p-3"><ComposeBox onSuccess={() => setComposeOpen(false)} autofocus /></div></DialogContent>
+              <DialogTrigger asChild><button type="button" aria-label="Create post"><PenSquare className="h-[18px] w-[18px]" /></button></DialogTrigger>
+              <DialogContent className="flux8-dialog max-w-lg overflow-hidden p-0"><DialogHeader className="border-b border-border px-4 py-3"><DialogTitle>New post</DialogTitle></DialogHeader><div className="p-3"><ComposeBox onSuccess={() => setComposeOpen(false)} autofocus /></div></DialogContent>
             </Dialog>
           </div>
         </div>
