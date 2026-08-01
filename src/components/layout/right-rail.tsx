@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Hash, Search, UserPlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
 import { getSuggestedUsers } from "@/services/users";
@@ -22,85 +19,65 @@ export function RightRail() {
   const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
   const [tags, setTags] = useState<HashtagInfo[]>([]);
-  const [q, setQ] = useState("");
+  const [queryText, setQueryText] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    const t = window.setTimeout(() => {
-      getSuggestedUsers(user.uid, 4).then(async (users) => {
-        setSuggestions(users);
+    const timer = window.setTimeout(() => {
+      getSuggestedUsers(user.uid, 5).then(async (people) => {
+        setSuggestions(people);
         const map: Record<string, boolean> = {};
-        await Promise.all(users.map(async (u) => { map[u.uid] = await isFollowing(user.uid, u.uid); }));
+        await Promise.all(people.map(async (person) => { map[person.uid] = await isFollowing(user.uid, person.uid); }));
         setFollowingMap(map);
-      });
-    }, 120);
-    return () => clearTimeout(t);
+      }).catch(() => setSuggestions([]));
+    }, 100);
+    return () => window.clearTimeout(timer);
   }, [user]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => getTrendingHashtags(5).then(setTags).catch(() => setTags([])), 80);
-    return () => clearTimeout(t);
+    const timer = window.setTimeout(() => getTrendingHashtags(6).then(setTags).catch(() => setTags([])), 70);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const onFollow = async (target: UserProfile) => {
     if (!user) return;
     try {
       await followUser(user.uid, target.uid);
-      setFollowingMap((m) => ({ ...m, [target.uid]: true }));
+      setFollowingMap((current) => ({ ...current, [target.uid]: true }));
       toast.success(`Following @${target.username}`);
     } catch {
-      toast.error("Could not follow user");
+      toast.error("Could not follow this person");
     }
   };
 
   return (
-    <aside className="sticky top-0 hidden h-[100dvh] w-[330px] shrink-0 overflow-y-auto py-4 pl-5 pr-1 no-scrollbar xl:block">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="space-y-4">
-        <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) router.push(`/explore?q=${encodeURIComponent(q.trim())}`); }} className="relative">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search Flux" className="h-11 rounded-2xl border-border bg-card pl-10 shadow-sm" />
+    <aside className="flux-right-rail sticky top-0 hidden h-[100dvh] shrink-0 overflow-y-auto no-scrollbar xl:block">
+      <div className="space-y-3">
+        <form onSubmit={(event) => { event.preventDefault(); if (queryText.trim()) router.push(`/explore?q=${encodeURIComponent(queryText.trim())}`); }} className="flux-search-box">
+          <Search className="h-4 w-4" />
+          <input value={queryText} onChange={(event) => setQueryText(event.target.value)} placeholder="Search Flux" aria-label="Search Flux" />
         </form>
 
-        {profile ? (
-          <div className="surface-card flex items-center justify-between gap-3 p-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <UserAvatar user={profile} size="md" decorations={profile.decorations} />
-              <div className="min-w-0"><p className="truncate font-bold">{profile.displayName}</p><p className="truncate text-xs text-muted-foreground">@{profile.username}</p></div>
-            </div>
-            <Link href={profilePath(profile.username)} className="shrink-0 text-xs font-black text-primary hover:underline">Profile</Link>
+        {profile ? <section className="flux-rail-card"><div className="flux-rail-profile"><UserAvatar user={profile} size="md" decorations={profile.decorations} /><div><strong>{profile.displayName}</strong><span>@{profile.username}</span></div><Link href={profilePath(profile.username)}>View</Link></div></section> : null}
+
+        <section className="flux-rail-card">
+          <header><Hash className="h-4 w-4" /><strong>What’s happening</strong></header>
+          <div className="flux-rail-list">
+            {tags.length ? tags.map((tag, index) => <Link key={tag.tag} href={`/explore?q=${encodeURIComponent(`#${tag.tag}`)}`} className="flux-rail-row"><div><span>Trending in Flux · {index + 1}</span><strong>#{tag.tag}</strong><small>{tag.postsCount} {tag.postsCount === 1 ? "post" : "posts"}</small></div></Link>) : <p className="px-4 py-5 text-[10px] text-muted-foreground">Post with hashtags to start a trend.</p>}
           </div>
-        ) : null}
+        </section>
 
-        <div className="surface-card p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-bold"><Hash className="h-4 w-4 text-primary" />Trending hashtags</div>
-          {tags.length === 0 ? <p className="px-2 py-3 text-sm text-muted-foreground">No hashtags yet. Post with #tags to start trends.</p> : (
-            <ul className="space-y-1">
-              {tags.map((t, i) => (
-                <li key={t.tag}>
-                  <Link href={`/explore?q=${encodeURIComponent("#" + t.tag)}`} className="block rounded-xl px-2 py-2 transition-colors hover:bg-muted">
-                    <p className="text-xs text-muted-foreground">Trending · #{i + 1}</p><p className="font-bold">#{t.tag}</p><p className="text-xs text-muted-foreground">{t.postsCount} {t.postsCount === 1 ? "post" : "posts"}</p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <section className="flux-rail-card">
+          <header><UserPlus className="h-4 w-4" /><strong>People to follow</strong></header>
+          <div>
+            {suggestions.length ? suggestions.map((person) => <div key={person.uid} className="flux-follow-row"><Link href={profilePath(person.username)}><UserAvatar user={person} size="sm" decorations={person.decorations} /></Link><div className="min-w-0"><Link href={profilePath(person.username)} className="block text-inherit no-underline"><strong>{person.displayName}</strong><span>@{person.username}</span></Link></div><button type="button" disabled={followingMap[person.uid]} onClick={() => void onFollow(person)}>{followingMap[person.uid] ? "Following" : "Follow"}</button></div>) : <p className="px-4 py-5 text-[10px] text-muted-foreground">No suggestions right now.</p>}
+          </div>
+        </section>
 
-        <div className="surface-card p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-bold"><UserPlus className="h-4 w-4 text-primary" />Who to follow</div>
-          <ul className="space-y-3">
-            {suggestions.length === 0 ? <li className="text-sm text-muted-foreground">{profile ? "No suggestions yet" : "Sign in"}</li> : suggestions.map((u) => (
-              <li key={u.uid} className="flex items-center gap-2.5">
-                <Link href={profilePath(u.username)}><UserAvatar user={u} size="sm" decorations={u.decorations} /></Link>
-                <div className="min-w-0 flex-1"><Link href={profilePath(u.username)} className="block truncate text-sm font-bold hover:underline">{u.displayName}</Link><p className="truncate text-xs text-muted-foreground">@{u.username}</p></div>
-                <Button size="sm" variant={followingMap[u.uid] ? "outline" : "default"} disabled={followingMap[u.uid]} onClick={() => onFollow(u)}>{followingMap[u.uid] ? "Following" : "Follow"}</Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <p className="px-2 text-[11px] text-muted-foreground">© {new Date().getFullYear()} Flux by Ripo Team</p>
-      </motion.div>
+        <nav className="flex flex-wrap gap-x-3 gap-y-1 px-2 text-[9px] text-muted-foreground">
+          <Link href="/help">Help</Link><Link href="/settings">Settings</Link><Link href="/premium">Premium</Link><span>© {new Date().getFullYear()} Ripo Team</span>
+        </nav>
+      </div>
     </aside>
   );
 }
