@@ -19,6 +19,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isCall = pathname?.startsWith("/messages/call");
   const isGames = pathname?.startsWith("/games");
   const isLive = pathname?.startsWith("/live");
+  const isStudio = pathname?.startsWith("/studio");
   const isLiveRoom = pathname?.startsWith("/live/create") || pathname?.startsWith("/live/view");
   const isImmersive = isAskAI || isCall || isLiveRoom;
   const hideRail = isAskAI || isMessages || isGames || isLive;
@@ -47,8 +48,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (!profile.onboardingComplete) return <LoadingScreen label="Continuing setup" />;
 
+  if (isStudio) {
+    return (
+      <div className="h-[100dvh] w-full overflow-hidden bg-[#0a0c0f]">
+        <IncomingCallBanner />
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-[1280px] overflow-x-clip">
+    <div className="mx-auto flex min-h-[100dvh] max-w-[1440px] overflow-x-clip">
       <IncomingCallBanner />
       <Sidebar />
       <main className={isImmersive ? "flex min-h-[100dvh] min-w-0 flex-1 flex-col bg-background lg:border-x lg:border-border" : "flex min-h-[100dvh] min-w-0 flex-1 flex-col border-x border-border bg-background pb-[calc(58px+env(safe-area-inset-bottom))] lg:pb-0"}>
