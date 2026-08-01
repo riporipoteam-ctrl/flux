@@ -9,6 +9,8 @@ import "./social-effects.css";
 import "./polish.css";
 import "./social-rebuild.css";
 import "@/styles/editor-surfaces.css";
+import "@/styles/flux-v5.css";
+import "@/styles/flux-engine.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
