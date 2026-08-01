@@ -21,6 +21,15 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    files: [
+      "src/lib/babylon-runtime.ts",
+      "src/components/studio/engine/engine-viewport-v2.tsx",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
