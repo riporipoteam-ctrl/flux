@@ -1,5 +1,7 @@
 export type AskAIWorkspaceView = "chat" | "agents" | "jobs" | "miniapps" | "files" | "memory";
 export type AskAIToolId = "web" | "flux-search" | "code" | "studio" | "social" | "files" | "memory";
+export type AskAIAgentAccess = "private" | "workspace";
+export type AskAIAgentStatus = "available" | "working" | "paused";
 
 export interface AskAIWorkspaceAgent {
   id: string;
@@ -11,6 +13,14 @@ export interface AskAIWorkspaceAgent {
   icon: string;
   isDefault?: boolean;
   createdAt: number;
+  model: "auto" | "local-balanced" | "local-lite" | "connected";
+  access: AskAIAgentAccess;
+  device: "automatic" | "browser" | "connected";
+  status: AskAIAgentStatus;
+  goals: string[];
+  skills: string[];
+  triggers: string[];
+  memoryEnabled: boolean;
 }
 
 export interface AskAIWorkspaceJob {
@@ -57,70 +67,118 @@ export interface AskAIWorkspaceSettings {
   confirmActions: boolean;
   speakReplies: boolean;
   engine: "auto" | "remote" | "local" | "instant";
+  preloadLocalModel?: boolean;
 }
 
-const AGENTS_KEY = "flux-askai-agents-v2";
+export interface AskAIAgentRoute {
+  agent: AskAIWorkspaceAgent;
+  reason: string;
+}
+
+const AGENTS_KEY = "flux-askai-agents-v3";
+const LEGACY_AGENTS_KEY = "flux-askai-agents-v2";
 const JOBS_KEY = "flux-askai-jobs-v2";
 const MINIAPPS_KEY = "flux-askai-miniapps-v2";
 const MEMORY_KEY = "flux-askai-memory-v2";
 const FILES_KEY = "flux-askai-files-v2";
 const SETTINGS_KEY = "flux-askai-settings-v2";
+const VALID_TOOLS = new Set<AskAIToolId>(["web", "flux-search", "code", "studio", "social", "files", "memory"]);
 
 const DEFAULT_AGENTS: AskAIWorkspaceAgent[] = [
   {
     id: "askai",
     name: "AskAI",
-    description: "Routes requests, uses the right Flux tools and keeps the full thread context.",
-    instructions: "Be useful, direct and honest. Coordinate the available tools instead of pretending an action happened.",
+    description: "Your workspace orchestrator. It routes work to specialists and keeps the final answer coherent.",
+    instructions: "Coordinate the specialist roster. Decide which role fits the request, use the available context and tools, then return one clear answer. Never pretend a tool or background job ran when it did not.",
     tools: ["web", "flux-search", "code", "studio", "social", "files", "memory"],
-    color: "#6d5dfc",
+    color: "#7468ff",
     icon: "✦",
     isDefault: true,
     createdAt: 0,
+    model: "auto",
+    access: "private",
+    device: "automatic",
+    status: "available",
+    goals: ["Route each task to the best specialist", "Keep the whole thread and workspace context", "Ask before risky Flux changes"],
+    skills: ["Delegation", "Task planning", "Answer synthesis", "Approval handling"],
+    triggers: [],
+    memoryEnabled: true,
   },
   {
     id: "research",
-    name: "Research",
-    description: "Turns questions, files and Flux searches into clear findings.",
-    instructions: "Research carefully, separate facts from guesses, summarize evidence and show uncertainty.",
+    name: "Research Analyst",
+    description: "Finds, compares and explains information using supplied sources, files and Flux search.",
+    instructions: "Separate evidence from inference. Cite supplied sources, surface uncertainty and finish with a practical conclusion.",
     tools: ["web", "flux-search", "files", "memory"],
-    color: "#2f7df6",
+    color: "#2f8cff",
     icon: "⌕",
     isDefault: true,
     createdAt: 0,
+    model: "auto",
+    access: "workspace",
+    device: "automatic",
+    status: "available",
+    goals: ["Find reliable evidence", "Compare competing options", "Produce decision-ready briefs"],
+    skills: ["Research", "Fact checking", "Source comparison", "Summaries"],
+    triggers: ["Weekly research brief"],
+    memoryEnabled: true,
   },
   {
     id: "builder",
-    name: "Builder",
-    description: "Plans games, websites, miniapps and Flux Engine projects.",
-    instructions: "Think like a senior product engineer. Produce concrete build steps, code and editable project artifacts.",
+    name: "Product Builder",
+    description: "Plans and creates Flux Studio projects, browser games, miniapps and product specifications.",
+    instructions: "Think like a senior product engineer. Break work into architecture, user flows, implementation and testing. Produce editable artifacts instead of fake completion claims.",
     tools: ["code", "studio", "files", "memory"],
-    color: "#10a37f",
+    color: "#14b889",
     icon: "◇",
     isDefault: true,
     createdAt: 0,
+    model: "local-balanced",
+    access: "workspace",
+    device: "browser",
+    status: "available",
+    goals: ["Turn ideas into buildable systems", "Keep projects editable", "Protect mobile performance"],
+    skills: ["Product architecture", "Game systems", "Frontend engineering", "QA plans"],
+    triggers: [],
+    memoryEnabled: true,
   },
   {
     id: "social",
-    name: "Social",
-    description: "Creates posts, captions, content plans and community ideas.",
-    instructions: "Write natural social content without corporate filler. Match the user's tone and platform.",
+    name: "Social Lead",
+    description: "Creates natural posts, campaigns, community plans and replies in the user's voice.",
+    instructions: "Write human social content with a clear point. Avoid corporate filler, fake hype and generic AI phrasing. Match the user's tone.",
     tools: ["social", "flux-search", "files", "memory"],
-    color: "#f04f88",
+    color: "#f05c98",
     icon: "◉",
     isDefault: true,
     createdAt: 0,
+    model: "local-balanced",
+    access: "workspace",
+    device: "browser",
+    status: "available",
+    goals: ["Create posts people would actually read", "Plan consistent campaigns", "Support community conversations"],
+    skills: ["Captions", "Campaigns", "Community replies", "Brand voice"],
+    triggers: ["Content calendar"],
+    memoryEnabled: true,
   },
   {
     id: "code",
-    name: "Code",
-    description: "Explains, debugs and improves HTML, CSS, JavaScript and TypeScript.",
-    instructions: "Return safe, runnable code. Explain the actual bug and avoid inventing APIs or results.",
+    name: "Code Engineer",
+    description: "Debugs and improves HTML, CSS, JavaScript, TypeScript and Flux project code.",
+    instructions: "Explain the actual bug, return safe runnable code and verify assumptions. Do not invent APIs, logs or test results.",
     tools: ["code", "studio", "files", "memory"],
-    color: "#f59e0b",
+    color: "#f5a524",
     icon: "</>",
     isDefault: true,
     createdAt: 0,
+    model: "local-balanced",
+    access: "workspace",
+    device: "browser",
+    status: "available",
+    goals: ["Find root causes", "Return maintainable fixes", "Preserve project behavior"],
+    skills: ["Debugging", "Code review", "Refactoring", "Performance"],
+    triggers: ["Project error review"],
+    memoryEnabled: true,
   },
 ];
 
@@ -149,22 +207,60 @@ function createId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function normalizeAgent(agent: Partial<AskAIWorkspaceAgent> & Pick<AskAIWorkspaceAgent, "id" | "name">): AskAIWorkspaceAgent {
+  const tools = [...new Set((agent.tools || ["files", "memory"]).filter((tool): tool is AskAIToolId => VALID_TOOLS.has(tool as AskAIToolId)))].slice(0, 12);
+  return {
+    id: agent.id,
+    name: agent.name.trim().slice(0, 48) || "New agent",
+    description: String(agent.description || "Workspace specialist").trim().slice(0, 180),
+    instructions: String(agent.instructions || "Help with the assigned workspace task.").trim().slice(0, 4000),
+    tools: tools.length ? tools : ["files", "memory"],
+    color: agent.color || "#7468ff",
+    icon: agent.icon || "✦",
+    isDefault: agent.isDefault,
+    createdAt: agent.createdAt || Date.now(),
+    model: agent.model || "auto",
+    access: agent.access || "private",
+    device: agent.device || "automatic",
+    status: agent.status || "available",
+    goals: (agent.goals || []).map(String).filter(Boolean).slice(0, 8),
+    skills: (agent.skills || []).map(String).filter(Boolean).slice(0, 12),
+    triggers: (agent.triggers || []).map(String).filter(Boolean).slice(0, 12),
+    memoryEnabled: agent.memoryEnabled ?? true,
+  };
+}
+
 export function listAskAIAgents(): AskAIWorkspaceAgent[] {
-  const custom = read<AskAIWorkspaceAgent[]>(AGENTS_KEY, []);
+  const saved = read<Array<Partial<AskAIWorkspaceAgent> & Pick<AskAIWorkspaceAgent, "id" | "name">>>(AGENTS_KEY, []);
+  const legacy = saved.length ? [] : read<Array<Partial<AskAIWorkspaceAgent> & Pick<AskAIWorkspaceAgent, "id" | "name">>>(LEGACY_AGENTS_KEY, []);
+  const custom = [...saved, ...legacy].map(normalizeAgent);
   return [...DEFAULT_AGENTS, ...custom.filter((agent) => !DEFAULT_AGENTS.some((item) => item.id === agent.id))];
 }
 
-export function saveAskAIAgent(input: Omit<AskAIWorkspaceAgent, "id" | "createdAt"> & { id?: string }): AskAIWorkspaceAgent {
-  const agent: AskAIWorkspaceAgent = {
+export function saveAskAIAgent(input: {
+  id?: string;
+  name: string;
+  description: string;
+  instructions: string;
+  tools: AskAIToolId[];
+  color: string;
+  icon: string;
+  isDefault?: boolean;
+  model?: AskAIWorkspaceAgent["model"];
+  access?: AskAIAgentAccess;
+  device?: AskAIWorkspaceAgent["device"];
+  status?: AskAIAgentStatus;
+  goals?: string[];
+  skills?: string[];
+  triggers?: string[];
+  memoryEnabled?: boolean;
+}): AskAIWorkspaceAgent {
+  const agent = normalizeAgent({
     ...input,
     id: input.id || createId("agent"),
-    name: input.name.trim().slice(0, 48) || "New agent",
-    description: input.description.trim().slice(0, 180),
-    instructions: input.instructions.trim().slice(0, 4000),
-    tools: [...new Set(input.tools)].slice(0, 12),
     createdAt: Date.now(),
-  };
-  const custom = read<AskAIWorkspaceAgent[]>(AGENTS_KEY, []);
+  });
+  const custom = read<AskAIWorkspaceAgent[]>(AGENTS_KEY, []).map(normalizeAgent);
   const index = custom.findIndex((item) => item.id === agent.id);
   if (index >= 0) custom[index] = agent;
   else custom.unshift(agent);
@@ -174,6 +270,26 @@ export function saveAskAIAgent(input: Omit<AskAIWorkspaceAgent, "id" | "createdA
 
 export function deleteAskAIAgent(id: string): void {
   write(AGENTS_KEY, read<AskAIWorkspaceAgent[]>(AGENTS_KEY, []).filter((agent) => agent.id !== id));
+}
+
+export function routeAskAIAgent(prompt: string, preferredId = "askai"): AskAIAgentRoute {
+  const agents = listAskAIAgents();
+  const preferred = agents.find((agent) => agent.id === preferredId);
+  if (preferred && preferred.id !== "askai") return { agent: preferred, reason: "You selected this specialist." };
+  const lower = prompt.toLowerCase();
+  const route: [string, string] = /\b(code|bug|error|typescript|javascript|css|html|github|build failure|debug)\b/.test(lower)
+    ? ["code", "The request is primarily code or debugging work."]
+    : /\b(game|website|studio|engine|product|feature|prototype|architecture|build|create an app)\b/.test(lower)
+      ? ["builder", "The request is product or creation work."]
+      : /\b(post|caption|hashtag|campaign|followers|community|social|reply|content plan)\b/.test(lower)
+        ? ["social", "The request is social or community work."]
+        : /\b(research|compare|latest|source|evidence|find out|investigate|report)\b/.test(lower)
+          ? ["research", "The request needs research or comparison."]
+          : ["askai", "The orchestrator can answer directly and coordinate tools as needed."];
+  return {
+    agent: agents.find((agent) => agent.id === route[0]) || agents[0],
+    reason: route[1],
+  };
 }
 
 export function listAskAIJobs(): AskAIWorkspaceJob[] {
@@ -304,6 +420,7 @@ export function getAskAISettings(): AskAIWorkspaceSettings {
     confirmActions: true,
     speakReplies: false,
     engine: "auto",
+    preloadLocalModel: true,
   });
 }
 
@@ -312,20 +429,32 @@ export function saveAskAISettings(settings: AskAIWorkspaceSettings): AskAIWorksp
 }
 
 export function buildAskAIWorkspaceContext(agent: AskAIWorkspaceAgent, files: AskAIWorkspaceFile[]): string {
-  const memories = listAskAIMemory().slice(0, 20);
-  const memoryText = memories.length ? memories.map((item) => `- ${item.text}`).join("\n") : "- No saved workspace memory.";
+  const memories = agent.memoryEnabled ? listAskAIMemory().slice(0, 20) : [];
+  const memoryText = memories.length ? memories.map((item) => `- ${item.text}`).join("\n") : "- No workspace memory is active for this agent.";
   const fileText = files.length
     ? files.map((file) => `FILE: ${file.name}\n${file.text ? file.text.slice(0, 12_000) : `[${file.type || "file"}, ${file.size} bytes]`}`).join("\n\n")
     : "No files are attached.";
+  const roster = listAskAIAgents()
+    .filter((item) => item.id !== "askai")
+    .map((item) => `- ${item.name}: ${item.description} | skills: ${item.skills.join(", ")}`)
+    .join("\n");
   return [
     `ACTIVE AGENT: ${agent.name}`,
+    `AGENT ROLE: ${agent.description}`,
     `AGENT INSTRUCTIONS: ${agent.instructions}`,
+    `MODEL PREFERENCE: ${agent.model}`,
+    `ACCESS: ${agent.access}`,
+    `DEVICE: ${agent.device}`,
     `AVAILABLE TOOLS: ${agent.tools.join(", ")}`,
+    `GOALS: ${agent.goals.join(" | ") || "Complete the user's request accurately."}`,
+    `SKILLS: ${agent.skills.join(", ") || "General assistance"}`,
+    agent.id === "askai" ? "SPECIALIST ROSTER:\n" + roster : "",
+    agent.id === "askai" ? "DELEGATION RULE: silently adopt the most relevant specialist's methods, but return one coherent answer as AskAI. State which specialist would own a long-running task when useful." : "",
     "WORKSPACE MEMORY:",
     memoryText,
     "ATTACHED FILES:",
     fileText,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function titleFromPrompt(prompt: string, type: AskAIMiniappType): string {
