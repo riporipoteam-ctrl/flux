@@ -1,5 +1,5 @@
-import AskAIWorkspace from "@/components/ask-ai/askai-workspace";
+import AskAIWorkspaceV2 from "@/components/ask-ai/askai-workspace-v2";
 
 export default function AskAIPage() {
-  return <AskAIWorkspace />;
+  return <AskAIWorkspaceV2 />;
 }
