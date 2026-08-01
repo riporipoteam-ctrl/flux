@@ -6,16 +6,11 @@ import { ThemeProvider } from "@/contexts/theme-context";
 import { MobileBoot } from "@/components/providers/mobile-boot";
 import { AskAIModelWarmup } from "@/components/providers/askai-model-warmup";
 import "./globals.css";
-import "./social-effects.css";
-import "./polish.css";
-import "./social-rebuild.css";
 import "@/styles/editor-surfaces.css";
-import "@/styles/flux-v5.css";
 import "@/styles/flux-engine.css";
-import "@/styles/flux-social-2027.css";
 import "@/styles/askai-workspace.css";
-import "@/styles/flux-redesign-v2.css";
 import "@/styles/askai-workspace-v2.css";
+import "@/styles/flux-v8.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -43,11 +38,11 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: `${basePath}/favicon.ico?v=flux-20260801-v2`, type: "image/x-icon", sizes: "256x256" },
-      { url: `${basePath}/flux-icon.png?v=flux-20260801-v2`, type: "image/png", sizes: "1024x1024" },
+      { url: `${basePath}/favicon.ico?v=flux-v8`, type: "image/x-icon", sizes: "256x256" },
+      { url: `${basePath}/flux-icon.png?v=flux-v8`, type: "image/png", sizes: "1024x1024" },
     ],
-    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-20260801-v2`, type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: `${basePath}/flux-icon.png?v=flux-20260801-v2`, type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-v8`, type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: `${basePath}/flux-icon.png?v=flux-v8`, type: "image/png", sizes: "180x180" }],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -56,8 +51,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#e9edf3" },
-    { media: "(prefers-color-scheme: dark)", color: "#070a0f" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f4f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#07090d" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -71,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}>
         <ThemeProvider>
           <AuthProvider>
