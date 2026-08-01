@@ -4,7 +4,6 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { MobileBoot } from "@/components/providers/mobile-boot";
-import { AskAIModelWarmup } from "@/components/providers/askai-model-warmup";
 import "./globals.css";
 import "@/styles/editor-surfaces.css";
 import "@/styles/flux-engine.css";
@@ -34,16 +33,16 @@ export const metadata: Metadata = {
   manifest: `${basePath}/manifest.webmanifest`,
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Flux",
   },
   icons: {
     icon: [
-      { url: `${basePath}/favicon.ico?v=flux-v8`, type: "image/x-icon", sizes: "256x256" },
-      { url: `${basePath}/flux-icon.png?v=flux-v8`, type: "image/png", sizes: "1024x1024" },
+      { url: `${basePath}/favicon.ico?v=flux-x`, type: "image/x-icon", sizes: "256x256" },
+      { url: `${basePath}/flux-icon.png?v=flux-x`, type: "image/png", sizes: "1024x1024" },
     ],
-    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-v8`, type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: `${basePath}/flux-icon.png?v=flux-v8`, type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-x`, type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: `${basePath}/flux-icon.png?v=flux-x`, type: "image/png", sizes: "180x180" }],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -52,8 +51,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f4f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#07090d" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -67,12 +66,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className="light" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}>
         <ThemeProvider>
           <AuthProvider>
             <MobileBoot />
-            <AskAIModelWarmup />
             {children}
             <Toaster
               position="top-center"

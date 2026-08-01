@@ -14,55 +14,49 @@ function forbidText(source, marker, label) {
 
 const root = read("src/app/layout.tsx");
 requireText(root, "flux-v8.css", "Root design system");
+requireText(root, 'className="light"', "Light-first design system");
 for (const legacy of ["social-rebuild.css", "flux-v5.css", "flux-social-2027.css", "flux-redesign-v2.css"]) {
   forbidText(root, legacy, "Root design system");
 }
 
 const layout = read("src/app/(main)/layout.tsx");
-for (const marker of ["DesktopTopbar", "flux8-app-shell", "flux8-content-grid", "flux8-main-column"]) {
-  requireText(layout, marker, "Flux V8 shell");
+for (const marker of ["flux8-app-shell", "flux8-main-column", "Sidebar", "RightRail", "MobileNav"]) {
+  requireText(layout, marker, "X-style Flux shell");
 }
-
-const topbar = read("src/components/layout/desktop-topbar.tsx");
-for (const marker of ["flux8-global-search", "flux8-create-button", "ComposeBox", "getUnreadCount"]) {
-  requireText(topbar, marker, "Desktop command bar");
-}
+forbidText(layout, "DesktopTopbar", "X-style Flux shell");
 
 const sidebar = read("src/components/layout/sidebar.tsx");
-for (const marker of ["flux8-sidebar", "flux8-sidebar-link", "flux8-sidebar-create", "Flux Coins"]) {
-  requireText(sidebar, marker, "Desktop navigation");
+for (const marker of ["Home", "Explore", "Notifications", "Messages", "AskAI", "Bookmarks", "Communities", "Premium", "Profile", "More", "flux8-sidebar-create"]) {
+  requireText(sidebar, marker, "X-style desktop navigation");
 }
 
 const mobileHeader = read("src/components/layout/mobile-app-header.tsx");
-requireText(mobileHeader, "flux8-mobile-header", "Mobile header");
+for (const marker of ["flux8-mobile-header", "MobileDrawer", "Settings"]) requireText(mobileHeader, marker, "X-style mobile header");
 const mobileNav = read("src/components/layout/mobile-nav.tsx");
-requireText(mobileNav, "flux8-mobile-nav", "Mobile navigation");
-const drawer = read("src/components/layout/mobile-drawer.tsx");
-requireText(drawer, "var(--v8-nav)", "Mobile drawer");
+for (const marker of ["/home", "/explore", "/ask-ai", "/notifications", "/messages", "flux8-mobile-create"]) requireText(mobileNav, marker, "X-style mobile navigation");
 
 const rail = read("src/components/layout/right-rail.tsx");
-for (const marker of ["flux8-balance-card", "flux8-premium-card", "flux8-askai-promo", "flux8-game-links"]) {
-  requireText(rail, marker, "Discovery rail");
+for (const marker of ["Search", "Subscribe to Premium", "What’s happening", "Who to follow", "flux8-right-rail"]) {
+  requireText(rail, marker, "X-style discovery rail");
 }
 
 const home = read("src/app/(main)/home/page.tsx");
-for (const marker of ["flux8-feed-hero", "flux8-quick-actions", "flux8-story-card", "flux8-post-wrap"]) {
-  requireText(home, marker, "Home feed");
+for (const marker of ["For you", "Following", "What is happening?!", "flux8-story-card", "flux8-post-wrap"]) {
+  requireText(home, marker, "X-style Home timeline");
 }
 
 const styles = read("src/styles/flux-v8.css");
 for (const marker of [
-  ".flux8-app-shell",
-  ".flux8-topbar",
+  "#1d9bf0",
+  "grid-template-columns: 275px minmax(0, 600px)",
   ".flux8-sidebar",
   ".flux8-right-rail",
   ".flux8-mobile-header",
   ".flux8-mobile-nav",
-  ".flux8-feed",
+  ".flux8-feed-tabs",
   ".flux8-composer-card",
   ".flux8-post-wrap",
-  ".social-page-header",
-  ".surface-card",
-]) requireText(styles, marker, "Flux V8 stylesheet");
+]) requireText(styles, marker, "X-style Flux stylesheet");
+forbidText(styles, "#7c3aed", "X-style Flux stylesheet");
 
-console.log("Flux V8 total redesign audit passed.");
+console.log("Flux X-style total redesign audit passed.");

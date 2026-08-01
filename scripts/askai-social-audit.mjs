@@ -14,70 +14,67 @@ function forbidText(source, text, label) {
 
 const route = read("src/app/(main)/ask-ai/page.tsx");
 requireText(route, "AskAIWorkspaceV2", "AskAI route");
-forbidText(route, "AskAIProduct", "AskAI route");
 
-const productShell = read("src/components/ask-ai/askai-workspace-v2.tsx");
+const workspace = read("src/components/ask-ai/askai-workspace-v2.tsx");
 for (const marker of [
-  "AskAI Workspace",
-  "subscribeLocalAskAIStatus",
-  "Search Flux",
-  "Return to Flux",
-]) requireText(productShell, marker, "AskAI product shell");
-
-const workspace = read("src/components/ask-ai/askai-workspace.tsx");
-for (const marker of [
+  "AskAI 1.0 Instant",
+  "AskAI 1.0 Pro",
+  "runAskAIPro",
+  "searchConnectedWeb",
   "streamLocalAskAI",
-  "localAskAISupported",
-  "AgentsView",
-  "JobsView",
-  "MiniappsView",
-  "FilesView",
-  "MemoryView",
-  "ApprovalCard",
-  "performSearch",
-  "performProject",
-  "performGroup",
-  "SpeechRecognition",
-  "speechSynthesis",
-]) requireText(workspace, marker, "AskAI workspace");
+  "searchFlux",
+  "Kimi K3",
+  "reasoning",
+]) requireText(workspace, marker, "AskAI two-model workspace");
+for (const legacy of ["Auto route", "Smart local WebGPU", "Connected endpoint", "AskAI Workspace"]) {
+  forbidText(workspace, legacy, "AskAI model selection");
+}
 
-const data = read("src/lib/askai-workspace.ts");
+const pro = read("src/lib/ai/askai-pro.ts");
 for (const marker of [
-  "DEFAULT_AGENTS",
-  "saveAskAIJob",
-  "createAskAIMiniapp",
-  "saveAskAIMemory",
-  "saveAskAIFile",
-  "buildAskAIWorkspaceContext",
-]) requireText(data, marker, "AskAI workspace data");
+  'model: "kimi-k3"',
+  'reasoning_effort: "max"',
+  "NEXT_PUBLIC_KIMI_K3_ENDPOINT",
+  "NEXT_PUBLIC_ASKAI_SEARCH_ENDPOINT",
+  "searchConnectedWeb",
+  "CONNECTED RESEARCH SOURCES",
+]) requireText(pro, marker, "AskAI Pro connector");
 
-const local = read("src/lib/local-ask-ai.ts");
-requireText(local, "conversationalResponse", "Instant local AskAI");
-requireText(local, "I’m doing well", "Instant local conversation");
-forbidText(local, "The main focus appears to be", "Instant local AskAI");
+const localModel = read("src/lib/ai/local-web-llm.ts");
+requireText(localModel, "Qwen2.5-0.5B-Instruct", "AskAI Instant model");
+requireText(localModel, "AskAI 1.0 Instant", "AskAI Instant branding");
+forbidText(localModel, "Qwen2.5-1.5B-Instruct", "AskAI Instant model");
+
+const localTools = read("src/lib/local-ask-ai.ts");
+requireText(localTools, "runLocalAskAI", "Instant local fallback");
+forbidText(localTools, "The main focus appears to be", "Instant local fallback");
 
 const mainLayout = read("src/app/(main)/layout.tsx");
 requireText(mainLayout, "if (isStudio)", "Immersive Studio shell");
 requireText(mainLayout, "if (isImmersive)", "Immersive AskAI shell");
 
 const rootLayout = read("src/app/layout.tsx");
+requireText(rootLayout, 'className="light"', "Light-first Flux");
 requireText(rootLayout, "askai-workspace-v2.css", "AskAI styles");
 requireText(rootLayout, "flux-v8.css", "Flux social styles");
 
 const socialStyles = read("src/styles/flux-v8.css");
 for (const marker of [
+  "#1d9bf0",
   ".flux8-sidebar",
   ".flux8-mobile-nav",
   ".flux8-mobile-header",
   ".flux8-right-rail",
   ".flux8-feed",
-]) requireText(socialStyles, marker, "Flux V8 social redesign");
+]) requireText(socialStyles, marker, "X-style Flux redesign");
+forbidText(socialStyles, "#7c3aed", "X-style Flux redesign");
 
 const askStyles = read("src/styles/askai-workspace-v2.css");
 for (const marker of [
-  ".askai-v2-productbar",
-  ".askai-v2-frame",
-  ".askai-v2-model",
-]) requireText(askStyles, marker, "AskAI V2 styles");
+  ".askx-shell",
+  ".askx-model-switch",
+  ".askx-composer",
+  ".askx-context",
+]) requireText(askStyles, marker, "AskAI X-style workspace");
 
-console.log("AskAI workspace and Flux V8 redesign audit passed.");
+console.log("AskAI Kimi K3 and X-style Flux audit passed.");

@@ -8,7 +8,6 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
-import { DesktopTopbar } from "@/components/layout/desktop-topbar";
 import { IncomingCallBanner } from "@/components/messages/incoming-call-banner";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -37,11 +36,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (!profile) {
     return (
       <div className="flux8-auth-fallback grid min-h-[100dvh] place-items-center px-5">
-        <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-7 text-center shadow-2xl">
+        <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-7 text-center">
           <h1 className="text-xl font-black">We couldn&apos;t load your profile</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">Your session is safe. Retry the connection, or return to sign in.</p>
-          <button onClick={() => void refreshProfile()} className="mt-5 h-11 w-full rounded-xl bg-primary text-sm font-black text-white">Try again</button>
-          <button onClick={() => void signOut()} className="mt-2 h-10 w-full rounded-xl text-sm font-semibold text-muted-foreground hover:bg-muted">Return to sign in</button>
+          <button onClick={() => void refreshProfile()} className="mt-5 h-11 w-full rounded-full bg-primary text-sm font-black text-white">Try again</button>
+          <button onClick={() => void signOut()} className="mt-2 h-10 w-full rounded-full text-sm font-semibold text-muted-foreground hover:bg-muted">Return to sign in</button>
         </div>
       </div>
     );
@@ -51,7 +50,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (isStudio) {
     return (
-      <div className="h-[100dvh] w-full overflow-hidden bg-[#07080c]">
+      <div className="h-[100dvh] w-full overflow-hidden bg-[#0b0f14]">
         <IncomingCallBanner />
         {children}
       </div>
@@ -71,16 +70,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="flux8-app-shell min-h-[100dvh] overflow-x-clip">
       <IncomingCallBanner />
       <Sidebar />
-      <section className="flux8-workspace min-w-0">
-        <DesktopTopbar />
+      <main className="flux8-main-column min-w-0 pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">
         <MobileAppHeader />
-        <div className="flux8-content-grid">
-          <main className="flux8-main-column min-w-0 pb-[calc(70px+env(safe-area-inset-bottom))] lg:pb-0">
-            {children}
-          </main>
-          {!hideRail ? <RightRail /> : null}
-        </div>
-      </section>
+        {children}
+      </main>
+      {!hideRail ? <RightRail /> : null}
       <MobileNav />
     </div>
   );

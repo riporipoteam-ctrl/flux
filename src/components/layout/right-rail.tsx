@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Coins, Crown, Gamepad2, Hash, Search, Sparkles, UserPlus } from "lucide-react";
+import { Search } from "lucide-react";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
 import { getSuggestedUsers } from "@/services/users";
@@ -12,10 +12,9 @@ import type { UserProfile } from "@/types";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { profilePath } from "@/lib/routes";
-import { formatCount } from "@/lib/utils";
 
 export function RightRail() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
@@ -36,7 +35,7 @@ export function RightRail() {
   }, [user]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => getTrendingHashtags(5).then(setTags).catch(() => setTags([])), 70);
+    const timer = window.setTimeout(() => getTrendingHashtags(6).then(setTags).catch(() => setTags([])), 70);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -55,46 +54,30 @@ export function RightRail() {
     <aside className="flux8-right-rail hidden xl:block no-scrollbar">
       <div className="flux8-right-stack">
         <form onSubmit={(event) => { event.preventDefault(); if (queryText.trim()) router.push(`/explore?q=${encodeURIComponent(queryText.trim())}`); }} className="flux8-rail-search">
-          <Search className="h-[17px] w-[17px]" />
-          <input value={queryText} onChange={(event) => setQueryText(event.target.value)} placeholder="Search Flux" aria-label="Search Flux" />
+          <Search className="h-[18px] w-[18px]" />
+          <input value={queryText} onChange={(event) => setQueryText(event.target.value)} placeholder="Search" aria-label="Search Flux" />
         </form>
 
-        {profile ? (
-          <section className="flux8-balance-card">
-            <div className="flux8-balance-icon"><Coins className="h-5 w-5" /></div>
-            <div><span>Your balance</span><strong>{formatCount(profile.coins)} Flux Coins</strong></div>
-            <Link href="/shop" aria-label="Open shop"><ArrowRight className="h-4 w-4" /></Link>
-          </section>
-        ) : null}
-
-        <Link href="/premium" className="flux8-premium-card">
-          <span className="flux8-premium-icon"><Crown className="h-5 w-5" /></span>
-          <div><strong>Flux Premium</strong><small>More creator tools and customisation</small></div>
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+        <section className="flux8-premium-card">
+          <strong>Subscribe to Premium</strong>
+          <p>Unlock creator tools, longer posts and more ways to customise Flux.</p>
+          <Link href="/premium">Subscribe</Link>
+        </section>
 
         <section className="flux8-rail-card">
-          <header><div><Hash className="h-4 w-4" /><strong>Explore</strong></div><Link href="/explore">Show all</Link></header>
+          <header><strong>What’s happening</strong></header>
           <div className="flux8-trend-list">
             {tags.length ? tags.map((tag, index) => (
               <Link key={tag.tag} href={`/explore?q=${encodeURIComponent(`#${tag.tag}`)}`} className="flux8-trend-row">
-                <span>{index + 1}</span>
-                <div><small>Trending now</small><strong>#{tag.tag}</strong><em>{tag.postsCount} {tag.postsCount === 1 ? "post" : "posts"}</em></div>
+                <div><small>{index + 1} · Trending</small><strong>#{tag.tag}</strong><em>{tag.postsCount} {tag.postsCount === 1 ? "post" : "posts"}</em></div>
               </Link>
             )) : <p className="flux8-empty-rail">Post with hashtags to start a trend.</p>}
           </div>
+          <Link href="/explore" className="flux8-rail-more">Show more</Link>
         </section>
 
         <section className="flux8-rail-card">
-          <header><div><Gamepad2 className="h-4 w-4" /><strong>Games</strong></div><Link href="/games">See all</Link></header>
-          <div className="flux8-game-links">
-            <Link href="/games"><span>Discover</span><small>Community games</small></Link>
-            <Link href="/studio"><span>Build</span><small>Open Flux Studio</small></Link>
-          </div>
-        </section>
-
-        <section className="flux8-rail-card">
-          <header><div><UserPlus className="h-4 w-4" /><strong>People to follow</strong></div><Link href="/explore">See all</Link></header>
+          <header><strong>Who to follow</strong></header>
           <div className="flux8-follow-list">
             {suggestions.length ? suggestions.map((person) => (
               <div key={person.uid} className="flux8-follow-row">
@@ -104,16 +87,11 @@ export function RightRail() {
               </div>
             )) : <p className="flux8-empty-rail">No suggestions right now.</p>}
           </div>
+          <Link href="/explore" className="flux8-rail-more">Show more</Link>
         </section>
 
-        <Link href="/ask-ai" className="flux8-askai-promo">
-          <div><Sparkles className="h-5 w-5" /><strong>Create with AskAI</strong></div>
-          <p>Research, write, plan and build without leaving Flux.</p>
-          <span>Open AskAI <ArrowRight className="h-4 w-4" /></span>
-        </Link>
-
         <nav className="flux8-rail-footer">
-          <Link href="/help">Help</Link><Link href="/settings">Settings</Link><Link href="/premium">Premium</Link><span>© {new Date().getFullYear()} Ripo Team</span>
+          <Link href="/help">Terms</Link><Link href="/settings">Privacy</Link><Link href="/help">Help</Link><span>© {new Date().getFullYear()} Ripo Team</span>
         </nav>
       </div>
     </aside>
