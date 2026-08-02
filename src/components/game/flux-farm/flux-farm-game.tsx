@@ -47,7 +47,6 @@ import {
   DAYS_PER_SEASON,
   SEASON_INFO,
   STORY,
-  TILE,
   UPGRADES,
   UPGRADE_ORDER,
   WEATHER_INFO,
@@ -74,17 +73,30 @@ import {
   formatClock,
   hireWorker,
   isNight,
-  movePlayer,
-  performAction,
-  resolveAction,
+  plotAt,
   sellBarn,
+  FARM_X,
+  FARM_Y,
   sleep,
+  tryHarvest,
+  tryPlant,
+  tryTill,
+  tryWater,
   upgradeLevel,
   type FarmRuntime,
   type GameEvent,
   type ToolId,
 } from "@/lib/flux-farm/simulation";
-import { addFloater, burst, createRenderState, render, type RenderState } from "@/lib/flux-farm/renderer";
+import {
+  createIsoState,
+  isoBurst,
+  isoFloater,
+  loadIsoAssets,
+  pickTile,
+  renderIso,
+  tileToWorld,
+  type IsoState,
+} from "@/lib/flux-farm/iso-renderer";
 import { FarmAudio } from "@/lib/flux-farm/audio";
 import { barnCapacity, totalBarnCount, type FarmSaveV2 } from "@/lib/flux-farm/world";
 import {
@@ -110,12 +122,10 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<FarmRuntime | null>(null);
-  const renderRef = useRef<RenderState | null>(null);
+  const renderRef = useRef<IsoState | null>(null);
   const audioRef = useRef<FarmAudio | null>(null);
   const keysRef = useRef<Set<string>>(new Set());
-  const stickRef = useRef({ active: false, id: -1, baseX: 0, baseY: 0, dx: 0, dy: 0 });
-  const holdActionRef = useRef(false);
-  const lastStepSoundRef = useRef(0);
+  const dragRef = useRef({ active: false, id: -1, lastX: 0, lastY: 0, moved: 0 });
   const lastNightRef = useRef(false);
 
   const [ready, setReady] = useState(false);
@@ -161,10 +171,15 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
       .then((save) => {
         if (cancelled) return;
         runtimeRef.current = createRuntime(save);
-        renderRef.current = createRenderState(seasonForDay(save.day));
-        renderRef.current.camera.x = save.playerX;
-        renderRef.current.camera.y = save.playerY;
+        const iso = createIsoState();
+        const centre = tileToWorld(FARM_X + 4, FARM_Y + 4);
+        iso.camera.x = centre.x;
+        iso.camera.y = centre.y;
+        renderRef.current = iso;
         setReady(true);
+        void loadIsoAssets().then((assets) => {
+          if (!cancelled && renderRef.current) renderRef.current.assets = assets;
+        });
       })
       .catch(() => {
         if (!cancelled) toast.error("Could not open your farm. Check your connection and reload.");
@@ -240,37 +255,37 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
     if (!runtime || !state) return;
 
     for (const event of events) {
-      const worldX = (event.x ?? 0) * TILE + TILE / 2;
-      const worldY = (event.y ?? 0) * TILE;
+      const tx = event.x ?? 0;
+      const ty = event.y ?? 0;
 
       switch (event.kind) {
         case "till":
           audio?.play("till", 0.9 + Math.random() * 0.2);
-          burst(state, worldX, worldY + TILE / 2, 6, "#7a5f43", "dust");
+          isoBurst(state, tx, ty, 8, "#8a6b4a");
           break;
         case "plant":
           audio?.play("plant");
-          burst(state, worldX, worldY + TILE / 2, 5, "#8fd07a");
+          isoBurst(state, tx, ty, 6, "#8fd07a");
           break;
         case "water":
           audio?.play("water");
-          burst(state, worldX, worldY + TILE / 2, 10, "#7fc4ff", "splash");
+          isoBurst(state, tx, ty, 12, "#7fc4ff");
           break;
         case "harvest":
           if (event.crop) {
             audio?.play("harvest", 0.95 + Math.random() * 0.15);
-            burst(state, worldX, worldY, 12, CROPS[event.crop].palette[2]);
-            addFloater(state, worldX, worldY, `+${event.value ?? 0} XP${event.detail ? ` · ${event.detail}` : ""}`, "#c7f284");
+            isoBurst(state, tx, ty, 14, CROPS[event.crop].palette[2]);
+            isoFloater(state, tx, ty, `+${event.value ?? 0} XP${event.detail ? ` · ${event.detail}` : ""}`, "#c7f284");
           }
           break;
         case "sell":
           audio?.play("coin");
-          addFloater(state, runtime.player.x, runtime.player.y, `+${(event.value ?? 0).toLocaleString()}`, "#ffd45e");
+          isoFloater(state, FARM_X + 2, FARM_Y + 2, `+${(event.value ?? 0).toLocaleString()}`, "#ffd45e");
           toast.success(event.message ?? "Sold");
           break;
         case "levelup":
           audio?.play("levelup");
-          burst(state, runtime.player.x + TILE / 2, runtime.player.y, 26, "#ffe066");
+          isoBurst(state, FARM_X + 2, FARM_Y + 2, 26, "#ffe066");
           setBanner({ title: event.message ?? "Rank up", detail: event.detail, tone: "#ffd45e" });
           break;
         case "story":
@@ -341,11 +356,10 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
 
       // Keep roughly the same number of tiles visible on every screen size.
       if (renderRef.current) {
-        // Aim for a similar slice of the world regardless of screen size, then
-        // apply the player's zoom preference on top.
-        const target = rect.width < 520 ? 13 : rect.width < 900 ? 18 : rect.width < 1400 ? 24 : 30;
-        const fit = rect.width / (target * TILE);
-        renderRef.current.camera.zoom = Math.max(0.9, Math.min(4, fit)) * (zoom / 2);
+        // Fit roughly N isometric tiles across, then apply the zoom preference.
+        const target = rect.width < 520 ? 7 : rect.width < 900 ? 10 : 14;
+        const fit = rect.width / (target * 128);
+        renderRef.current.camera.zoom = Math.max(0.22, Math.min(1.6, fit)) * (zoom / 2);
       }
     };
 
@@ -363,38 +377,21 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
 
       runtime.paused = paused || panel !== null;
 
-      // Movement input: keyboard + virtual stick, combined.
-      let inputX = 0;
-      let inputY = 0;
+      // Keyboard pans the camera — there is no avatar to walk.
+      let panX = 0;
+      let panY = 0;
       const keys = keysRef.current;
-      if (keys.has("a") || keys.has("arrowleft")) inputX -= 1;
-      if (keys.has("d") || keys.has("arrowright")) inputX += 1;
-      if (keys.has("w") || keys.has("arrowup")) inputY -= 1;
-      if (keys.has("s") || keys.has("arrowdown")) inputY += 1;
-      if (stickRef.current.active) {
-        inputX += stickRef.current.dx;
-        inputY += stickRef.current.dy;
+      if (keys.has("a") || keys.has("arrowleft")) panX -= 1;
+      if (keys.has("d") || keys.has("arrowright")) panX += 1;
+      if (keys.has("w") || keys.has("arrowup")) panY -= 1;
+      if (keys.has("s") || keys.has("arrowdown")) panY += 1;
+      if (panX || panY) {
+        const speed = 620 * dt / state.camera.zoom;
+        state.camera.x += panX * speed;
+        state.camera.y += panY * speed;
       }
 
       if (!runtime.paused) {
-        movePlayer(runtime, inputX, inputY, dt);
-
-        if (runtime.player.moving) {
-          lastStepSoundRef.current += dt;
-          const cadence = 0.34;
-          if (lastStepSoundRef.current > cadence) {
-            lastStepSoundRef.current = 0;
-            audioRef.current?.play("step", 0.85 + Math.random() * 0.3);
-          }
-        }
-
-        if (runtime.player.action) {
-          runtime.player.action.timer -= dt;
-          if (runtime.player.action.timer <= 0) runtime.player.action = null;
-        }
-
-        if (holdActionRef.current && !runtime.player.action) performAction(runtime, tool);
-
         advance(runtime, dt);
         handleEvents(drainEvents(runtime));
 
@@ -411,12 +408,12 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
         );
       }
 
-      render(ctx, runtime, state, runtime.paused ? 0 : dt, canvas.width, canvas.height, dpr);
+      renderIso(ctx, runtime, state, runtime.paused ? 0 : dt, canvas.width, canvas.height, dpr);
 
       hudTimer += dt;
       if (hudTimer > 0.12) {
         hudTimer = 0;
-        const resolved = resolveAction(runtime, tool);
+        const hovered = renderRef.current?.hover ?? null;
         setHud({
           coins: Math.floor(runtime.save.coins),
           xp: Math.floor(runtime.save.xp),
@@ -434,7 +431,7 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
           upgrades: { ...runtime.save.upgrades },
           workers: [...runtime.save.workers],
           activeEvent: runtime.save.activeEvent,
-          hint: resolved.valid ? ACTION_LABEL[resolved.action] : "",
+          hint: hovered ? describeTile(runtime, hovered.tx, hovered.ty, tool) : "",
         });
       }
 
@@ -461,9 +458,13 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
 
       if (key === " " || key === "e") {
         const runtime = runtimeRef.current;
-        if (runtime && !runtime.paused) performAction(runtime, tool);
+        const hovered = renderRef.current?.hover;
+        if (runtime && !runtime.paused && hovered) actOnTile(runtime, hovered.tx, hovered.ty, tool);
       }
-      if (key === "escape") setPanel((current) => (current ? null : current)), setPaused((value) => !value);
+      if (key === "escape") {
+        setPanel(null);
+        setPaused((value) => !value);
+      }
       if (key === "q") cycleCrop(-1);
       if (key === "tab") {
         event.preventDefault();
@@ -505,72 +506,56 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
   /* Pointer input                                                           */
   /* ---------------------------------------------------------------------- */
 
-  const onCanvasPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    ensureAudio();
-    const runtime = runtimeRef.current;
-    const state = renderRef.current;
-    const canvas = canvasRef.current;
-    if (!runtime || !state || !canvas || runtime.paused) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const viewW = rect.width / state.camera.zoom;
-    const viewH = rect.height / state.camera.zoom;
-    const worldX = state.camera.x - viewW / 2 + (event.clientX - rect.left) / state.camera.zoom;
-    const worldY = state.camera.y - viewH / 2 + (event.clientY - rect.top) / state.camera.zoom;
-
-    const tileX = Math.floor(worldX / TILE);
-    const tileY = Math.floor(worldY / TILE);
-    const playerTileX = Math.floor((runtime.player.x + TILE / 2) / TILE);
-    const playerTileY = Math.floor((runtime.player.y + TILE / 2) / TILE);
-
-    // Close enough to reach: act on it. Otherwise walk there.
-    if (Math.abs(tileX - playerTileX) <= 1 && Math.abs(tileY - playerTileY) <= 1) {
-      const dx = tileX - playerTileX;
-      const dy = tileY - playerTileY;
-      if (dx !== 0 || dy !== 0) {
-        runtime.player.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 2 : 1) : dy > 0 ? 0 : 3;
-      }
-      performAction(runtime, tool);
-      return;
-    }
-
-    // Walk-to: nudge the player toward the tap for a moment.
-    const angle = Math.atan2(worldY - runtime.player.y, worldX - runtime.player.x);
-    stickRef.current = { active: true, id: -2, baseX: 0, baseY: 0, dx: Math.cos(angle), dy: Math.sin(angle) };
-    window.setTimeout(() => {
-      if (stickRef.current.id === -2) stickRef.current.active = false;
-    }, 320);
+  const canvasPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top, rect };
   };
 
-  const onStickStart = (event: React.PointerEvent<HTMLDivElement>) => {
+  const onCanvasPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     ensureAudio();
-    const rect = event.currentTarget.getBoundingClientRect();
-    stickRef.current = {
-      active: true,
-      id: event.pointerId,
-      baseX: rect.left + rect.width / 2,
-      baseY: rect.top + rect.height / 2,
-      dx: 0,
-      dy: 0,
-    };
+    dragRef.current = { active: true, id: event.pointerId, lastX: event.clientX, lastY: event.clientY, moved: 0 };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const onStickMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const stick = stickRef.current;
-    if (!stick.active || stick.id !== event.pointerId) return;
-    const dx = event.clientX - stick.baseX;
-    const dy = event.clientY - stick.baseY;
-    const distance = Math.hypot(dx, dy);
-    const max = 46;
-    const scale = distance > max ? max / distance : 1;
-    stick.dx = (dx * scale) / max;
-    stick.dy = (dy * scale) / max;
+  const onCanvasPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const state = renderRef.current;
+    if (!state) return;
+
+    const { x, y, rect } = canvasPoint(event);
+    state.hover = pickTile(state, x, y, rect.width, rect.height);
+
+    const drag = dragRef.current;
+    if (!drag.active || drag.id !== event.pointerId) return;
+
+    const dx = event.clientX - drag.lastX;
+    const dy = event.clientY - drag.lastY;
+    drag.lastX = event.clientX;
+    drag.lastY = event.clientY;
+    drag.moved += Math.abs(dx) + Math.abs(dy);
+    state.camera.x -= dx / state.camera.zoom;
+    state.camera.y -= dy / state.camera.zoom;
   };
 
-  const onStickEnd = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (stickRef.current.id !== event.pointerId) return;
-    stickRef.current = { active: false, id: -1, baseX: 0, baseY: 0, dx: 0, dy: 0 };
+  const onCanvasPointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const drag = dragRef.current;
+    const state = renderRef.current;
+    const runtime = runtimeRef.current;
+    dragRef.current = { active: false, id: -1, lastX: 0, lastY: 0, moved: 0 };
+    if (!state || !runtime || runtime.paused) return;
+
+    // A short press is a tap on a plot; anything longer was a camera pan.
+    if (drag.moved > 12) return;
+    const { x, y, rect } = canvasPoint(event);
+    const tile = pickTile(state, x, y, rect.width, rect.height);
+    actOnTile(runtime, tile.tx, tile.ty, tool);
+    handleEvents(drainEvents(runtime));
+  };
+
+  const onCanvasWheel = (event: React.WheelEvent<HTMLCanvasElement>) => {
+    const state = renderRef.current;
+    if (!state) return;
+    const next = state.camera.zoom * (event.deltaY > 0 ? 0.9 : 1.1);
+    state.camera.zoom = Math.max(0.18, Math.min(1.8, next));
   };
 
   /* ---------------------------------------------------------------------- */
@@ -634,6 +619,10 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
           ref={canvasRef}
           className="h-full w-full touch-none"
           onPointerDown={onCanvasPointerDown}
+          onPointerMove={onCanvasPointerMove}
+          onPointerUp={onCanvasPointerUp}
+          onPointerCancel={onCanvasPointerUp}
+          onWheel={onCanvasWheel}
           aria-label="Flux Farm world"
         />
       </div>
@@ -824,42 +813,6 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
           </div>
         </div>
       </div>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* Touch controls — placed above the tool bar so nothing overlaps     */}
-      {/* ---------------------------------------------------------------- */}
-      <div
-        className="absolute bottom-[calc(104px+env(safe-area-inset-bottom))] left-3 z-20 h-28 w-28 touch-none rounded-full border border-white/12 bg-black/25 backdrop-blur-md lg:hidden"
-        onPointerDown={onStickStart}
-        onPointerMove={onStickMove}
-        onPointerUp={onStickEnd}
-        onPointerCancel={onStickEnd}
-        aria-label="Movement joystick"
-        role="application"
-      >
-        <span className="pointer-events-none absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/25" />
-      </div>
-
-      <button
-        type="button"
-        className="absolute bottom-[calc(112px+env(safe-area-inset-bottom))] right-4 z-20 grid h-[72px] w-[72px] touch-none place-items-center rounded-full border border-white/15 bg-[#2f7d42]/85 text-white shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md active:scale-95 lg:hidden"
-        onPointerDown={(event) => {
-          event.preventDefault();
-          ensureAudio();
-          holdActionRef.current = true;
-          const runtime = runtimeRef.current;
-          if (runtime && !runtime.paused) performAction(runtime, tool);
-        }}
-        onPointerUp={() => {
-          holdActionRef.current = false;
-        }}
-        onPointerCancel={() => {
-          holdActionRef.current = false;
-        }}
-        aria-label="Use tool"
-      >
-        <Sparkles className="h-7 w-7" />
-      </button>
 
       {/* ---------------------------------------------------------------- */}
       {/* Pause overlay                                                     */}
@@ -1079,12 +1032,42 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
   );
 }
 
-const ACTION_LABEL: Record<string, string> = {
-  till: "Till this ground",
-  plant: "Plant a seed here",
-  water: "Water this plot",
-  harvest: "Harvest",
-};
+/**
+ * Applies the selected tool to one plot. "Auto" picks the obvious next step,
+ * which is what makes single-tap play work on a phone.
+ */
+function actOnTile(runtime: FarmRuntime, tx: number, ty: number, tool: ToolId) {
+  const plot = plotAt(runtime, tx, ty);
+  if (!plot) return false;
+
+  if (tool === "hoe") return tryTill(runtime, tx, ty);
+  if (tool === "seed") return tryPlant(runtime, tx, ty);
+  if (tool === "can") return tryWater(runtime, tx, ty);
+  if (tool === "scythe") return tryHarvest(runtime, tx, ty);
+
+  if (plot.crop && (plot.dead || plot.growth >= CROPS[plot.crop].growHours)) return tryHarvest(runtime, tx, ty);
+  if (!plot.tilled) return tryTill(runtime, tx, ty);
+  if (!plot.crop) return tryPlant(runtime, tx, ty);
+  return tryWater(runtime, tx, ty);
+}
+
+/** One-line description of what a tap would do, shown above the tool bar. */
+function describeTile(runtime: FarmRuntime, tx: number, ty: number, tool: ToolId): string {
+  const plot = plotAt(runtime, tx, ty);
+  if (!plot) return "";
+
+  if (plot.crop) {
+    const info = CROPS[plot.crop];
+    if (plot.dead) return `${info.name} withered — tap to clear`;
+    const progress = Math.min(1, plot.growth / info.growHours);
+    if (progress >= 1) return `${info.name} ready — tap to harvest`;
+    if (plot.moisture < 0.3) return `${info.name} is thirsty — tap to water`;
+    return `${info.name} · ${Math.round(progress * 100)}% grown`;
+  }
+
+  if (!plot.tilled) return tool === "seed" ? "Till this plot first" : "Tap to till";
+  return "Tap to plant the selected seed";
+}
 
 const PANEL_TITLES: Record<NonNullable<PanelId>, string> = {
   shop: "Seed shop",

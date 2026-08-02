@@ -264,16 +264,20 @@ export function generateTerrain(seed: number): Terrain {
     }
   }
 
+  // Placed as a farmyard hugging the west and north edges of the field. In an
+  // isometric projection anything more than a few tiles away leaves the frame,
+  // so these sit deliberately tight to the plots.
   const buildings: BuildingEntity[] = [
-    { id: "house", x: FARM_X - 8, y: FARM_Y + 1, w: 5, h: 4 },
-    { id: "barn", x: FARM_X - 8, y: FARM_Y + 7, w: 5, h: 4 },
-    { id: "well", x: FARM_X - 2, y: FARM_Y + 6, w: 1, h: 1 },
-    { id: "shed", x: FARM_X - 3, y: FARM_Y - 3, w: 2, h: 2 },
-    { id: "silo", x: FARM_X + FARM_W + 1, y: FARM_Y + 2, w: 2, h: 3, requiresUpgrade: "silo" },
-    { id: "greenhouse", x: FARM_X + FARM_W + 1, y: FARM_Y + 7, w: 4, h: 4, requiresUpgrade: "greenhouse" },
-    { id: "windmill", x: FARM_X + FARM_W + 2, y: FARM_Y - 4, w: 3, h: 5, requiresUpgrade: "windmill" },
-    { id: "market", x: FARM_X + 4, y: FARM_Y + FARM_H + 4, w: 4, h: 3, requiresUpgrade: "market" },
+    { id: "house", x: FARM_X - 2, y: FARM_Y, w: 1, h: 1 },
+    { id: "barn", x: FARM_X - 2, y: FARM_Y + 2, w: 1, h: 1 },
+    { id: "shed", x: FARM_X - 2, y: FARM_Y + 4, w: 1, h: 1 },
+    { id: "well", x: FARM_X - 1, y: FARM_Y + 6, w: 1, h: 1 },
+    { id: "market", x: FARM_X + 2, y: FARM_Y - 2, w: 1, h: 1 },
+    { id: "silo", x: FARM_X + 4, y: FARM_Y - 2, w: 1, h: 1, requiresUpgrade: "silo" },
+    { id: "greenhouse", x: FARM_X + 6, y: FARM_Y - 2, w: 1, h: 1, requiresUpgrade: "greenhouse" },
+    { id: "windmill", x: FARM_X - 2, y: FARM_Y - 2, w: 1, h: 1, requiresUpgrade: "windmill" },
   ];
+
 
   // Fence the farm rectangle so the play space reads as a farm, not a field.
   for (let x = FARM_X - 1; x <= FARM_X + FARM_W; x += 1) {
