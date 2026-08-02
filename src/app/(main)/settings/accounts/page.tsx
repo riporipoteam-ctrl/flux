@@ -103,7 +103,7 @@ export default function LinkedAccountsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center gap-3 glass-strong border-b border-border px-4 py-3">
+      <header className="x-header">
         <Link href="/settings" className="rounded-full p-2 hover:bg-muted">
           <ArrowLeft className="h-5 w-5" />
         </Link>

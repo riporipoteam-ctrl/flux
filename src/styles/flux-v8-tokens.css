@@ -1,3 +1,7 @@
+/* Bridges the shadcn/Tailwind semantic token names onto the X palette.
+   Declared once for both themes because every value dereferences a --v8-*
+   variable that already switches with `.dark`. */
+
 :root,
 .dark {
   --background: var(--v8-bg);
@@ -20,13 +24,13 @@
   --input: var(--v8-line-strong);
   --ring: var(--v8-accent);
   --success: var(--v8-green);
-  --like: #f91880;
+  --like: var(--v8-pink);
   --repost: var(--v8-green);
   --sidebar: var(--v8-panel);
   --link: var(--v8-accent);
-  --feed-max: 600px;
-  --radius: 1rem;
-  --shadow-soft: none;
+  --feed-max: var(--v8-feed);
+  --radius: var(--v8-radius-md);
+  --shadow-soft: var(--v8-shadow-sm);
   --shadow-glow: none;
 }
 
@@ -46,6 +50,7 @@
   box-shadow: none !important;
 }
 
+/* Radix portals render outside .flux8-main-column, so they are themed here. */
 [role="dialog"] {
   border-color: var(--v8-line) !important;
   background: var(--v8-panel) !important;
@@ -56,6 +61,7 @@
   border-color: var(--v8-line) !important;
   background: var(--v8-panel) !important;
   color: var(--v8-text) !important;
+  box-shadow: var(--v8-shadow-pop) !important;
 }
 
 button:focus-visible,

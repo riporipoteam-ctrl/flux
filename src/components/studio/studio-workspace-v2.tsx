@@ -319,7 +319,7 @@ export default function StudioWorkspaceV2() {
 
   return (
     <main className="flex h-[calc(100dvh_-_53px_-_env(safe-area-inset-top))] min-h-0 flex-col overflow-hidden bg-[#08090c] text-white lg:h-[100dvh]">
-      <header className="flex min-h-14 items-center gap-2 border-b border-white/10 bg-[#0b0c10] px-2 sm:px-3">
+      <header className="flex min-h-14 items-center gap-2 border-b border-white/10 bg-[#000000] px-2 sm:px-3">
         <Link href="/games" className="grid h-10 w-10 place-items-center rounded-xl hover:bg-white/8" aria-label="Back to Games"><ChevronLeft className="h-5 w-5" /></Link>
         <button type="button" onClick={() => setLeftOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl bg-white/7 lg:hidden" aria-label="Open projects"><PanelLeft className="h-5 w-5" /></button>
         <span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-black"><Gamepad2 className="h-4 w-4" /></span>
@@ -346,7 +346,7 @@ export default function StudioWorkspaceV2() {
           onDelete={(id) => { deleteLocalProject(id); refreshProjects(project?.id === id ? undefined : project?.id); }}
         />
 
-        <section className="flex min-w-0 flex-1 flex-col bg-[#090a0d]">
+        <section className="flex min-w-0 flex-1 flex-col bg-[#000000]">
           <div className="flex min-h-12 items-center gap-1 overflow-x-auto border-b border-white/10 bg-[#0d0f14] px-2 no-scrollbar">
             <WorkspaceTabButton active={tab === "preview"} icon={Play} label="Preview" onClick={() => setTab("preview")} />
             <WorkspaceTabButton active={tab === "html"} icon={FileCode2} label="HTML" onClick={() => setTab("html")} />
@@ -416,7 +416,7 @@ function ProjectsSidebar(props: {
 }) {
   return <>
     {props.open ? <button type="button" className="fixed inset-0 z-50 bg-black/60 lg:hidden" onClick={props.onClose} aria-label="Close projects" /> : null}
-    <aside className={cn("fixed inset-y-0 left-0 z-[60] flex w-[min(90vw,330px)] flex-col border-r border-white/10 bg-[#0b0c10] transition-transform lg:static lg:z-auto lg:w-[292px] lg:translate-x-0", props.open ? "translate-x-0" : "-translate-x-full")}>
+    <aside className={cn("fixed inset-y-0 left-0 z-[60] flex w-[min(90vw,330px)] flex-col border-r border-white/10 bg-[#000000] transition-transform lg:static lg:z-auto lg:w-[292px] lg:translate-x-0", props.open ? "translate-x-0" : "-translate-x-full")}>
       <div className="border-b border-white/10 p-3">
         <div className="flex items-center"><h2 className="text-xs font-black uppercase tracking-[.14em] text-white/38">New project</h2><button type="button" onClick={props.onClose} className="ml-auto grid h-9 w-9 place-items-center rounded-xl hover:bg-white/8 lg:hidden"><X className="h-4 w-4" /></button></div>
         <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => props.onKind("game")} className={cn("rounded-xl py-2 text-xs font-black", props.newKind === "game" ? "bg-white text-black" : "bg-white/7 text-white/45")}>Game</button><button type="button" onClick={() => props.onKind("website")} className={cn("rounded-xl py-2 text-xs font-black", props.newKind === "website" ? "bg-white text-black" : "bg-white/7 text-white/45")}>Website</button></div>
@@ -447,7 +447,7 @@ function Inspector(props: {
 }) {
   return <>
     {props.open ? <button type="button" className="fixed inset-0 z-50 bg-black/60 xl:hidden" onClick={props.onClose} aria-label="Close inspector" /> : null}
-    <aside className={cn("fixed inset-y-0 right-0 z-[60] flex w-[min(94vw,390px)] flex-col border-l border-white/10 bg-[#0b0c10] transition-transform xl:static xl:z-auto xl:w-[360px] xl:translate-x-0", props.open ? "translate-x-0" : "translate-x-full")}>
+    <aside className={cn("fixed inset-y-0 right-0 z-[60] flex w-[min(94vw,390px)] flex-col border-l border-white/10 bg-[#000000] transition-transform xl:static xl:z-auto xl:w-[360px] xl:translate-x-0", props.open ? "translate-x-0" : "translate-x-full")}>
       <div className="flex min-h-14 items-center gap-1 border-b border-white/10 p-2"><button type="button" onClick={() => props.onTab("project")} className={cn("h-10 flex-1 rounded-xl text-xs font-black", props.tab === "project" ? "bg-white text-black" : "text-white/45 hover:bg-white/7")}>Project</button><button type="button" onClick={() => props.onTab("askai")} className={cn("flex h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-black", props.tab === "askai" ? "bg-white text-black" : "text-white/45 hover:bg-white/7")}><Sparkles className="h-4 w-4" />AskAI</button><button type="button" onClick={props.onClose} className="grid h-10 w-10 place-items-center rounded-xl hover:bg-white/7 xl:hidden"><X className="h-4 w-4" /></button></div>
       {!props.project ? <div className="grid flex-1 place-items-center p-8 text-center text-sm text-white/30">Create or select a project.</div> : props.tab === "project" ? <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
         <div><p className="text-[10px] font-black uppercase tracking-wider text-white/35">Thumbnail</p><button type="button" onClick={props.onThumbnail} className="mt-2 relative block aspect-video w-full overflow-hidden rounded-2xl border border-dashed border-white/15 bg-white/5" style={{ background: props.project.thumbnail }}>{props.project.thumbnail.startsWith("data:") ? <img src={props.project.thumbnail} alt="Game thumbnail" className="h-full w-full object-cover" /> : <span className="absolute inset-0 grid place-items-center"><span className="rounded-full bg-black/55 px-4 py-2 text-xs font-black"><Upload className="mr-2 inline h-4 w-4" />Upload 16:9 image</span></span>}</button><p className="mt-2 truncate text-[9px] text-white/28">{props.project.thumbnailFileName || "Generated placeholder—replace it before publishing"}</p></div>
@@ -473,7 +473,7 @@ function VersionsWorkspace({ project, onSnapshot, onRestore }: { project: Genera
 }
 
 function CodeEditor({ language, value, onChange }: { language: "html" | "css" | "javascript"; value: string; onChange: (value: string) => void }) {
-  return <div className="flex min-h-0 flex-1 flex-col"><div className="flex min-h-10 items-center border-b border-white/10 bg-[#0b0c10] px-3 text-[10px] font-black uppercase tracking-wider text-white/35"><Code2 className="mr-2 h-4 w-4" />{language === "javascript" ? "script.js" : language === "css" ? "styles.css" : "index.html"}<span className="ml-auto normal-case tracking-normal">Manual editing · autosaved when you press Save</span></div><textarea value={value} onChange={(event) => onChange(event.target.value)} spellCheck={false} className="min-h-0 flex-1 resize-none bg-[#07080a] p-4 font-mono text-[12px] leading-6 text-emerald-200 outline-none sm:p-6 sm:text-[13px]" /></div>;
+  return <div className="flex min-h-0 flex-1 flex-col"><div className="flex min-h-10 items-center border-b border-white/10 bg-[#000000] px-3 text-[10px] font-black uppercase tracking-wider text-white/35"><Code2 className="mr-2 h-4 w-4" />{language === "javascript" ? "script.js" : language === "css" ? "styles.css" : "index.html"}<span className="ml-auto normal-case tracking-normal">Manual editing · autosaved when you press Save</span></div><textarea value={value} onChange={(event) => onChange(event.target.value)} spellCheck={false} className="min-h-0 flex-1 resize-none bg-[#07080a] p-4 font-mono text-[12px] leading-6 text-emerald-200 outline-none sm:p-6 sm:text-[13px]" /></div>;
 }
 
 function EmptyWorkspace({ onBlank, onStarter }: { onBlank: () => void; onStarter: () => void }) {

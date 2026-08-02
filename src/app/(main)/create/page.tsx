@@ -103,7 +103,7 @@ export default function CreatePage() {
 
   return (
     <main className="min-h-screen bg-[#f3f4f7] pb-24 text-[#101114] dark:bg-black dark:text-white">
-      <header className="overflow-hidden border-b border-black/6 bg-[#0a0b0e] text-white dark:border-white/8">
+      <header className="overflow-hidden border-b border-[var(--v8-line)] bg-[#0a0b0e] text-white dark:border-white/8">
         <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
           <div className="pointer-events-none absolute -left-24 -top-28 h-80 w-80 rounded-full bg-violet-600/28 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-44 right-0 h-96 w-96 rounded-full bg-cyan-500/18 blur-3xl" />
@@ -129,13 +129,13 @@ export default function CreatePage() {
             {creatorTools.map((tool) => {
               const Icon = tool.icon;
               return (
-                <Link key={tool.href} href={tool.href} className={cn("group relative min-h-[250px] overflow-hidden rounded-[28px] border border-black/7 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(0,0,0,.12)] dark:border-white/9 dark:bg-[#101114]", tool.wide && "xl:col-span-2")}>
+                <Link key={tool.href} href={tool.href} className={cn("group relative min-h-[250px] overflow-hidden rounded-[28px] x-card x-lift bg-[var(--v8-panel)] p-5", tool.wide && "xl:col-span-2")}>
                   <div className={cn("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tool.accent)} />
                   <div className={cn("grid h-13 w-13 place-items-center rounded-[18px] bg-gradient-to-br text-white shadow-lg", tool.accent)}><Icon className="h-6 w-6" /></div>
                   <p className="mt-7 text-[9px] font-black uppercase tracking-[.16em] text-black/32 dark:text-white/28">{tool.eyebrow}</p>
                   <h3 className="mt-2 text-2xl font-black tracking-[-.045em]">{tool.title}</h3>
                   <p className="mt-3 max-w-xl text-sm leading-6 text-black/48 dark:text-white/42">{tool.description}</p>
-                  <span className="absolute bottom-5 right-5 grid h-10 w-10 place-items-center rounded-full border border-black/8 text-black/45 transition group-hover:bg-black group-hover:text-white dark:border-white/10 dark:text-white/45 dark:group-hover:bg-white dark:group-hover:text-black"><ArrowRight className="h-4 w-4" /></span>
+                  <span className="absolute bottom-5 right-5 grid h-10 w-10 place-items-center rounded-full border border-[var(--v8-line)] text-[var(--v8-muted)] transition group-hover:bg-[var(--v8-text)] group-hover:text-[var(--v8-panel)]"><ArrowRight className="h-4 w-4" /></span>
                 </Link>
               );
             })}
@@ -143,12 +143,12 @@ export default function CreatePage() {
         </section>
 
         <section className="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="rounded-[30px] border border-black/7 bg-white p-5 shadow-sm dark:border-white/9 dark:bg-[#101114] sm:p-7">
-            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-black text-white dark:bg-white dark:text-black"><Zap className="h-5 w-5" /></span><div><h2 className="text-xl font-black">Explore Flux</h2><p className="text-xs text-muted-foreground">Creation and discovery work together</p></div></div>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">{destinations.map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-2xl border border-black/6 p-3 transition hover:bg-black/[.025] dark:border-white/8 dark:hover:bg-white/[.035]"><span className="grid h-11 w-11 place-items-center rounded-xl bg-black/[.045] dark:bg-white/6"><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><strong className="block text-sm">{item.label}</strong><span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{item.description}</span></span><ArrowRight className="h-4 w-4 text-muted-foreground" /></Link>; })}</div>
+          <div className="x-card bg-[var(--v8-panel)] p-5 sm:p-7">
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-[var(--v8-text)] text-[var(--v8-panel)]"><Zap className="h-5 w-5" /></span><div><h2 className="text-xl font-black">Explore Flux</h2><p className="text-xs text-muted-foreground">Creation and discovery work together</p></div></div>
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">{destinations.map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-2xl border border-[var(--v8-line)] p-3 transition hover:bg-[var(--v8-panel-2)]"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--v8-panel-3)]"><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><strong className="block text-sm">{item.label}</strong><span className="mt-1 block text-[10px] leading-4 text-muted-foreground">{item.description}</span></span><ArrowRight className="h-4 w-4 text-muted-foreground" /></Link>; })}</div>
           </div>
 
-          <aside className="rounded-[30px] border border-black/7 bg-[#101216] p-6 text-white shadow-sm dark:border-white/9">
+          <aside className="rounded-[30px] border border-[var(--v8-line)] bg-[#101216] p-6 text-white shadow-sm dark:border-white/9">
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-violet-500"><Bot className="h-5 w-5" /></span>
             <p className="mt-6 text-[9px] font-black uppercase tracking-[.16em] text-white/32">Your creator access</p>
             <h2 className="mt-2 text-3xl font-black capitalize tracking-[-.045em]">{profile?.planTier || "free"}</h2>

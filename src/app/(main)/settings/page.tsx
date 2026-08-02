@@ -1,27 +1,31 @@
 "use client";
 
-import Link from "next/link";
-import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
+  Activity,
   Bell,
+  Bookmark,
   ChevronRight,
+  Coins,
+  Crown,
+  Gamepad2,
+  HelpCircle,
   LogOut,
   Moon,
+  Settings as SettingsIcon,
   Shield,
   User,
-  Palette,
-  Activity,
-  Bookmark,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "@/contexts/theme-context";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { updateUserProfile } from "@/services/users";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { UserAvatar } from "@/components/shared/user-avatar";
+import { XCard, XHeader, XPage, XRow, XSectionTitle } from "@/components/x/x-ui";
+import { formatCount } from "@/lib/utils";
+import { profilePath } from "@/lib/routes";
 
 export default function SettingsPage() {
   const { profile, user, signOut, refreshProfile } = useAuth();
@@ -32,12 +36,10 @@ export default function SettingsPage() {
     toggleDark(enabled);
     if (user) {
       try {
-        await updateUserProfile(user.uid, {
-          settings: { theme: enabled ? "dark" : "light" },
-        });
+        await updateUserProfile(user.uid, { settings: { theme: enabled ? "dark" : "light" } });
         await refreshProfile();
       } catch {
-        /* local theme still works */
+        /* the local theme still applies even if the write fails */
       }
     }
     toast.success(enabled ? "Dark mode on" : "Light mode on");
@@ -49,156 +51,64 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 glass-strong border-b border-border/70 px-4 py-3">
-        <h1 className="text-lg font-bold tracking-tight">Settings</h1>
-      </header>
+    <XPage>
+      <XHeader title="Settings" subtitle="Your account and appearance" icon={SettingsIcon} hideOnMobile />
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-6 p-4"
-      >
-        {/* Appearance — dark mode switch lives here */}
-        <section className="surface-card p-4">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <Palette className="h-4 w-4 text-primary" />
-            Appearance
-          </div>
-          <div className="flex items-center justify-between gap-4 rounded-2xl bg-muted/50 px-3 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-sm">
-                <Moon className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium">Dark mode</p>
-                <p className="text-xs text-muted-foreground">
-                  Light is the default. Toggle dark mode here.
-                </p>
-              </div>
+      {profile ? (
+        <div className="p-4">
+          <XCard className="flex items-center gap-3 p-4">
+            <UserAvatar user={profile} decorations={profile.decorations} clickable={false} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-bold">{profile.displayName}</p>
+              <p className="truncate text-[13px] text-[var(--v8-muted)]">@{profile.username}</p>
             </div>
-            <Switch
-              checked={resolved === "dark"}
-              onCheckedChange={onDarkToggle}
-              aria-label="Toggle dark mode"
-            />
-          </div>
-        </section>
+            <span className="flex flex-none items-center gap-1.5 rounded-full bg-[var(--v8-panel-3)] px-3 py-1.5 text-[13px] font-black">
+              <Coins className="h-3.5 w-3.5 text-[var(--v8-orange)]" />
+              {formatCount(profile.coins ?? 0)}
+            </span>
+          </XCard>
+        </div>
+      ) : null}
 
-        <section className="surface-card overflow-hidden">
-          <SettingsLink
-            href="/settings/profile"
-            icon={User}
-            title="Edit profile"
-            description="Avatars, banner, bio, business account"
-          />
-          <Separator />
-          <SettingsLink
-            href="/settings/accounts"
-            icon={Users}
-            title="Accounts"
-            description="Link up to 5 accounts & switch securely"
-          />
-          <Separator />
-          <SettingsLink
-            href="/activity"
-            icon={Activity}
-            title="Activity history"
-            description="Likes, follows, replies timeline"
-          />
-          <Separator />
-          <SettingsLink
-            href="/bookmarks"
-            icon={Bookmark}
-            title="Bookmarks"
-            description="Posts you saved"
-          />
-          <Separator />
-          <SettingsLink
-            href="/notifications"
-            icon={Bell}
-            title="Notifications"
-            description="Alerts and mentions"
-          />
-          <Separator />
-          <SettingsRow
-            icon={Shield}
-            title="Privacy & safety"
-            description="Report posts from the ··· menu on any post"
-          />
-        </section>
+      <XSectionTitle>Appearance</XSectionTitle>
+      <div className="x-row">
+        <span className="x-row-icon">
+          <Moon className="h-[18px] w-[18px]" />
+        </span>
+        <span className="x-row-main">
+          <strong>Dark mode</strong>
+          <span>Light is the default. Flip it whenever.</span>
+        </span>
+        <Switch checked={resolved === "dark"} onCheckedChange={onDarkToggle} aria-label="Toggle dark mode" />
+      </div>
 
-        <section className="surface-card p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Account
-          </p>
+      <XSectionTitle>Your account</XSectionTitle>
+      <XRow icon={User} title="Edit profile" description="Avatar, banner, bio, business account" href="/settings/profile" trailing={<ChevronRight className="h-4 w-4" />} />
+      <XRow icon={Users} title="Linked accounts" description="Link up to 5 accounts and switch securely" href="/settings/accounts" trailing={<ChevronRight className="h-4 w-4" />} />
+      {profile?.username ? (
+        <XRow icon={User} title="View public profile" description={`@${profile.username}`} href={profilePath(profile.username)} trailing={<ChevronRight className="h-4 w-4" />} />
+      ) : null}
+
+      <XSectionTitle>Content</XSectionTitle>
+      <XRow icon={Activity} title="Activity history" description="Likes, follows and replies timeline" href="/activity" trailing={<ChevronRight className="h-4 w-4" />} />
+      <XRow icon={Bookmark} title="Bookmarks" description="Posts you saved for later" href="/bookmarks" trailing={<ChevronRight className="h-4 w-4" />} />
+      <XRow icon={Bell} title="Notifications" description="Alerts and mentions" href="/notifications" trailing={<ChevronRight className="h-4 w-4" />} />
+      <XRow icon={Gamepad2} title="Games" description="Flux Farm and the rest of the arcade" href="/games" trailing={<ChevronRight className="h-4 w-4" />} />
+
+      <XSectionTitle>Support</XSectionTitle>
+      <XRow icon={Crown} title="Flux Premium" description="Plans, multipliers and creator tools" href="/premium" trailing={<ChevronRight className="h-4 w-4" />} />
+      <XRow icon={Shield} title="Privacy and safety" description="Report content from the ··· menu on any post" href="/help" trailing={<ChevronRight className="h-4 w-4" />} />
+      <XRow icon={HelpCircle} title="Help centre" description="Rules, FAQ and human support" href="/help" trailing={<ChevronRight className="h-4 w-4" />} />
+
+      <div className="p-4">
+        <XCard className="p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--v8-muted)]">Signed in as</p>
           <p className="mt-2 text-sm">{profile?.email || user?.email}</p>
-          <p className="text-sm text-muted-foreground">
-            @{profile?.username} · {profile?.coins ?? 0} Flux Coins
-          </p>
-          <Button
-            variant="outline"
-            className="mt-4 w-full text-destructive hover:bg-destructive/10"
-            onClick={onSignOut}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
-        </section>
-      </motion.div>
-    </div>
-  );
-}
-
-function SettingsLink({
-  href,
-  icon: Icon,
-  title,
-  description,
-}: {
-  href: string;
-  icon: typeof User;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50"
-    >
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground">
-        <Icon className="h-5 w-5" />
+          <button type="button" className="x-btn x-btn-hollow x-btn-block mt-4 !text-[var(--v8-red)]" onClick={() => void onSignOut()}>
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </XCard>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </Link>
-  );
-}
-
-function SettingsRow({
-  icon: Icon,
-  title,
-  description,
-  trailing,
-}: {
-  icon: typeof User;
-  title: string;
-  description: string;
-  trailing?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-3.5">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-foreground">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-      {trailing}
-    </div>
+    </XPage>
   );
 }

@@ -172,22 +172,24 @@ export const BROWSER_GAMES: BrowserGame[] = [
   },
   {
     slug: "flux-farm",
-    title: "Flux Farm Beta",
+    title: "Flux Farm",
     author: "Ripo Team",
-    shortDescription: "The original Flux farming experiment, kept available while it is rebuilt.",
-    description: "Plant crops, progress through days and test Flux account saving while the next farming direction is developed.",
+    shortDescription: "A full 2D farming life-sim with seasons, weather, hired hands, world events and a live global ladder.",
+    description:
+      "Inherit a forgotten valley and bring it back. Till soil, plant twelve crops across four seasons, survive storms and frost, hire farmhands as you rank up, build and upgrade the homestead, and chase story chapters and timed world events. A real day/night cycle, dynamic weather with wind, procedural pixel-art art direction and a synthesised adaptive soundtrack run at 60fps on phone, tablet and desktop. Progress saves to your Flux account and your rank is posted to the global leaderboard.",
     categories: ["Farming", "Simulator"],
     playUrl: "/games/flux-farm",
     sourceUrl: "https://github.com/riporipoteam-ctrl/flux",
     license: "Flux source",
-    technology: "Next.js · Canvas · Firebase",
-    controls: "Touch · mouse · keyboard",
+    technology: "Next.js · Canvas 2D · WebAudio · Firebase",
+    controls: "Touch stick · WASD/arrows · mouse",
     devices: ["Mobile", "PC", "Tablet"],
     symbol: "🌾",
-    palette: ["#052e16", "#15803d", "#bef264"],
+    palette: ["#0d2818", "#2f7d42", "#c7f284"],
     thumbnail: "/game-covers/flux-farm.svg",
     internal: true,
-    status: "Beta",
+    featured: true,
+    status: "Released",
   },
 ];
 
@@ -195,4 +197,7 @@ export function getBrowserGame(slug: string | null | undefined) {
   return BROWSER_GAMES.find((game) => game.slug === slug);
 }
 
-export const FEATURED_GAMES = BROWSER_GAMES.filter((game) => game.featured);
+// Flux Farm leads the hub; the rest keep their catalogue order behind it.
+export const FEATURED_GAMES = BROWSER_GAMES.filter((game) => game.featured).sort(
+  (a, b) => Number(b.slug === "flux-farm") - Number(a.slug === "flux-farm")
+);

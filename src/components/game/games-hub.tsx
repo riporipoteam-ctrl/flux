@@ -125,26 +125,22 @@ export default function GamesHub() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8] pb-20 dark:bg-black">
-      <header className="sticky top-0 z-40 hidden border-b border-border/70 bg-background/88 px-5 py-3 backdrop-blur-xl lg:block">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-black tracking-[-0.04em]">Flux Games</h1>
-            <p className="text-xs text-muted-foreground">Open-source games and community creations, playable inside Flux.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" /> No redirects · no VPS
-            </span>
-            <Link href="/studio" className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-4 text-xs font-black text-background">
-              <Boxes className="h-4 w-4" /> Open Studio
-            </Link>
-          </div>
+    <div className="x-page">
+      <header className="x-header hidden lg:flex">
+        <div className="x-header-titles">
+          <h1>Games</h1>
+          <p>Open-source games and community creations, playable inside Flux</p>
         </div>
+        <span className="hidden items-center gap-2 text-xs font-bold text-[var(--v8-muted)] xl:flex">
+          <ShieldCheck className="h-4 w-4 text-[var(--v8-green)]" /> No redirects · no VPS
+        </span>
+        <Link href="/studio" className="x-btn x-btn-ink x-btn-sm">
+          <Boxes className="h-4 w-4" /> Studio
+        </Link>
       </header>
 
-      <main className="mx-auto max-w-7xl px-3 pt-3 sm:px-5 sm:pt-5">
-        <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-[0_30px_80px_rgba(0,0,0,.3)] sm:rounded-[34px]">
+      <main className="mx-auto w-full max-w-[1180px] px-3 pt-3 sm:px-5 sm:pt-5">
+        <section className="relative overflow-hidden rounded-[24px] border border-[var(--v8-line)] bg-black">
           <div className="relative min-h-[470px] sm:min-h-[540px]">
             <GameCoverArt game={hero} />
             <motion.div
@@ -162,13 +158,13 @@ export default function GamesHub() {
                 ))}
               </div>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href={hrefForGame(hero)} className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black">
+                <Link href={hrefForGame(hero)} className="x-btn x-btn-lg !bg-white !text-black">
                   <Gamepad2 className="h-5 w-5" /> Play now <ArrowRight className="h-4 w-4" />
                 </Link>
-                <button type="button" onClick={surpriseMe} className="inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-black/30 px-5 text-sm font-black text-white backdrop-blur-md">
+                <button type="button" onClick={surpriseMe} className="x-btn x-btn-lg !border !border-white/25 !bg-black/35 !text-white backdrop-blur-md">
                   <Dice5 className="h-4 w-4" /> Surprise me
                 </button>
-                <Link href="/studio" className="inline-flex h-12 items-center gap-2 rounded-full border border-violet-300/25 bg-violet-500/18 px-5 text-sm font-black text-white backdrop-blur-md">
+                <Link href="/studio" className="x-btn x-btn-lg !bg-[var(--v8-accent)] !text-white">
                   <Sparkles className="h-4 w-4" /> Make a game
                 </Link>
               </div>
@@ -182,14 +178,14 @@ export default function GamesHub() {
           <Stat value="3" label="Device types" />
         </section>
 
-        <section className="mt-8 rounded-[24px] border border-border bg-card p-3 shadow-sm sm:p-4">
+        <section className="x-card mt-8 p-3 sm:p-4">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search games, creators and hashtags"
-              className="h-12 w-full rounded-2xl border border-border bg-background pl-11 pr-12 text-sm font-semibold outline-none transition focus:border-foreground/25 focus:ring-4 focus:ring-foreground/5"
+              className="h-12 w-full rounded-full border border-[var(--v8-line-strong)] bg-[var(--v8-panel)] pl-11 pr-12 text-sm font-semibold outline-none transition focus:border-[var(--v8-accent)] focus:ring-4 focus:ring-[var(--v8-accent-soft)]"
             />
             {query ? (
               <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full hover:bg-muted" aria-label="Clear search">
@@ -199,7 +195,7 @@ export default function GamesHub() {
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {GAME_CATEGORIES.map((item) => (
-              <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full px-4 py-2 text-[11px] font-black ${item === category ? "bg-foreground text-background" : "border border-border bg-background text-muted-foreground"}`}>
+              <button key={item} type="button" onClick={() => setCategory(item)} data-active={item === category} className="x-chip shrink-0">
                 {item}
               </button>
             ))}
@@ -209,14 +205,14 @@ export default function GamesHub() {
         {favoriteGames.length ? <GameRow title="Saved games" icon={Heart} games={favoriteGames.slice(0, 4)} favorites={favorites} onToggleFavorite={toggleFavorite} /> : null}
         {recentGames.length ? <GameRow title="Continue playing" icon={Clock3} games={recentGames.slice(0, 4)} favorites={favorites} onToggleFavorite={toggleFavorite} /> : null}
 
-        <section className="mt-10 rounded-[30px] bg-[#101216] p-4 text-white sm:p-6">
+        <section className="mt-10 overflow-hidden rounded-[24px] bg-[#0b0f14] p-4 text-white sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-300">Built by Flux users</p>
               <h2 className="mt-2 text-3xl font-black tracking-[-.05em]">Community creations</h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-white/48">Games generated or edited in Flux Studio can be previewed, published and played here.</p>
             </div>
-            <Link href="/studio" className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-black">
+            <Link href="/studio" className="x-btn !bg-white !text-black">
               <Boxes className="h-4 w-4" /> Create in Studio
             </Link>
           </div>
@@ -267,17 +263,17 @@ function CommunityCard({ game }: { game: PublishedCommunityGame }) {
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
-  return <div className="rounded-2xl border border-border bg-card px-4 py-4"><p className="text-xl font-black tracking-[-0.04em]">{value}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p></div>;
+  return <div className="x-stat"><b>{value}</b><small>{label}</small></div>;
 }
 
 function GameRow({ title, icon: Icon, games, favorites, onToggleFavorite }: { title: string; icon: typeof Clock3; games: BrowserGame[]; favorites: string[]; onToggleFavorite: (slug: string) => void }) {
-  return <section className="mt-9"><div className="flex items-center gap-2"><Icon className="h-4.5 w-4.5 text-muted-foreground" /><h2 className="text-xl font-black tracking-[-0.035em]">{title}</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{games.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={onToggleFavorite} compact />)}</div></section>;
+  return <section className="mt-9"><div className="flex items-center gap-2"><Icon className="h-[18px] w-[18px] text-muted-foreground" /><h2 className="text-xl font-black tracking-[-0.035em]">{title}</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{games.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={onToggleFavorite} compact />)}</div></section>;
 }
 
 function GameCard({ game, index, favorite, onToggleFavorite, compact = false }: { game: BrowserGame; index: number; favorite: boolean; onToggleFavorite: (slug: string) => void; compact?: boolean }) {
   const reduceMotion = useReducedMotion();
   return (
-    <motion.article initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.25, delay: Math.min(index * 0.025, 0.14) }} className="group overflow-hidden rounded-[22px] border border-border bg-card transition hover:border-foreground/20 hover:shadow-[0_18px_45px_rgba(0,0,0,.11)]">
+    <motion.article initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.25, delay: Math.min(index * 0.025, 0.14) }} className="x-card x-lift group overflow-hidden">
       <Link href={hrefForGame(game)} className="block">
         <div className={`relative overflow-hidden ${compact ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
           <GameCoverArt game={game} compact />

@@ -143,7 +143,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="min-h-screen">
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center justify-between gap-3 glass-strong border-b border-border/70 px-4 py-3">
+      <header className="x-header justify-between">
         <div className="flex items-center gap-3">
           <Link
             href="/settings"
