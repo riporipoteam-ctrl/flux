@@ -73,7 +73,7 @@ export default function PostDetailPage(
 
   return (
     <div className="min-h-screen">
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center gap-3 glass border-b border-border px-4 py-2">
+      <header className="x-header">
         <button
           onClick={() => router.back()}
           className="rounded-full p-2 transition hover:bg-muted"

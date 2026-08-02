@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { AtSign, Bell, CheckCheck, Heart, MessageCircle, Repeat2, UserPlus } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -13,112 +12,150 @@ import {
 } from "@/services/notifications";
 import type { Notification, UserProfile } from "@/types";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/shared/empty-state";
+import { XEmpty, XHeader, XPage, XRowSkeleton, XSwitch, XTabs } from "@/components/x/x-ui";
 import { cn } from "@/lib/utils";
 import { groupPath, postPath, profilePath } from "@/lib/routes";
 
 type NotifRow = Notification & { actor?: UserProfile | null };
+type Tab = "all" | "mentions";
+
+const BADGES: Record<string, { icon: typeof Heart; tint: string }> = {
+  like: { icon: Heart, tint: "var(--v8-pink)" },
+  reply: { icon: MessageCircle, tint: "var(--v8-accent)" },
+  mention: { icon: AtSign, tint: "var(--v8-accent)" },
+  repost: { icon: Repeat2, tint: "var(--v8-green)" },
+  quote: { icon: Repeat2, tint: "var(--v8-green)" },
+  follow: { icon: UserPlus, tint: "var(--v8-accent)" },
+};
 
 export default function NotificationsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<NotifRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("all");
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
       setItems(await getNotifications(user.uid));
+    } catch {
+      setItems([]);
     } finally {
       setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const markAll = async () => {
     if (!user) return;
     await markAllNotificationsRead(user.uid);
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    setItems((previous) => previous.map((row) => ({ ...row, read: true })));
   };
 
-  const onOpen = async (n: NotifRow) => {
-    if (!n.read) {
-      await markNotificationRead(n.id);
-      setItems((prev) =>
-        prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
-      );
-    }
+  const open = async (row: NotifRow) => {
+    if (row.read) return;
+    await markNotificationRead(row.id);
+    setItems((previous) => previous.map((item) => (item.id === row.id ? { ...item, read: true } : item)));
   };
+
+  const unread = useMemo(() => items.filter((row) => !row.read).length, [items]);
+  const visible = useMemo(
+    () => (tab === "mentions" ? items.filter((row) => row.type === "mention" || row.type === "reply") : items),
+    [items, tab]
+  );
 
   return (
-    <div className="min-h-screen">
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center justify-between glass border-b border-border px-4 py-3">
-        <h1 className="text-lg font-bold">Notifications</h1>
-        <Button variant="ghost" size="sm" onClick={markAll}>
-          <CheckCheck className="h-4 w-4" />
-          Mark all read
-        </Button>
-      </header>
+    <XPage>
+      <XHeader
+        title="Notifications"
+        subtitle={unread ? `${unread} unread` : "All caught up"}
+        icon={Bell}
+        hideOnMobile
+        actions={
+          <button type="button" className="x-header-action" onClick={() => void markAll()} aria-label="Mark all as read">
+            <CheckCheck className="h-[18px] w-[18px]" />
+          </button>
+        }
+      />
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      ) : items.length === 0 ? (
-        <EmptyState
-          icon={Bell}
-          title="You're all caught up"
-          description="Likes, replies, follows, and gifts will show up here."
-        />
-      ) : (
-        <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          {items.map((n) => {
-            const href = n.postId
-              ? postPath(n.postId)
-              : n.groupId
-                ? groupPath(n.groupId)
-                : n.actor?.username
-                  ? profilePath(n.actor.username)
-                  : "/notifications";
-            const time = n.createdAt?.toDate
-              ? formatDistanceToNowStrict(n.createdAt.toDate())
-              : "";
-            return (
-              <li key={n.id}>
-                <Link
-                  href={href}
-                  onClick={() => onOpen(n)}
-                  className={cn(
-                    "flex gap-3 border-b border-border px-4 py-3 transition hover:bg-muted/40",
-                    !n.read && "bg-accent/40"
-                  )}
-                >
-                  <UserAvatar user={n.actor} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[15px]">
-                      <span className="font-bold">
-                        {n.actor?.displayName || "Someone"}
-                      </span>{" "}
-                      <span className="text-muted-foreground">{n.message}</span>
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {n.type}
-                      {time ? ` · ${time}` : ""}
-                    </p>
-                  </div>
-                  {!n.read ? (
-                    <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-        </motion.ul>
-      )}
-    </div>
+      <XTabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "all", label: "All", count: unread },
+          { id: "mentions", label: "Mentions" },
+        ]}
+      />
+
+      <XSwitch id={tab}>
+        {loading ? (
+          <XRowSkeleton rows={7} />
+        ) : visible.length === 0 ? (
+          <XEmpty
+            icon={Bell}
+            title={tab === "mentions" ? "No mentions yet" : "You're all caught up"}
+            description={
+              tab === "mentions"
+                ? "When someone @mentions you or replies to your post it lands here."
+                : "Likes, replies, follows and gifts will show up here."
+            }
+          />
+        ) : (
+          <ul className="x-stagger">
+            {visible.map((row, index) => {
+              const badge = BADGES[row.type];
+              const Icon = badge?.icon;
+              const href = row.postId
+                ? postPath(row.postId)
+                : row.groupId
+                  ? groupPath(row.groupId)
+                  : row.actor?.username
+                    ? profilePath(row.actor.username)
+                    : "/notifications";
+              const time = row.createdAt?.toDate ? formatDistanceToNowStrict(row.createdAt.toDate()) : "";
+
+              return (
+                <li key={row.id} style={{ ["--i" as string]: Math.min(index, 14) }}>
+                  <Link
+                    href={href}
+                    onClick={() => void open(row)}
+                    className={cn("x-row items-start", !row.read && "bg-[var(--v8-accent-soft)]")}
+                  >
+                    <span className="relative flex-none">
+                      <UserAvatar user={row.actor} />
+                      {Icon ? (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full"
+                          style={{ background: "var(--v8-panel)", color: badge.tint, boxShadow: "0 0 0 2px var(--v8-panel)" }}
+                        >
+                          <Icon className="h-3 w-3" />
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="x-row-main">
+                      <strong className="!font-normal text-[15px]">
+                        <b className="font-bold">{row.actor?.displayName || "Someone"}</b>{" "}
+                        <span className="text-[var(--v8-muted)]">{row.message}</span>
+                      </strong>
+                      <span className="capitalize">
+                        {row.type}
+                        {time ? ` · ${time}` : ""}
+                      </span>
+                    </span>
+                    {!row.read ? (
+                      <span className="mt-2 h-2 w-2 flex-none rounded-full bg-[var(--v8-accent)] x-anim-pop" />
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </XSwitch>
+    </XPage>
   );
 }

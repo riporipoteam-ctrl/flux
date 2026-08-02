@@ -75,7 +75,7 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center justify-between glass border-b border-border px-4 py-3">
+      <header className="x-header justify-between">
         <h1 className="text-lg font-bold">Events</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

@@ -1,27 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { List, Loader2, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { List, Lock, Plus, Trash2 } from "lucide-react";
 import {
   addDoc,
   collection,
   deleteDoc,
   doc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   where,
-  limit,
 } from "firebase/firestore";
+import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/auth-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/shared/empty-state";
-import { PageTransition } from "@/components/shared/page-transition";
-import { toast } from "sonner";
 import { stripUndefined } from "@/lib/firestore-safe";
+import { XEmpty, XHeader, XPage, XRowSkeleton } from "@/components/x/x-ui";
 
 interface UserList {
   id: string;
@@ -37,23 +33,19 @@ export default function ListsPage() {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const snap = await getDocs(
-        query(
-          collection(db, "lists"),
-          where("ownerId", "==", user.uid),
-          limit(40)
-        )
+      const snapshot = await getDocs(
+        query(collection(db, "lists"), where("ownerId", "==", user.uid), limit(40))
       );
       setLists(
-        snap.docs.map((d) => ({
-          id: d.id,
-          name: d.data().name || "List",
-          description: d.data().description || "",
-          memberCount: d.data().memberCount || 0,
+        snapshot.docs.map((entry) => ({
+          id: entry.id,
+          name: entry.data().name || "List",
+          description: entry.data().description || "",
+          memberCount: entry.data().memberCount || 0,
         }))
       );
     } catch {
@@ -61,12 +53,11 @@ export default function ListsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
+    void load();
+  }, [load]);
 
   const create = async () => {
     if (!user || !name.trim()) return;
@@ -87,8 +78,8 @@ export default function ListsPage() {
       setName("");
       toast.success("List created");
       await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not create list");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create list");
     } finally {
       setCreating(false);
     }
@@ -97,7 +88,7 @@ export default function ListsPage() {
   const remove = async (id: string) => {
     try {
       await deleteDoc(doc(db, "lists", id));
-      setLists((prev) => prev.filter((l) => l.id !== id));
+      setLists((previous) => previous.filter((item) => item.id !== id));
       toast.success("List deleted");
     } catch {
       toast.error("Could not delete list");
@@ -105,71 +96,60 @@ export default function ListsPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 glass-strong border-b border-border/70 px-4 py-3">
-        <h1 className="text-lg font-bold">Lists</h1>
-        <p className="text-xs text-muted-foreground">
-          Curate custom people groups (private to you)
-        </p>
-      </header>
+    <XPage>
+      <XHeader title="Lists" subtitle="Private groups of people you follow" icon={List} hideOnMobile />
 
-      <PageTransition className="space-y-4 p-4">
-        <div className="surface-card flex gap-2 p-3">
-          <Input
+      <div className="flex gap-2 border-b border-[var(--v8-line)] p-3">
+        <label className="flux8-rail-search !static flex-1">
+          <Plus className="h-[18px] w-[18px] flex-none" />
+          <input
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="New list name…"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") create();
+            onChange={(event) => setName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void create();
             }}
+            placeholder="Name a new list"
+            aria-label="New list name"
           />
-          <Button onClick={create} loading={creating} disabled={!name.trim()}>
-            <Plus className="h-4 w-4" />
-            Create
-          </Button>
-        </div>
+        </label>
+        <button type="button" className="x-btn" onClick={() => void create()} disabled={creating || !name.trim()}>
+          {creating ? "Creating…" : "Create"}
+        </button>
+      </div>
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : lists.length === 0 ? (
-          <EmptyState
-            icon={List}
-            title="No lists yet"
-            description="Create a list for friends, creators, or news accounts."
-          />
-        ) : (
-          <ul className="space-y-2">
-            {lists.map((list, i) => (
-              <motion.li
-                key={list.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="surface-card flex items-center gap-3 p-4"
+      {loading ? (
+        <XRowSkeleton rows={4} />
+      ) : lists.length === 0 ? (
+        <XEmpty
+          icon={List}
+          title="No lists yet"
+          description="Lists keep separate timelines for friends, creators or news accounts — and only you can see them."
+        />
+      ) : (
+        <ul className="x-stagger">
+          {lists.map((list, index) => (
+            <li key={list.id} className="x-row" style={{ ["--i" as string]: Math.min(index, 12) }}>
+              <span className="x-row-icon">
+                <List className="h-[18px] w-[18px]" />
+              </span>
+              <span className="x-row-main">
+                <strong>{list.name}</strong>
+                <span className="flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Private · {list.memberCount} members
+                </span>
+              </span>
+              <button
+                type="button"
+                className="x-header-action"
+                aria-label={`Delete ${list.name}`}
+                onClick={() => void remove(list.id)}
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-primary">
-                  <List className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{list.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {list.memberCount} members · Private
-                  </p>
-                </div>
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={() => remove(list.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </motion.li>
-            ))}
-          </ul>
-        )}
-      </PageTransition>
-    </div>
+                <Trash2 className="h-[18px] w-[18px] text-[var(--v8-red)]" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </XPage>
   );
 }

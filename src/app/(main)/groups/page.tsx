@@ -108,7 +108,7 @@ export default function GroupsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="relative z-20 flex items-center justify-end border-b border-border px-3 py-2.5 lg:sticky lg:top-0 lg:z-30 lg:justify-between sm:px-4 glass-strong">
+      <header className="x-header justify-between">
         <h1 className="hidden text-xl font-extrabold lg:block">Groups</h1>
         <Dialog
           open={open}

@@ -50,7 +50,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (isStudio) {
     return (
-      <div className="h-[100dvh] w-full overflow-hidden bg-[#0b0f14]">
+      <div className="h-[100dvh] w-full overflow-hidden bg-black">
         <IncomingCallBanner />
         {children}
       </div>
@@ -67,7 +67,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flux8-app-shell min-h-[100dvh] overflow-x-clip">
+    <div className="flux8-app-shell min-h-[100dvh] overflow-x-clip" data-rail={hideRail ? "off" : "on"}>
       <IncomingCallBanner />
       <Sidebar />
       <main className="flux8-main-column min-w-0 pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">

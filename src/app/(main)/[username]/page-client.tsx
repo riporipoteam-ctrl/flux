@@ -209,7 +209,7 @@ export default function ProfilePage(
         themeItem?.id === "ocean-theme" && "bg-[#061018]"
       )}
     >
-      <header className="relative z-20 lg:sticky lg:top-0 lg:z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-2 backdrop-blur-xl">
+      <header className="x-header">
         <button
           type="button"
           onClick={() => router.back()}

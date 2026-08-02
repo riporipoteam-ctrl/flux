@@ -41,7 +41,7 @@ export default function StudioMusicPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#07080b] pb-24 text-white">
+    <main className="min-h-screen bg-[#000000] pb-24 text-white">
       <header className="sticky top-0 z-40 border-b border-white/8 bg-[#08090d]/90 backdrop-blur-2xl">
         <div className="mx-auto flex min-h-16 max-w-7xl items-center gap-3 px-3 sm:px-5">
           <Link href="/studio" className="grid h-11 w-11 place-items-center rounded-2xl border border-white/8 bg-white/[.035] hover:bg-white/8" aria-label="Back to Studio"><ArrowLeft className="h-5 w-5" /></Link>
