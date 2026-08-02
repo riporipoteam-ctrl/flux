@@ -46,9 +46,14 @@ for (const marker of ["For you", "Following", "What is happening?!", "flux8-stor
 }
 
 const styles = read("src/styles/flux-v8.css");
+// The shell geometry is now expressed through design tokens, so assert the
+// token values and the declaration that consumes them rather than one literal.
 for (const marker of [
   "#1d9bf0",
-  "grid-template-columns: 275px minmax(0, 600px)",
+  "--v8-nav-w: 275px",
+  "--v8-feed: 600px",
+  "--v8-rail: 350px",
+  "grid-template-columns: var(--v8-nav-w) minmax(0, var(--v8-feed)) minmax(290px, var(--v8-rail))",
   ".flux8-sidebar",
   ".flux8-right-rail",
   ".flux8-mobile-header",
