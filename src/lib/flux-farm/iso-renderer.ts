@@ -9,7 +9,7 @@
  * with the tile under the cursor highlighted for tap-to-act.
  */
 
-import { CROPS, seasonForDay, type CropId, type Season } from "./content";
+import { CROPS, WORKERS, seasonForDay, type CropId, type Season } from "./content";
 import { dayFactor, upgradeLevel, type FarmRuntime } from "./simulation";
 import { WORLD_H, WORLD_W, hash2, unlockedPlotBounds } from "./world";
 
@@ -28,6 +28,8 @@ interface SpriteMeta {
   oy: number;
   fw: number;
   fh: number;
+  /** Flat terrain diamonds; drawn centred rather than base-anchored. */
+  ground?: boolean;
 }
 
 export interface IsoAssets {
@@ -168,8 +170,8 @@ function drawSprite(
   const meta = assets.meta.get(name);
   if (!image || !meta) return;
 
-  const drawX = worldX - ANCHOR_X + meta.ox;
-  const drawY = worldY - ANCHOR_Y + meta.oy;
+  const drawX = meta.ground ? worldX - meta.w / 2 : worldX - ANCHOR_X + meta.ox;
+  const drawY = meta.ground ? worldY - meta.h / 2 : worldY - ANCHOR_Y + meta.oy;
 
   if (alpha !== 1) ctx.globalAlpha = alpha;
   ctx.drawImage(image, drawX, drawY);
@@ -238,6 +240,8 @@ export function renderIso(
   ctx.translate(-state.camera.x + viewW / 2 + shakeX, -state.camera.y + viewH / 2 + shakeY);
 
   drawWorld(ctx, runtime, state, assets, season, viewW, viewH);
+  drawWorkers(ctx, runtime, state);
+  drawSmoke(ctx, runtime, state);
   drawParticles(ctx, state);
 
   ctx.restore();
@@ -335,7 +339,13 @@ function drawTile(
       if (plot.dead) {
         drawSprite(ctx, assets, "cornYoung", world.x, world.y, 0.75, "#6b5a3a");
       } else {
-        drawSprite(ctx, assets, cropSpriteName(plot.crop, progress), world.x, world.y, 1, info.palette[2]);
+        // Growing crops lean with the wind; taller growth leans further.
+        const sway = Math.sin(state.time * 1.9 + tx * 0.6 + ty * 0.4) * runtime.save.windSpeed * progress * 0.035;
+        ctx.save();
+        ctx.translate(world.x, world.y);
+        ctx.transform(1, 0, sway, 1, 0, 0);
+        drawSprite(ctx, assets, cropSpriteName(plot.crop, progress), 0, 0, 1, info.palette[2]);
+        ctx.restore();
         if (progress >= 1) {
           const bob = Math.sin(state.time * 3 + tx + ty) * 3;
           drawReadyPip(ctx, world.x, world.y - 96 + bob);
@@ -345,7 +355,8 @@ function drawTile(
   } else if (owned) {
     drawSprite(ctx, assets, "dirt", world.x, world.y);
   } else {
-    drawGround(ctx, world.x, world.y, season, tx, ty);
+    drawGround(ctx, assets, world.x, world.y, season, tx, ty);
+    drawScenery(ctx, assets, world.x, world.y, tx, ty);
   }
 
   // Fence ring around the owned block.
@@ -419,8 +430,10 @@ function drawBuilding(
   }
 }
 
+/** Real textured ground, with the season shifting which variant is used. */
 function drawGround(
   ctx: CanvasRenderingContext2D,
+  assets: IsoAssets,
   x: number,
   y: number,
   season: Season,
@@ -428,15 +441,40 @@ function drawGround(
   ty: number
 ) {
   const noise = hash2(tx, ty, 17);
-  const base =
-    season === "winter"
-      ? ["#d7e3ea", "#cddae2"]
-      : season === "autumn"
-        ? ["#8f9a4e", "#849046"]
-        : ["#6f9d4a", "#679544"];
-  ctx.fillStyle = noise > 0.5 ? base[0] : base[1];
+  const dry = season === "autumn" || season === "summer";
+  const name = dry && noise > 0.62 ? `grassDry${Math.floor(noise * 2) % 2}` : `grass${Math.floor(noise * 4) % 4}`;
+
+  if (assets.images.has(name)) {
+    drawSprite(ctx, assets, name, x, y);
+    if (season === "winter") {
+      // Snow is a wash over the real texture, so the grain still shows.
+      ctx.save();
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = "#eef5fa";
+      diamondPath(ctx, x, y);
+      ctx.fill();
+      ctx.restore();
+    }
+    return;
+  }
+
+  ctx.fillStyle = season === "winter" ? "#d7e3ea" : "#6f9d4a";
   diamondPath(ctx, x, y);
   ctx.fill();
+}
+
+/** Deterministic scenery outside the farm so the valley is not empty grass. */
+function drawScenery(ctx: CanvasRenderingContext2D, assets: IsoAssets, x: number, y: number, tx: number, ty: number) {
+  // Sparse on purpose: dense scatter turns the valley into an unreadable
+  // thicket and buries the farm the player is meant to be looking at.
+  const roll = hash2(tx, ty, 733);
+  if (roll > 0.992) drawSprite(ctx, assets, "treeBig", x, y);
+  else if (roll > 0.984) drawSprite(ctx, assets, "treePalm", x, y);
+  else if (roll > 0.976) drawSprite(ctx, assets, "shrubTall", x, y);
+  else if (roll > 0.964) drawSprite(ctx, assets, "bush", x, y);
+  else if (roll > 0.950) drawSprite(ctx, assets, "shrub", x, y);
+  else if (roll > 0.925) drawSprite(ctx, assets, "grassTuft", x, y);
+  else if (roll > 0.905) drawSprite(ctx, assets, "weed", x, y);
 }
 
 function diamondPath(ctx: CanvasRenderingContext2D, x: number, y: number) {
@@ -462,6 +500,119 @@ function drawReadyPip(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("!", x, y + 1);
+  ctx.restore();
+}
+
+/**
+ * Hired farmhands, drawn as small shaded figures with a walk cycle. The pack
+ * has no character art, so these are drawn directly — at this camera distance
+ * a clean silhouette with a bob and swinging arms reads better than a
+ * mismatched sprite from another art style would.
+ */
+function drawWorkers(ctx: CanvasRenderingContext2D, runtime: FarmRuntime, state: IsoState) {
+  for (const worker of runtime.workers) {
+    const info = WORKERS[worker.id];
+    if (!info) continue;
+
+    // The simulation tracks workers in top-down pixels; convert to tiles.
+    const tx = worker.x / 32;
+    const ty = worker.y / 32;
+    const p = tileToWorld(tx, ty);
+
+    const moving = Math.hypot(worker.targetX - worker.x, worker.targetY - worker.y) > 6;
+    const phase = state.time * 7 + worker.phase;
+    const bob = moving ? Math.abs(Math.sin(phase)) * 4 : Math.sin(state.time * 2 + worker.phase) * 1.2;
+    const swing = moving ? Math.sin(phase) * 5 : 0;
+
+    const bx = p.x;
+    const by = p.y - bob;
+
+    ctx.save();
+    // contact shadow
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(bx, p.y + 4, 13, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // legs
+    ctx.strokeStyle = "#33405a";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(bx - 3, by - 14);
+    ctx.lineTo(bx - 3 + swing * 0.6, by);
+    ctx.moveTo(bx + 3, by - 14);
+    ctx.lineTo(bx + 3 - swing * 0.6, by);
+    ctx.stroke();
+
+    // torso
+    ctx.fillStyle = info.shirt;
+    roundRect(ctx, bx - 8, by - 34, 16, 21, 5);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    roundRect(ctx, bx - 8, by - 34, 6, 21, 5);
+    ctx.fill();
+
+    // arms
+    ctx.strokeStyle = info.shirt;
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(bx - 8, by - 30);
+    ctx.lineTo(bx - 12, by - 18 + swing);
+    ctx.moveTo(bx + 8, by - 30);
+    ctx.lineTo(bx + 12, by - 18 - swing);
+    ctx.stroke();
+
+    // head + hat
+    ctx.fillStyle = "#f0c39a";
+    ctx.beginPath();
+    ctx.arc(bx, by - 41, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = info.hair;
+    ctx.beginPath();
+    ctx.ellipse(bx, by - 45, 9.5, 5, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#d8b23c";
+    ctx.beginPath();
+    ctx.ellipse(bx, by - 44, 13, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // a working flourish so idle hands still look busy
+    if (!moving) {
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(bx + 14, by - 24, 7, -0.8 + Math.sin(state.time * 6) * 0.5, 0.6 + Math.sin(state.time * 6) * 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** Chimney smoke — cheap, but it makes the homestead feel lived in. */
+function drawSmoke(ctx: CanvasRenderingContext2D, runtime: FarmRuntime, state: IsoState) {
+  const house = runtime.terrain.buildings.find((b) => b.id === "house");
+  if (!house) return;
+  const p = tileToWorld(house.x, house.y);
+  ctx.save();
+  for (let i = 0; i < 5; i += 1) {
+    const t = (state.time * 0.45 + i * 0.2) % 1;
+    ctx.globalAlpha = (1 - t) * 0.4;
+    ctx.fillStyle = "#e8eef2";
+    ctx.beginPath();
+    ctx.arc(p.x + 18 + Math.sin(t * 5 + i) * 9, p.y - 120 - t * 70, 5 + t * 11, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 

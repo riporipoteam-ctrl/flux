@@ -22,3 +22,20 @@ weight. Each sprite was halved from 256x512 to 128x256 (still oversampled for a
 
 The upstream `License.txt` shipped with the pack is preserved alongside this
 file as `KENNEY-LICENSE.txt`.
+
+## Isometric Ground Tiles — Kutejnikov
+
+- **Source:** https://opengameart.org/content/isometric-ground-tiles
+- **Licence:** CC0 1.0 Universal
+- **Retrieved:** 2026-08-02
+- **Modified:** single 128x64 diamonds cut out of the 8x7 sheets (grass, dry
+  grass, dirt, dark dirt, stone path, sand); the source sheets, .blend and
+  .xcf files were not vendored.
+
+## Free Isometric Plants Pack — yd
+
+- **Source:** https://opengameart.org/content/free-isometric-plants-pack
+- **Licence:** CC0 1.0 Universal
+- **Retrieved:** 2026-08-02
+- **Modified:** trees, shrubs and tufts trimmed and scaled down from 1024px to
+  90-150px so they sit correctly on a 128px tile.
