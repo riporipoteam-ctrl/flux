@@ -34,12 +34,18 @@ const nav = read("src/components/layout/mobile-nav.tsx");
 for (const marker of ["/home", "/explore", "#compose", "/games", "profileHref", "flux8-mobile-tab-create"]) requireText(nav, marker, "Mobile bottom navigation");
 
 const mobileBoot = read("src/components/providers/mobile-boot.tsx");
-for (const marker of ["visualViewport", "--flux-visual-bottom", "updateViaCache", "flux-shell-v3"]) requireText(mobileBoot, marker, "Safari viewport and cache recovery");
+for (const marker of ["visualViewport", "--flux-visual-bottom", "updateViaCache", "flux-shell-v4", "NEXT_PUBLIC_RELEASE_SHA"]) requireText(mobileBoot, marker, "Safari viewport and cache recovery");
 
 const style = read("src/styles/flux-x-ultimate.css");
-for (const marker of ["var(--flux-visual-bottom)", "z-index: 1000", "content-visibility: auto", "prefers-reduced-motion"]) requireText(style, marker, "Responsive X design system");
+for (const marker of ["var(--flux-visual-bottom)", "z-index: 1000", "content-visibility: auto", "prefers-reduced-motion", ".flux9-topbar { display: none", "border-radius: 0 !important"]) requireText(style, marker, "Responsive X2 design system");
+
+const root = read("src/app/layout.tsx");
+for (const marker of ["data-flux-ui=\"x2\"", "data-flux-release", "NEXT_PUBLIC_RELEASE_SHA"]) requireText(root, marker, "Traceable Flux X2 release");
+
+const deploy = read(".github/workflows/deploy-pages.yml");
+for (const marker of ["NEXT_PUBLIC_RELEASE_SHA", "release.json", "version.txt", "upload-pages-artifact@v4", "data-flux-ui=\"x2\""]) requireText(deploy, marker, "Traceable Pages deployment");
 
 const media = read("src/services/media.ts");
 for (const marker of ["processStoryImage", "maxDimension: 2048", "attempt < 3", "Post videos must be under 100 MB"]) requireText(media, marker, "Post upload reliability");
 
-console.log(`Flux X V3 audit passed with ${worldCount * genreCount} integrated Arcade games.`);
+console.log(`Flux X2 audit passed with ${worldCount * genreCount} integrated Arcade games.`);
