@@ -1,3 +1,5 @@
+import { FLUX_ARCADE_GAMES } from "@/data/flux-arcade-games";
+
 export type BrowserGameCategory =
   | "Racing"
   | "3D"
@@ -10,7 +12,10 @@ export type BrowserGameCategory =
   | "Platformer"
   | "Puzzle"
   | "Sandbox"
-  | "Farming";
+  | "Farming"
+  | "Quest"
+  | "Survival"
+  | "Arcade";
 
 export type BrowserGame = {
   slug: string;
@@ -31,28 +36,32 @@ export type BrowserGame = {
   featured?: boolean;
   directEmbed?: boolean;
   internal?: boolean;
+  arcade?: boolean;
   status?: "Released" | "Beta" | "In development";
 };
 
 export const GAME_CATEGORIES = [
   "All",
-  "3D",
-  "Racing",
-  "Simulator",
-  "Tycoon",
-  "Strategy",
-  "Story",
+  "Arcade",
   "Horror",
-  "Action",
+  "Simulator",
+  "Quest",
+  "Tycoon",
+  "Story",
+  "Racing",
   "Platformer",
   "Puzzle",
-  "Sandbox",
+  "Survival",
   "Farming",
+  "3D",
+  "Strategy",
+  "Action",
+  "Sandbox",
 ] as const;
 
 export type GameCategoryFilter = (typeof GAME_CATEGORIES)[number];
 
-export const BROWSER_GAMES: BrowserGame[] = [
+const OPEN_SOURCE_GAMES: BrowserGame[] = [
   {
     slug: "tux-racer",
     title: "TuxRacer.js",
@@ -174,15 +183,14 @@ export const BROWSER_GAMES: BrowserGame[] = [
     slug: "flux-farm",
     title: "Flux Farm",
     author: "Ripo Team",
-    shortDescription: "A full 2D farming life-sim with seasons, weather, hired hands, world events and a live global ladder.",
-    description:
-      "Inherit a forgotten valley and bring it back. Till soil, plant twelve crops across four seasons, survive storms and frost, hire farmhands as you rank up, build and upgrade the homestead, and chase story chapters and timed world events. A real day/night cycle, dynamic weather with wind, hand-assembled isometric art built from CC0 packs and a synthesised adaptive soundtrack run at 60fps on phone, tablet and desktop. Progress saves to your Flux account and your rank is posted to the global leaderboard.",
+    shortDescription: "A 2D farming life-sim with seasons, upgrades, events and a global ladder.",
+    description: "Restore a forgotten valley, grow crops, upgrade the farm and compete for the highest Flux Farm rank.",
     categories: ["Farming", "Simulator"],
     playUrl: "/games/flux-farm",
     sourceUrl: "https://github.com/riporipoteam-ctrl/flux",
     license: "Flux source",
     technology: "Next.js · Canvas 2D · WebAudio · Firebase",
-    controls: "Tap a plot · drag to pan · pinch or wheel to zoom",
+    controls: "Touch · mouse · keyboard",
     devices: ["Mobile", "PC", "Tablet"],
     symbol: "🌾",
     palette: ["#0d2818", "#2f7d42", "#c7f284"],
@@ -193,11 +201,35 @@ export const BROWSER_GAMES: BrowserGame[] = [
   },
 ];
 
+const ARCADE_GAMES: BrowserGame[] = FLUX_ARCADE_GAMES.map((game, index) => ({
+  slug: game.slug,
+  title: game.title,
+  author: "Flux Arcade",
+  shortDescription: game.shortDescription,
+  description: game.description,
+  categories: [game.genre, "Arcade"] as BrowserGameCategory[],
+  playUrl: `/games/arcade?game=${encodeURIComponent(game.slug)}`,
+  sourceUrl: "https://github.com/riporipoteam-ctrl/flux",
+  license: "Flux source",
+  technology: "React · WebAudio · Firebase leaderboard",
+  controls: "Touch · mouse · keyboard",
+  devices: ["Mobile", "PC", "Tablet"],
+  symbol: game.symbol,
+  palette: game.palette,
+  thumbnail: "/game-covers/flux-arcade.svg",
+  internal: true,
+  arcade: true,
+  featured: index < 3,
+  status: "Released",
+}));
+
+export const BROWSER_GAMES: BrowserGame[] = [...OPEN_SOURCE_GAMES, ...ARCADE_GAMES];
+export const ARCADE_GAME_COUNT = ARCADE_GAMES.length;
+
 export function getBrowserGame(slug: string | null | undefined) {
   return BROWSER_GAMES.find((game) => game.slug === slug);
 }
 
-// Flux Farm leads the hub; the rest keep their catalogue order behind it.
 export const FEATURED_GAMES = BROWSER_GAMES.filter((game) => game.featured).sort(
   (a, b) => Number(b.slug === "flux-farm") - Number(a.slug === "flux-farm")
 );
