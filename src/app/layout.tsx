@@ -14,6 +14,7 @@ import "@/styles/flux-v8.css";
 import "@/styles/flux-v8-tokens.css";
 import "@/styles/flux-polish.css";
 import "@/styles/flux-x-ultimate.css";
+import "@/styles/flux-mobile-dock.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const release = process.env.NEXT_PUBLIC_RELEASE_SHA || "local";
@@ -30,11 +31,11 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Flux" },
   icons: {
     icon: [
-      { url: `${basePath}/favicon.ico?v=flux-x2`, type: "image/x-icon", sizes: "256x256" },
-      { url: `${basePath}/flux-icon.png?v=flux-x2`, type: "image/png", sizes: "1024x1024" },
+      { url: `${basePath}/favicon.ico?v=flux-x3`, type: "image/x-icon", sizes: "256x256" },
+      { url: `${basePath}/flux-icon.png?v=flux-x3`, type: "image/png", sizes: "1024x1024" },
     ],
-    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-x2`, type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: `${basePath}/flux-icon.png?v=flux-x2`, type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-x3`, type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: `${basePath}/flux-icon.png?v=flux-x3`, type: "image/png", sizes: "180x180" }],
   },
   other: { "mobile-web-app-capable": "yes", "flux-release": release },
 };
@@ -52,7 +53,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="light" data-accent="blue" data-flux-ui="x2" data-flux-release={release.slice(0, 12)} suppressHydrationWarning>
+    <html lang="en" className="light" data-accent="blue" data-flux-ui="x3" data-flux-release={release.slice(0, 12)} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem("flux-theme-v2");var a=localStorage.getItem("flux-accent-v1");var r=document.documentElement;if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}if(t==="light"||t==="dim"||t==="dark"){r.classList.remove("light","dim","dark");r.classList.add(t);r.style.colorScheme=t==="light"?"light":"dark"}if(a){r.dataset.accent=a}}catch(e){}})()` }} />
       </head>
