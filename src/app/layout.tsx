@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { MobileBoot } from "@/components/providers/mobile-boot";
+import { RouteMotion } from "@/components/providers/route-motion";
 import "./globals.css";
 import "@/styles/editor-surfaces.css";
 import "@/styles/flux-engine.css";
@@ -11,6 +12,7 @@ import "@/styles/askai-workspace.css";
 import "@/styles/askai-workspace-v2.css";
 import "@/styles/flux-v8.css";
 import "@/styles/flux-v8-tokens.css";
+import "@/styles/flux-polish.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -68,8 +70,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" data-accent="blue" suppressHydrationWarning>
       <head>
-        {/* Paint the stored background before first paint. Without this the
-            page flashes white on every load for anyone on Dim or Lights out. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem("flux-theme-v2");var a=localStorage.getItem("flux-accent-v1");var r=document.documentElement;if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}if(t==="light"||t==="dim"||t==="dark"){r.classList.remove("light","dim","dark");r.classList.add(t);r.style.colorScheme=t==="light"?"light":"dark"}if(a){r.dataset.accent=a}}catch(e){}})()`,
@@ -80,7 +80,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <MobileBoot />
-            {children}
+            <RouteMotion>{children}</RouteMotion>
             <Toaster
               position="top-center"
               richColors
