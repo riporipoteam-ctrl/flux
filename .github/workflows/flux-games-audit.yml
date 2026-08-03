@@ -7,9 +7,12 @@ on:
       - "src/app/games/play/**"
       - "src/components/game/**"
       - "src/data/browser-games.ts"
-      - "src/app/social-effects.css"
+      - "src/data/flux-arcade-games.ts"
+      - "src/services/game-leaderboards.ts"
+      - "src/styles/flux-x-ultimate.css"
       - "src/app/layout.tsx"
       - "src/app/(main)/home/page.tsx"
+      - "scripts/flux-x-games-v3-audit.mjs"
       - ".github/workflows/flux-games-audit.yml"
   workflow_dispatch:
 
@@ -19,7 +22,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       GITHUB_PAGES: "true"
     steps:
@@ -29,6 +32,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/flux-x-games-v3-audit.mjs
       - run: npm run lint
       - name: Exclude server-only routes from static export
         run: mv src/app/api .pages-api
@@ -37,4 +41,5 @@ jobs:
         run: |
           test -f out/games/index.html
           test -f out/games/play/index.html
+          test -f out/games/arcade/index.html
           test -f out/games/flux-farm/index.html

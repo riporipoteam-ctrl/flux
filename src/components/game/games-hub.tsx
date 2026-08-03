@@ -1,25 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   Boxes,
-  Clock3,
   Dice5,
   Gamepad2,
   Heart,
   Loader2,
   Search,
-  ShieldCheck,
-  Smartphone,
   Sparkles,
+  Trophy,
   Users,
   X,
 } from "lucide-react";
 import {
+  ARCADE_GAME_COUNT,
   BROWSER_GAMES,
   FEATURED_GAMES,
   GAME_CATEGORIES,
@@ -27,15 +26,12 @@ import {
   type GameCategoryFilter,
 } from "@/data/browser-games";
 import { GameCoverArt } from "@/components/game/game-cover-art";
-import {
-  listPublishedCommunityGames,
-  type PublishedCommunityGame,
-} from "@/services/studio-projects";
+import { listPublishedCommunityGames, type PublishedCommunityGame } from "@/services/studio-projects";
 
 const FAVORITES_KEY = "flux-games-favorites";
-const RECENT_KEY = "flux-games-recent";
+const PAGE_SIZE = 30;
 
-function hrefForGame(game: BrowserGame) {
+function hrefForGame(game: BrowserGame): string {
   return game.internal ? game.playUrl : `/games/play?game=${encodeURIComponent(game.slug)}`;
 }
 
@@ -43,252 +39,153 @@ export default function GamesHub() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [category, setCategory] = useState<GameCategoryFilter>("All");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [recent, setRecent] = useState<string[]>([]);
   const [community, setCommunity] = useState<PublishedCommunityGame[]>([]);
   const [communityLoading, setCommunityLoading] = useState(true);
   const hero = FEATURED_GAMES[0] ?? BROWSER_GAMES[0];
 
   useEffect(() => {
-    const readSaved = () => {
-      try {
-        setFavorites(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as string[]);
-        setRecent(JSON.parse(localStorage.getItem(RECENT_KEY) || "[]") as string[]);
-      } catch {
-        setFavorites([]);
-        setRecent([]);
-      }
-    };
-    readSaved();
-    window.addEventListener("flux-games-updated", readSaved);
-    window.addEventListener("storage", readSaved);
-    return () => {
-      window.removeEventListener("flux-games-updated", readSaved);
-      window.removeEventListener("storage", readSaved);
-    };
-  }, []);
-
-  useEffect(() => {
-    listPublishedCommunityGames(48)
+    try { setFavorites(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as string[]); } catch { setFavorites([]); }
+    listPublishedCommunityGames(24)
       .then(setCommunity)
       .catch(() => setCommunity([]))
       .finally(() => setCommunityLoading(false));
   }, []);
 
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [category, deferredQuery]);
+
   const filteredGames = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = deferredQuery.trim().toLowerCase();
     return BROWSER_GAMES.filter((game) => {
       const categoryMatch = category === "All" || game.categories.includes(category);
-      const textMatch = !needle || [game.title, game.author, game.shortDescription, ...game.categories]
+      if (!categoryMatch) return false;
+      if (!needle) return true;
+      return [game.title, game.author, game.shortDescription, ...game.categories]
         .join(" ")
         .toLowerCase()
         .includes(needle);
-      return categoryMatch && textMatch;
     });
-  }, [category, query]);
+  }, [category, deferredQuery]);
 
-  const filteredCommunity = useMemo(() => {
-    if (category !== "All") return [];
-    const needle = query.trim().toLowerCase();
-    return community.filter((game) =>
-      !needle || [game.title, game.description, ...game.hashtags].join(" ").toLowerCase().includes(needle)
-    );
-  }, [category, community, query]);
-
+  const visibleGames = filteredGames.slice(0, visibleCount);
   const favoriteGames = favorites
     .map((slug) => BROWSER_GAMES.find((game) => game.slug === slug))
-    .filter(Boolean) as BrowserGame[];
-  const recentGames = recent
-    .map((slug) => BROWSER_GAMES.find((game) => game.slug === slug))
-    .filter(Boolean) as BrowserGame[];
+    .filter(Boolean)
+    .slice(0, 6) as BrowserGame[];
 
   const toggleFavorite = (slug: string) => {
     setFavorites((current) => {
-      const next = current.includes(slug)
-        ? current.filter((item) => item !== slug)
-        : [slug, ...current];
-      try {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
-        window.dispatchEvent(new Event("flux-games-updated"));
-      } catch {
-        // Ignore browsers with blocked local storage.
-      }
+      const next = current.includes(slug) ? current.filter((item) => item !== slug) : [slug, ...current];
+      try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(next)); } catch { /* private mode */ }
       return next;
     });
   };
 
   const surpriseMe = () => {
     const pool = filteredGames.length ? filteredGames : BROWSER_GAMES;
-    const next = pool[Math.floor(Math.random() * pool.length)];
-    if (next) router.push(hrefForGame(next));
+    const game = pool[Math.floor(Math.random() * pool.length)];
+    if (game) router.push(hrefForGame(game));
   };
 
   return (
-    <div className="x-page">
+    <div className="flux-games-v3 min-h-[100dvh] bg-background">
       <header className="x-header hidden lg:flex">
-        <div className="x-header-titles">
-          <h1>Games</h1>
-          <p>Open-source games and community creations, playable inside Flux</p>
-        </div>
-        <span className="hidden items-center gap-2 text-xs font-bold text-[var(--v8-muted)] xl:flex">
-          <ShieldCheck className="h-4 w-4 text-[var(--v8-green)]" /> No redirects · no VPS
-        </span>
-        <Link href="/studio" className="x-btn x-btn-ink x-btn-sm">
-          <Boxes className="h-4 w-4" /> Studio
-        </Link>
+        <div className="x-header-titles"><h1>Games</h1><p>Play inside Flux, compete globally and create in Studio</p></div>
+        <Link href="/studio" className="x-btn x-btn-ink x-btn-sm"><Boxes className="h-4 w-4" />Studio</Link>
       </header>
 
-      <main className="mx-auto w-full max-w-[1180px] px-3 pt-3 sm:px-5 sm:pt-5">
-        <section className="relative overflow-hidden rounded-[24px] border border-[var(--v8-line)] bg-black">
-          <div className="relative min-h-[420px] sm:min-h-[540px]">
+      <main className="mx-auto w-full max-w-[1220px] px-3 pb-24 pt-3 sm:px-5 sm:pt-5 lg:pb-10">
+        <section className="flux-games-hero relative overflow-hidden rounded-[26px] border border-[var(--v8-line)] bg-black">
+          <div className="relative min-h-[420px] sm:min-h-[520px]">
             <GameCoverArt game={hero} />
             <motion.div
-              className="absolute inset-0 flex max-w-2xl flex-col justify-end p-6 sm:p-10"
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
+              className="absolute inset-0 flex max-w-3xl flex-col justify-end p-6 sm:p-10"
+              initial={{ opacity: 0, y: reduceMotion ? 0 : 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.42 }}
+              transition={{ duration: reduceMotion ? 0 : 0.4 }}
             >
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/60">Featured this week</p>
-              <h2 className="mt-3 text-4xl font-black leading-[0.92] tracking-[-0.06em] text-white sm:text-6xl">{hero.title}</h2>
-              <p className="mt-4 line-clamp-4 max-w-xl text-sm leading-6 text-white/72 sm:line-clamp-none sm:text-base">{hero.description}</p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {hero.categories.map((item) => (
-                  <span key={item} className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-[10px] font-bold text-white/80 backdrop-blur-md">{item}</span>
-                ))}
-              </div>
+              <p className="text-[10px] font-black uppercase tracking-[.2em] text-white/55">Featured on Flux</p>
+              <h2 className="mt-3 text-4xl font-black leading-[.92] tracking-[-.06em] text-white sm:text-7xl">{hero.title}</h2>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-white/68 sm:text-base">{hero.description}</p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link href={hrefForGame(hero)} className="x-btn x-btn-lg !bg-white !text-black">
-                  <Gamepad2 className="h-5 w-5" /> Play now <ArrowRight className="h-4 w-4" />
-                </Link>
-                <button type="button" onClick={surpriseMe} className="x-btn x-btn-lg !border !border-white/25 !bg-black/35 !text-white backdrop-blur-md">
-                  <Dice5 className="h-4 w-4" /> Surprise me
-                </button>
-                <Link href="/studio" className="x-btn x-btn-lg !bg-[var(--v8-accent)] !text-white">
-                  <Sparkles className="h-4 w-4" /> Make a game
-                </Link>
+                <Link href={hrefForGame(hero)} className="x-btn x-btn-lg !bg-white !text-black"><Gamepad2 className="h-5 w-5" />Play now<ArrowRight className="h-4 w-4" /></Link>
+                <button type="button" onClick={surpriseMe} className="x-btn x-btn-lg !border !border-white/20 !bg-black/30 !text-white backdrop-blur-xl"><Dice5 className="h-4 w-4" />Surprise me</button>
+                <Link href="/studio" className="x-btn x-btn-lg !bg-[var(--v8-accent)] !text-white"><Sparkles className="h-4 w-4" />Create a game</Link>
               </div>
             </motion.div>
           </div>
         </section>
 
-        <section className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
-          <Stat value={`${BROWSER_GAMES.length + community.length}`} label="Games" />
-          <Stat value={`${community.length}`} label="Creator games" />
-          <Stat value="3" label="Device types" />
+        <section className="mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:gap-3">
+          <Stat value={`${BROWSER_GAMES.length + community.length}`} label="Playable" />
+          <Stat value={`${ARCADE_GAME_COUNT}`} label="Flux Arcade" />
+          <Stat value="Global" label="Leaderboards" />
         </section>
 
-        <section className="x-card mt-8 p-3 sm:p-4">
+        <section className="mt-5 rounded-[22px] border border-[var(--v8-line)] bg-[var(--v8-panel)] p-3 sm:p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search games, creators and hashtags"
-              className="h-12 w-full rounded-full border border-[var(--v8-line-strong)] bg-[var(--v8-panel)] pl-11 pr-12 text-sm font-semibold outline-none transition focus:border-[var(--v8-accent)] focus:ring-4 focus:ring-[var(--v8-accent-soft)]"
-            />
-            {query ? (
-              <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full hover:bg-muted" aria-label="Clear search">
-                <X className="h-4 w-4" />
-              </button>
-            ) : null}
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search all games and genres" className="h-12 w-full rounded-full border border-[var(--v8-line-strong)] bg-[var(--v8-panel-2)] pl-11 pr-12 text-sm font-semibold outline-none transition focus:border-[var(--v8-accent)] focus:ring-4 focus:ring-[var(--v8-accent-soft)]" />
+            {query ? <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full hover:bg-muted" aria-label="Clear search"><X className="h-4 w-4" /></button> : null}
           </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {GAME_CATEGORIES.map((item) => (
-              <button key={item} type="button" onClick={() => setCategory(item)} data-active={item === category} className="x-chip shrink-0">
-                {item}
-              </button>
-            ))}
+          <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
+            {GAME_CATEGORIES.map((item) => <button key={item} type="button" onClick={() => setCategory(item)} data-active={item === category} className="x-chip shrink-0">{item}</button>)}
           </div>
         </section>
 
-        {favoriteGames.length ? <GameRow title="Saved games" icon={Heart} games={favoriteGames.slice(0, 4)} favorites={favorites} onToggleFavorite={toggleFavorite} /> : null}
-        {recentGames.length ? <GameRow title="Continue playing" icon={Clock3} games={recentGames.slice(0, 4)} favorites={favorites} onToggleFavorite={toggleFavorite} /> : null}
+        {favoriteGames.length ? (
+          <section className="mt-8">
+            <div className="flex items-center gap-2"><Heart className="h-5 w-5 text-rose-500" /><h2 className="text-xl font-black tracking-tight">Saved games</h2></div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{favoriteGames.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite onToggleFavorite={toggleFavorite} />)}</div>
+          </section>
+        ) : null}
 
-        <section className="mt-10 overflow-hidden rounded-[24px] bg-[#0b0f14] p-4 text-white sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-300">Built by Flux users</p>
-              <h2 className="mt-2 text-3xl font-black tracking-[-.05em]">Community creations</h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-white/48">Games generated or edited in Flux Studio can be previewed, published and played here.</p>
-            </div>
-            <Link href="/studio" className="x-btn !bg-white !text-black">
-              <Boxes className="h-4 w-4" /> Create in Studio
-            </Link>
-          </div>
-          {communityLoading ? (
-            <div className="grid min-h-52 place-items-center"><Loader2 className="h-6 w-6 animate-spin text-white/40" /></div>
-          ) : filteredCommunity.length ? (
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredCommunity.map((game) => <CommunityCard key={game.id} game={game} />)}
-            </div>
-          ) : (
-            <div className="mt-6 grid min-h-48 place-items-center rounded-[24px] border border-dashed border-white/12 text-center">
-              <div><Gamepad2 className="mx-auto h-7 w-7 text-white/25" /><p className="mt-3 font-black">No creator games match yet</p><p className="mt-1 text-xs text-white/35">Publish one from Flux Studio.</p></div>
-            </div>
-          )}
-        </section>
-
-        <section className="mt-10">
+        <section className="mt-9">
           <div className="flex items-end justify-between gap-4">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Open-source library</p><h2 className="mt-1 text-3xl font-black tracking-[-0.05em]">{category === "All" ? "All games" : category}</h2></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-muted-foreground">Full catalog</p><h2 className="mt-1 text-3xl font-black tracking-[-.05em]">{category === "All" ? "All games" : category}</h2></div>
             <p className="text-xs font-bold text-muted-foreground">{filteredGames.length} results</p>
           </div>
-          <motion.div layout className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredGames.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={toggleFavorite} />)}
-          </motion.div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleGames.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={toggleFavorite} />)}
+          </div>
+          {visibleCount < filteredGames.length ? <button type="button" onClick={() => setVisibleCount((current) => current + PAGE_SIZE)} className="mx-auto mt-7 flex h-12 items-center rounded-full border border-[var(--v8-line-strong)] bg-[var(--v8-panel)] px-7 text-sm font-black transition hover:bg-[var(--v8-panel-2)]">Show {Math.min(PAGE_SIZE, filteredGames.length - visibleCount)} more</button> : null}
+        </section>
+
+        <section className="mt-10 overflow-hidden rounded-[26px] bg-[#0b0f14] p-5 text-white sm:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-violet-300">Created by the community</p><h2 className="mt-2 text-3xl font-black tracking-[-.05em]">Studio games</h2><p className="mt-2 max-w-xl text-sm leading-6 text-white/46">Publish a playable project from Flux Studio and it appears here.</p></div>
+            <Link href="/studio" className="x-btn !bg-white !text-black"><Boxes className="h-4 w-4" />Open Studio</Link>
+          </div>
+          {communityLoading ? <div className="grid min-h-44 place-items-center"><Loader2 className="h-6 w-6 animate-spin text-white/35" /></div> : community.length ? <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{community.slice(0, 9).map((game) => <CommunityCard key={game.id} game={game} />)}</div> : <div className="mt-6 grid min-h-40 place-items-center rounded-[22px] border border-dashed border-white/12 text-center"><div><Users className="mx-auto h-7 w-7 text-white/20" /><p className="mt-3 font-black">No community games yet</p><p className="mt-1 text-xs text-white/35">Publish the first one from Studio.</p></div></div>}
         </section>
       </main>
     </div>
   );
 }
 
-function CommunityCard({ game }: { game: PublishedCommunityGame }) {
-  return (
-    <Link href={`/studio/play?id=${encodeURIComponent(game.id)}`} className="group overflow-hidden rounded-[22px] border border-white/10 bg-white/6 transition hover:-translate-y-1 hover:bg-white/9">
-      <div className="relative aspect-[16/9] overflow-hidden" style={{ background: game.thumbnail || "linear-gradient(135deg,#7c3aed,#07111f)" }}>
-        <span className="absolute left-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider backdrop-blur">Community</span>
-        <span className="absolute bottom-3 right-3 grid h-10 w-10 place-items-center rounded-full bg-white text-black"><ArrowRight className="h-4 w-4" /></span>
-      </div>
-      <div className="p-4">
-        <h3 className="truncate text-lg font-black tracking-tight">{game.title}</h3>
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/48">{game.description}</p>
-        <div className="mt-4 flex items-center gap-3 border-t border-white/8 pt-3 text-[10px] font-bold text-white/38">
-          <span>{game.visits} plays</span><span>{game.cheers} cheers</span>
-          {game.multiplayer ? <span className="ml-auto flex items-center gap-1 text-emerald-300"><Users className="h-3.5 w-3.5" />{game.maxPlayers}</span> : null}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return <div className="x-stat"><b>{value}</b><small>{label}</small></div>;
-}
-
-function GameRow({ title, icon: Icon, games, favorites, onToggleFavorite }: { title: string; icon: typeof Clock3; games: BrowserGame[]; favorites: string[]; onToggleFavorite: (slug: string) => void }) {
-  return <section className="mt-9"><div className="flex items-center gap-2"><Icon className="h-[18px] w-[18px] text-muted-foreground" /><h2 className="text-xl font-black tracking-[-0.035em]">{title}</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{games.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={onToggleFavorite} compact />)}</div></section>;
-}
-
-function GameCard({ game, index, favorite, onToggleFavorite, compact = false }: { game: BrowserGame; index: number; favorite: boolean; onToggleFavorite: (slug: string) => void; compact?: boolean }) {
+function GameCard({ game, index, favorite, onToggleFavorite }: { game: BrowserGame; index: number; favorite: boolean; onToggleFavorite: (slug: string) => void }) {
   const reduceMotion = useReducedMotion();
   return (
-    <motion.article initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.25, delay: Math.min(index * 0.025, 0.14) }} className="x-card x-lift group overflow-hidden">
+    <motion.article initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.22, delay: Math.min(index * 0.015, 0.12) }} className="flux-game-card group overflow-hidden rounded-[20px] border border-[var(--v8-line)] bg-[var(--v8-panel)]">
       <Link href={hrefForGame(game)} className="block">
-        <div className={`relative overflow-hidden ${compact ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
-          <GameCoverArt game={game} compact />
-          <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleFavorite(game.slug); }} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur-md" aria-label="Toggle favorite">
-            <Heart className={`h-4 w-4 ${favorite ? "fill-rose-400 text-rose-400" : ""}`} />
-          </button>
-          <span className="absolute bottom-3 right-3 grid h-9 w-9 place-items-center rounded-full bg-white text-black"><ArrowRight className="h-4 w-4" /></span>
-        </div>
-        <div className={compact ? "p-4" : "p-5"}>
-          <h3 className={`${compact ? "text-base" : "text-xl"} truncate font-black tracking-[-0.035em]`}>{game.title}</h3>
-          <p className="mt-1 truncate text-[10px] font-bold text-muted-foreground">{game.author} · {game.status}</p>
-          {!compact ? <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{game.shortDescription}</p> : null}
-          <div className="mt-4 flex items-center gap-1.5 border-t border-border/70 pt-3 text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground"><Smartphone className="h-3.5 w-3.5" /> Mobile · Tablet · PC</div>
-        </div>
+        <div className="relative aspect-[16/10] overflow-hidden"><GameCoverArt game={game} compact /><button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleFavorite(game.slug); }} className="absolute right-2.5 top-2.5 grid h-9 w-9 place-items-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur-xl transition active:scale-90" aria-label={favorite ? "Remove favorite" : "Save game"}><Heart className={cn("h-4 w-4", favorite && "fill-rose-500 text-rose-500")} /></button><span className="absolute bottom-2.5 left-2.5 rounded-full bg-black/55 px-2.5 py-1 text-[9px] font-black text-white backdrop-blur">{game.arcade ? "Leaderboard" : game.status || "Play"}</span></div>
+        <div className="p-3.5"><h3 className="truncate text-[15px] font-black tracking-tight">{game.title}</h3><p className="mt-1.5 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{game.shortDescription}</p><div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-muted-foreground"><span>{game.categories[0]}</span>{game.arcade ? <span className="ml-auto flex items-center gap-1 text-amber-500"><Trophy className="h-3.5 w-3.5" />Global scores</span> : <span className="ml-auto">{game.author}</span>}</div></div>
       </Link>
     </motion.article>
   );
+}
+
+function CommunityCard({ game }: { game: PublishedCommunityGame }) {
+  return <Link href={`/studio/play?id=${encodeURIComponent(game.id)}`} className="group overflow-hidden rounded-[20px] border border-white/10 bg-white/6 transition hover:bg-white/10"><div className="aspect-[16/9]" style={{ background: game.thumbnail || "linear-gradient(135deg,#7c3aed,#07111f)" }} /><div className="p-4"><h3 className="truncate font-black">{game.title}</h3><p className="mt-1 line-clamp-2 text-xs leading-5 text-white/42">{game.description}</p><div className="mt-3 flex gap-3 text-[10px] font-bold text-white/32"><span>{game.visits} plays</span><span>{game.cheers} cheers</span></div></div></Link>;
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return <div className="rounded-[18px] border border-[var(--v8-line)] bg-[var(--v8-panel)] px-3 py-3 text-center sm:py-4"><b className="block text-lg font-black sm:text-2xl">{value}</b><small className="mt-0.5 block text-[9px] font-bold uppercase tracking-[.12em] text-muted-foreground sm:text-[10px]">{label}</small></div>;
+}
+
+function cn(...values: Array<string | false | null | undefined>): string {
+  return values.filter(Boolean).join(" ");
 }

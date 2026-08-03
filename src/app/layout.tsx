@@ -13,31 +13,20 @@ import "@/styles/askai-workspace-v2.css";
 import "@/styles/flux-v8.css";
 import "@/styles/flux-v8-tokens.css";
 import "@/styles/flux-polish.css";
+import "@/styles/flux-x-ultimate.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Flux — Social, Games, Create",
-  description:
-    "Flux is the social and gaming network by Ripo Team — connect, create, share and play free browser games from mobile, tablet or PC.",
+  description: "Flux is the social and gaming network by Ripo Team — connect, create, share and play free browser games from mobile, tablet or PC.",
   applicationName: "Flux",
   authors: [{ name: "Ripo Team" }],
   manifest: `${basePath}/manifest.webmanifest`,
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Flux",
-  },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Flux" },
   icons: {
     icon: [
       { url: `${basePath}/favicon.ico?v=flux-x`, type: "image/x-icon", sizes: "256x256" },
@@ -46,9 +35,7 @@ export const metadata: Metadata = {
     shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-x`, type: "image/png", sizes: "1024x1024" }],
     apple: [{ url: `${basePath}/flux-icon.png?v=flux-x`, type: "image/png", sizes: "180x180" }],
   },
-  other: {
-    "mobile-web-app-capable": "yes",
-  },
+  other: { "mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
@@ -62,33 +49,18 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="light" data-accent="blue" suppressHydrationWarning>
       <head>
-        {/* Paint the stored background before first paint. Without this the
-            page flashes white on every load for anyone on Dim or Lights out. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("flux-theme-v2");var a=localStorage.getItem("flux-accent-v1");var r=document.documentElement;if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}if(t==="light"||t==="dim"||t==="dark"){r.classList.remove("light","dim","dark");r.classList.add(t);r.style.colorScheme=t==="light"?"light":"dark"}if(a){r.dataset.accent=a}}catch(e){}})()`,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem("flux-theme-v2");var a=localStorage.getItem("flux-accent-v1");var r=document.documentElement;if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}if(t==="light"||t==="dim"||t==="dark"){r.classList.remove("light","dim","dark");r.classList.add(t);r.style.colorScheme=t==="light"?"light":"dark"}if(a){r.dataset.accent=a}}catch(e){}})()` }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}>
         <ThemeProvider>
           <AuthProvider>
             <MobileBoot />
             <RouteMotion>{children}</RouteMotion>
-            <Toaster
-              position="top-center"
-              richColors
-              closeButton
-              toastOptions={{ className: "border border-border shadow-soft" }}
-            />
+            <Toaster position="top-center" richColors closeButton toastOptions={{ className: "border border-border shadow-soft" }} />
           </AuthProvider>
         </ThemeProvider>
       </body>

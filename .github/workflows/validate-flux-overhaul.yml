@@ -57,6 +57,9 @@ jobs:
       - name: Platform reliability V2 audit
         run: node scripts/platform-reliability-v2-audit.mjs
 
+      - name: Flux X V3 and Games audit
+        run: node scripts/flux-x-games-v3-audit.mjs
+
       - name: TypeScript check
         run: npx tsc --noEmit
 
