@@ -1,0 +1,271 @@
+/* Flux product polish — restrained depth, responsive motion and better interaction feedback. */
+:root {
+  --flux-ease-out: cubic-bezier(.22, 1, .36, 1);
+  --flux-ease-spring: cubic-bezier(.2, .8, .2, 1.12);
+  --flux-motion-fast: 140ms;
+  --flux-motion: 220ms;
+  --flux-motion-slow: 360ms;
+  --flux-shadow-1: 0 1px 2px rgb(15 23 42 / .06), 0 8px 28px rgb(15 23 42 / .06);
+  --flux-shadow-2: 0 16px 48px rgb(15 23 42 / .14), 0 3px 12px rgb(15 23 42 / .08);
+}
+
+.dark,
+.dim {
+  --flux-shadow-1: 0 1px 2px rgb(0 0 0 / .35), 0 12px 34px rgb(0 0 0 / .22);
+  --flux-shadow-2: 0 20px 64px rgb(0 0 0 / .45), 0 3px 16px rgb(0 0 0 / .28);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--v8-accent, #1d9bf0) 24%, transparent);
+}
+
+.flux-route-frame {
+  min-height: 100%;
+  transform-origin: 50% 0;
+}
+
+button,
+a,
+input,
+textarea,
+select,
+[role="button"] {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform, filter;
+  transition-duration: var(--flux-motion-fast);
+  transition-timing-function: var(--flux-ease-out);
+}
+
+button:active:not(:disabled),
+[role="button"]:active:not([aria-disabled="true"]) {
+  transform: scale(.965);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--v8-accent, #1d9bf0) 72%, white);
+  outline-offset: 2px;
+}
+
+.flux8-sidebar-link,
+.flux8-mobile-nav a,
+.flux8-mobile-nav button {
+  position: relative;
+  isolation: isolate;
+}
+
+.flux8-sidebar-link::before {
+  content: "";
+  position: absolute;
+  inset: 3px 0;
+  z-index: -1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v8-accent, #1d9bf0) 10%, transparent);
+  opacity: 0;
+  transform: scale(.9);
+  transition: opacity var(--flux-motion) var(--flux-ease-out), transform var(--flux-motion) var(--flux-ease-spring);
+}
+
+.flux8-sidebar-link:hover::before,
+.flux8-sidebar-link[aria-current="page"]::before,
+.flux8-sidebar-link.is-active::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.flux8-sidebar-link:hover svg,
+.flux8-mobile-nav a:hover svg,
+.flux8-mobile-nav button:hover svg {
+  transform: translateY(-1px) scale(1.06);
+}
+
+.flux8-sidebar-link svg,
+.flux8-mobile-nav svg {
+  transition: transform var(--flux-motion) var(--flux-ease-spring);
+}
+
+.post-row {
+  position: relative;
+  overflow: clip;
+  transition: background-color var(--flux-motion) var(--flux-ease-out), box-shadow var(--flux-motion) var(--flux-ease-out);
+}
+
+.post-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(420px circle at var(--post-x, 50%) var(--post-y, 20%), color-mix(in srgb, var(--v8-accent, #1d9bf0) 7%, transparent), transparent 62%);
+  transition: opacity var(--flux-motion) var(--flux-ease-out);
+}
+
+@media (hover: hover) {
+  .post-row:hover {
+    background: color-mix(in srgb, var(--background) 94%, var(--v8-accent, #1d9bf0));
+  }
+
+  .post-row:hover::after {
+    opacity: 1;
+  }
+}
+
+.surface-card,
+[data-slot="dialog-content"],
+[role="dialog"] {
+  box-shadow: var(--flux-shadow-1);
+}
+
+[role="dialog"] {
+  animation: flux-dialog-in var(--flux-motion) var(--flux-ease-out) both;
+}
+
+.shadow-soft {
+  box-shadow: var(--flux-shadow-1) !important;
+}
+
+.flux8-composer-card:focus-within,
+.askx-composer:focus-within,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: color-mix(in srgb, var(--v8-accent, #1d9bf0) 52%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v8-accent, #1d9bf0) 12%, transparent);
+}
+
+.like-burst {
+  animation: flux-heart-pop 360ms var(--flux-ease-spring);
+}
+
+.flux-action-pending {
+  pointer-events: none;
+  opacity: .62;
+}
+
+.flux-action-pending svg {
+  animation: flux-soft-spin .8s linear infinite;
+}
+
+.flux-shimmer,
+[data-loading="true"] {
+  background-image: linear-gradient(105deg, transparent 20%, color-mix(in srgb, currentColor 8%, transparent) 38%, transparent 56%);
+  background-size: 220% 100%;
+  animation: flux-shimmer 1.35s linear infinite;
+}
+
+.flux-glass-panel {
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  box-shadow: var(--flux-shadow-2);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+}
+
+.flux-studio-ai-trigger {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 18px));
+  z-index: 80;
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  padding: 0 18px;
+  color: white;
+  background: linear-gradient(135deg, #7c3aed, #2563eb 52%, #0ea5e9);
+  box-shadow: 0 16px 48px rgb(37 99 235 / .35), inset 0 1px rgb(255 255 255 / .25);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+
+.flux-studio-ai-trigger:hover {
+  transform: translateY(-2px) scale(1.015);
+  filter: saturate(1.08) brightness(1.04);
+}
+
+.flux-studio-ai-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 90;
+  width: min(430px, calc(100vw - 24px));
+  overflow: hidden;
+  border-radius: 28px;
+}
+
+.flux-live-stage {
+  background:
+    radial-gradient(circle at 22% 14%, rgb(29 155 240 / .18), transparent 34%),
+    radial-gradient(circle at 82% 78%, rgb(239 68 68 / .12), transparent 30%),
+    #020305;
+}
+
+.flux-live-status-dot {
+  box-shadow: 0 0 0 0 rgb(239 68 68 / .55);
+  animation: flux-live-pulse 1.8s ease-out infinite;
+}
+
+@keyframes flux-dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes flux-heart-pop {
+  0% { transform: scale(.85); }
+  46% { transform: scale(1.34) rotate(-6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@keyframes flux-soft-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flux-shimmer {
+  to { background-position: -220% 0; }
+}
+
+@keyframes flux-live-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(239 68 68 / .55); }
+  70%, 100% { box-shadow: 0 0 0 10px rgb(239 68 68 / 0); }
+}
+
+@media (max-width: 639px) {
+  .flux-studio-ai-trigger {
+    right: 14px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    min-height: 48px;
+    padding: 0 15px;
+  }
+
+  .flux-studio-ai-panel {
+    inset: auto 0 0;
+    width: 100%;
+    max-height: min(82dvh, 760px);
+    border-radius: 26px 26px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
