@@ -85,6 +85,34 @@ place of the synthesised voice.
 
 ---
 
+## AskAI
+
+Two engines behind one switch.
+
+**AskAI 1.0 Instant** runs the model in the browser through WebGPU, so a chat
+never leaves the device. Where WebGPU is missing — or the model download fails —
+it falls back to Flux's built-in instant tools rather than erroring out.
+
+**AskAI 1.0 Pro** is the connected, high-reasoning half. It speaks the
+OpenAI-compatible `/chat/completions` shape, which is what Moonshot's Kimi API
+and every gateway in front of it expose, and it streams: reasoning tokens drive
+the progress line, answer tokens land in the bubble as they are written.
+
+It resolves a connection in this order:
+
+1. **What the person configured** in AskAI → *Connect Pro* — endpoint, key,
+   model and reasoning effort, stored in that browser only and sent straight to
+   the endpoint they chose.
+2. **A build-time endpoint**, if `NEXT_PUBLIC_KIMI_K3_ENDPOINT` is set.
+3. **`/api/askai-pro`**, Flux's own proxy, which keeps the key server-side. It
+   exists only where the app runs a server — GitHub Pages strips `src/app/api`
+   — and reads `KIMI_API_KEY`, `KIMI_BASE_URL` and `KIMI_MODEL`.
+
+That ordering is what makes Pro work on the static Pages build at all: there is
+no server there to hold a secret, so the browser has to bring its own.
+
+---
+
 ## Platform features
 
 - **Feed** — For You + Following, infinite scroll, posts with media and polls
@@ -98,7 +126,7 @@ place of the synthesised voice.
 - **Studio** — visual game/website editor with versions and publishing
 - **Games** — Flux Farm plus an open-source browser library and community builds
 - **Shop, Gifts, Rewards, Premium** — the Flux Coin economy
-- **AskAI** — feed-aware assistant (`/api/ask-ai`)
+- **AskAI** — feed-aware assistant, in two halves (see below)
 - **Admin** — verification, reports and coin tools
 
 Schema and rules: `firestore.rules`, `storage.rules`, `docs/SCHEMA.md`.

@@ -17,6 +17,12 @@ const tabs = [
   { href: "/messages", icon: Mail, label: "Messages" },
 ];
 
+/** Tapping the tab you are already on scrolls the timeline back to the top. */
+function backToTop(event: React.MouseEvent) {
+  event.preventDefault();
+  window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
 export function MobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -29,7 +35,14 @@ export function MobileNav() {
             const Icon = tab.icon;
             const active = isNavPathActive(pathname, tab.href);
             return (
-              <Link key={tab.href} href={tab.href} aria-label={tab.label} aria-current={active ? "page" : undefined} className={cn("flux8-mobile-tab", active && "is-active")}>
+              <Link
+                key={tab.href}
+                href={tab.href}
+                aria-label={tab.label}
+                aria-current={active ? "page" : undefined}
+                onClick={active ? backToTop : undefined}
+                className={cn("flux8-mobile-tab", active && "is-active")}
+              >
                 <Icon className="h-[24px] w-[24px]" strokeWidth={active ? 2.55 : 2} />
               </Link>
             );

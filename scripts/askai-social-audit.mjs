@@ -23,8 +23,12 @@ for (const marker of [
   "searchConnectedWeb",
   "streamLocalAskAI",
   "searchFlux",
-  "Kimi K3",
   "reasoning",
+  // Pro's model, endpoint and effort are chosen at runtime now, so assert the
+  // connection machinery rather than a hardcoded model name in the markup.
+  "resolveProConnection",
+  "ConnectProSheet",
+  "saveProConnection",
 ]) requireText(workspace, marker, "AskAI two-model workspace");
 for (const legacy of ["Auto route", "Smart local WebGPU", "Connected endpoint", "AskAI Workspace"]) {
   forbidText(workspace, legacy, "AskAI model selection");
@@ -32,13 +36,25 @@ for (const legacy of ["Auto route", "Smart local WebGPU", "Connected endpoint", 
 
 const pro = read("src/lib/ai/askai-pro.ts");
 for (const marker of [
-  'model: "kimi-k3"',
-  'reasoning_effort: "max"',
+  // The model and the effort are chosen at runtime now, so assert the default
+  // and the wire format rather than the literals that used to be hardcoded.
+  "kimi-k3-max",
+  "reasoning_effort",
+  "reasoning_content",
+  "stream: true",
+  "api.moonshot.ai",
+  "proxyEndpoint",
   "NEXT_PUBLIC_KIMI_K3_ENDPOINT",
   "NEXT_PUBLIC_ASKAI_SEARCH_ENDPOINT",
   "searchConnectedWeb",
   "CONNECTED RESEARCH SOURCES",
 ]) requireText(pro, marker, "AskAI Pro connector");
+
+// The proxy is what lets a server-side key work without the browser holding one.
+const proxy = read("src/app/api/askai-pro/route.ts");
+for (const marker of ["KIMI_API_KEY", "KIMI_BASE_URL", "KIMI_MODEL", "text/event-stream"]) {
+  requireText(proxy, marker, "AskAI Pro proxy");
+}
 
 const localModel = read("src/lib/ai/local-web-llm.ts");
 requireText(localModel, "Qwen2.5-0.5B-Instruct", "AskAI Instant model");
@@ -77,4 +93,4 @@ for (const marker of [
   ".askx-context",
 ]) requireText(askStyles, marker, "AskAI X-style workspace");
 
-console.log("AskAI Kimi K3 and X-style Flux audit passed.");
+console.log("AskAI Kimi and X-style Flux audit passed.");

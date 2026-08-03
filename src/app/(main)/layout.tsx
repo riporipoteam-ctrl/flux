@@ -9,6 +9,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
 import { IncomingCallBanner } from "@/components/messages/incoming-call-banner";
+import { RouteProgress } from "@/components/layout/route-progress";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, refreshProfile, signOut } = useAuth();
@@ -51,6 +52,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (isStudio) {
     return (
       <div className="h-[100dvh] w-full overflow-hidden bg-black">
+        <RouteProgress />
         <IncomingCallBanner />
         {children}
       </div>
@@ -60,6 +62,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (isImmersive) {
     return (
       <div className="h-[100dvh] w-full overflow-hidden bg-background">
+        <RouteProgress />
         <IncomingCallBanner />
         {children}
       </div>
@@ -68,6 +71,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="flux8-app-shell min-h-[100dvh] overflow-x-clip" data-rail={hideRail ? "off" : "on"}>
+      <RouteProgress />
       <IncomingCallBanner />
       <Sidebar />
       <main className="flux8-main-column min-w-0 pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">
