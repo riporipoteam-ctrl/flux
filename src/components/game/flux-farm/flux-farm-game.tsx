@@ -91,6 +91,7 @@ import {
   createIsoState,
   isoBurst,
   isoFloater,
+  isoSendFarmer,
   loadIsoAssets,
   pickTile,
   renderIso,
@@ -172,7 +173,8 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
         if (cancelled) return;
         runtimeRef.current = createRuntime(save);
         const iso = createIsoState();
-        const centre = tileToWorld(FARM_X + 4, FARM_Y + 4);
+        // Frame the yard and the field together rather than the field alone.
+        const centre = tileToWorld(FARM_X - 1, FARM_Y + 3);
         iso.camera.x = centre.x;
         iso.camera.y = centre.y;
         renderRef.current = iso;
@@ -459,7 +461,10 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
       if (key === " " || key === "e") {
         const runtime = runtimeRef.current;
         const hovered = renderRef.current?.hover;
-        if (runtime && !runtime.paused && hovered) actOnTile(runtime, hovered.tx, hovered.ty, tool);
+        if (runtime && !runtime.paused && hovered) {
+          if (renderRef.current) isoSendFarmer(renderRef.current, hovered.tx, hovered.ty);
+          actOnTile(runtime, hovered.tx, hovered.ty, tool);
+        }
       }
       if (key === "escape") {
         setPanel(null);
@@ -547,6 +552,7 @@ export function FluxFarmGame({ profile }: { profile: UserProfile }) {
     if (drag.moved > 12) return;
     const { x, y, rect } = canvasPoint(event);
     const tile = pickTile(state, x, y, rect.width, rect.height);
+    isoSendFarmer(state, tile.tx, tile.ty);
     actOnTile(runtime, tile.tx, tile.ty, tool);
     handleEvents(drainEvents(runtime));
   };

@@ -14,11 +14,15 @@ so anyone auditing the repo can confirm the licence without guessing.
 
 ### What was taken and what was changed
 
-Only the 37 sprites Flux Farm actually draws, and only the `_S` camera angle —
-the game uses a fixed camera, so the N/E/W rotations would be dead bundle
-weight. Each sprite was halved from 256x512 to 128x256 (still oversampled for a
-2x DPR display) and its transparent margin trimmed. That takes the pack from
-9.7 MB / 466 files to ~430 KB / 37 files.
+Only the pieces Flux Farm actually draws. Walls, fences and roofs are vendored
+in all four camera angles, because a building needs a wall on each of its four
+sides; everything symmetrical keeps the `_S` angle alone. Each sprite was
+halved from 256x512 to 128x256 (still oversampled for a 2x DPR display), had a
+gamma curve applied to open up the baked ambient shading, and was trimmed to
+its own bounding box. That takes the pack from 9.7 MB / 466 files to ~1.2 MB /
+89 files.
+
+`scripts/vendor-flux-farm-art.py` performs the cut and writes `manifest.json`.
 
 The upstream `License.txt` shipped with the pack is preserved alongside this
 file as `KENNEY-LICENSE.txt`.
@@ -37,5 +41,9 @@ file as `KENNEY-LICENSE.txt`.
 - **Source:** https://opengameart.org/content/free-isometric-plants-pack
 - **Licence:** CC0 1.0 Universal
 - **Retrieved:** 2026-08-02
-- **Modified:** trees, shrubs and tufts trimmed and scaled down from 1024px to
-  90-150px so they sit correctly on a 128px tile.
+- **Modified:** trees, shrubs and tufts taken from the pack's `isometric tiles`
+  folder, scaled to 20-156px so they sit correctly on a 128px tile, gamma
+  lifted, and anchored on the base of the plant rather than the middle of the
+  source plate. Several of the pack's baked ground shadows run off the edge of
+  their own frame; the outer band of each sprite is faded so the clip dissolves
+  instead of ending in a straight line.

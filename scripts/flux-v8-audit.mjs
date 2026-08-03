@@ -14,7 +14,11 @@ function forbidText(source, marker, label) {
 
 const root = read("src/app/layout.tsx");
 requireText(root, "flux-v8.css", "Root design system");
+// Light-first, but the stored background has to be painted before first paint
+// or Dim and Lights out flash white on every load.
 requireText(root, 'className="light"', "Light-first design system");
+requireText(root, "flux-theme-v2", "Theme boot script");
+requireText(root, 'data-accent', "Accent boot script");
 for (const legacy of ["social-rebuild.css", "flux-v5.css", "flux-social-2027.css", "flux-redesign-v2.css"]) {
   forbidText(root, legacy, "Root design system");
 }
@@ -63,5 +67,18 @@ for (const marker of [
   ".flux8-post-wrap",
 ]) requireText(styles, marker, "X-style Flux stylesheet");
 forbidText(styles, "#7c3aed", "X-style Flux stylesheet");
+// The composer's tool buttons carry `hover:bg-primary/10`, so a substring
+// match on bg-primary paints them solid. It has to stay gone.
+forbidText(styles, 'button[class*="bg-primary"]', "X-style Flux stylesheet");
+
+// X ships three backgrounds and six highlight colours; so does Flux.
+for (const marker of ["\n.dim {", '[data-accent="blue"]', '[data-accent="yellow"]', '[data-accent="pink"]', '[data-accent="purple"]', '[data-accent="orange"]', '[data-accent="green"]']) {
+  requireText(styles, marker, "X-style display settings");
+}
+
+const display = read("src/app/(main)/settings/display/page.tsx");
+for (const marker of ["Colour", "Background", "Lights out", "Match my device"]) {
+  requireText(display, marker, "X-style display settings");
+}
 
 console.log("Flux X-style total redesign audit passed.");

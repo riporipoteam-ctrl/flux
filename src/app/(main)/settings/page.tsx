@@ -12,6 +12,7 @@ import {
   HelpCircle,
   LogOut,
   Moon,
+  Palette,
   Settings as SettingsIcon,
   Shield,
   User,
@@ -27,9 +28,15 @@ import { XCard, XHeader, XPage, XRow, XSectionTitle } from "@/components/x/x-ui"
 import { formatCount } from "@/lib/utils";
 import { profilePath } from "@/lib/routes";
 
+const BACKGROUND_LABEL: Record<"light" | "dim" | "dark", string> = {
+  light: "Default",
+  dim: "Dim",
+  dark: "Lights out",
+};
+
 export default function SettingsPage() {
   const { profile, user, signOut, refreshProfile } = useAuth();
-  const { resolved, toggleDark } = useTheme();
+  const { resolved, accent, toggleDark } = useTheme();
   const router = useRouter();
 
   const onDarkToggle = async (enabled: boolean) => {
@@ -71,15 +78,22 @@ export default function SettingsPage() {
       ) : null}
 
       <XSectionTitle>Appearance</XSectionTitle>
+      <XRow
+        icon={Palette}
+        title="Display"
+        description={`${BACKGROUND_LABEL[resolved]} background · ${accent} highlight`}
+        href="/settings/display"
+        trailing={<ChevronRight className="h-4 w-4" />}
+      />
       <div className="x-row">
         <span className="x-row-icon">
           <Moon className="h-[18px] w-[18px]" />
         </span>
         <span className="x-row-main">
-          <strong>Dark mode</strong>
-          <span>Light is the default. Flip it whenever.</span>
+          <strong>Lights out</strong>
+          <span>The quickest way to the black background.</span>
         </span>
-        <Switch checked={resolved === "dark"} onCheckedChange={onDarkToggle} aria-label="Toggle dark mode" />
+        <Switch checked={resolved === "dark"} onCheckedChange={onDarkToggle} aria-label="Toggle lights out" />
       </div>
 
       <XSectionTitle>Your account</XSectionTitle>
