@@ -54,6 +54,9 @@ jobs:
       - name: Firebase reliability audit
         run: node scripts/firebase-reliability-audit.mjs
 
+      - name: Platform reliability V2 audit
+        run: node scripts/platform-reliability-v2-audit.mjs
+
       - name: TypeScript check
         run: npx tsc --noEmit
 
