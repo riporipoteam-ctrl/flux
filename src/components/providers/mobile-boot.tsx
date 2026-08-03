@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { isFluxMobileApp, isCapacitorNative, markFluxMobileApp } from "@/lib/mobile-app";
 import { assetUrl } from "@/lib/asset-url";
 
+const release = process.env.NEXT_PUBLIC_RELEASE_SHA?.slice(0, 12) || "x2";
+
 export function MobileBoot() {
   const router = useRouter();
   const pathname = usePathname();
@@ -13,9 +15,7 @@ export function MobileBoot() {
     const root = document.documentElement;
     const syncVisualViewport = () => {
       const viewport = window.visualViewport;
-      const covered = viewport
-        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
-        : 0;
+      const covered = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
       root.style.setProperty("--flux-visual-bottom", `${Math.round(covered)}px`);
       root.style.setProperty("--flux-visual-height", `${Math.round(viewport?.height || window.innerHeight)}px`);
     };
@@ -24,15 +24,20 @@ export function MobileBoot() {
     window.visualViewport?.addEventListener("scroll", syncVisualViewport);
     window.addEventListener("orientationchange", syncVisualViewport);
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register(assetUrl("/sw.js"), { updateViaCache: "none" })
-        .then((registration) => registration.update())
-        .catch(() => undefined);
-    }
     if ("caches" in window) {
-      void caches.keys().then((keys) => Promise.all(
-        keys.filter((key) => key.startsWith("flux-shell-") && key !== "flux-shell-v3").map((key) => caches.delete(key))
-      )).catch(() => undefined);
+      void caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("flux-shell-") && key !== "flux-shell-v4").map((key) => caches.delete(key)))).catch(() => undefined);
+    }
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register(`${assetUrl("/sw.js")}?release=${encodeURIComponent(release)}`, { updateViaCache: "none" })
+        .then(async (registration) => {
+          await registration.update();
+          const previous = localStorage.getItem("flux-active-release");
+          if (previous !== release) {
+            localStorage.setItem("flux-active-release", release);
+            window.dispatchEvent(new CustomEvent("flux-release-updated", { detail: release }));
+          }
+        })
+        .catch(() => undefined);
     }
 
     const appMode = isFluxMobileApp() || isCapacitorNative();
