@@ -311,7 +311,12 @@ export default function AskAIWorkspaceV2() {
     } catch (error) {
       setStreaming("");
       if ((error as DOMException)?.name === "AbortError") return;
-      const message = error instanceof Error ? error.message : "AskAI could not finish that request.";
+      const raw = error instanceof Error ? error.message : "";
+      // "Load failed" and friends come from the fetch layer and mean nothing to
+      // the reader. Show something they can act on instead.
+      const message = !raw || /^(load failed|failed to fetch|networkerror)/i.test(raw)
+        ? "AskAI could not reach that model. Check your connection, or open Connect Pro to point Pro at a different endpoint."
+        : raw;
       toast.error(message);
       if (conversationId) await append(conversationId, "assistant", message, { mode, error: true });
     } finally {

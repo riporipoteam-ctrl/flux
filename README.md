@@ -19,9 +19,17 @@ type ramp and motion.
 
 Key conventions:
 
+- **A global bar, then three columns.** Facebook's shape on top — brand and
+  search left, the primary destinations as icon tabs in the middle, actions and
+  account right — over X's column discipline underneath. The bar earns its space
+  from 1000px up; phones keep the compact header and the bottom bar, and every
+  sticky offset hangs off `--v8-top-h` so it collapses to zero with it.
+- **Columns float on a canvas.** `--v8-canvas` sits behind the shell and the
+  reading column is a rounded panel on it, which is what makes Default, Dim and
+  Lights out read as three different surfaces rather than three palettes.
 - **One reading column.** Content lives in a 600px column between a 275px nav
   and a 350px rail. Screens that need the space (Games, Studio, Live, Messages)
-  set `data-rail="off"` on the shell and the column expands.
+  set `data-rail="off"` on the shell, and the column goes edge to edge.
 - **Sticky header + tabs.** `XHeader` is 53px with a blurred backdrop; `XTabs`
   sticks beneath it and animates its underline with a shared `layoutId`.
 - **Motion is a token, not a decoration.** `--v8-ease`, `--v8-spring` and the
@@ -119,7 +127,8 @@ no server there to hold a secret, so the browser has to bring its own.
 - **Post detail** — full comment and reply threads
 - **Explore** — trends, plus post/people/community search
 - **Notifications** and **Activity** — filtered timelines
-- **Messages** — 1:1 DMs with a live Firestore subscription, plus calls
+- **Messages** — 1:1 DMs with a live Firestore subscription, plus voice and
+  video calls over WebRTC
 - **Communities** and **Events** — create, join, discuss
 - **Stories** — editor, viewer, per-viewer analytics
 - **Live** — streaming studio and viewer

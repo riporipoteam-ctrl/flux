@@ -58,6 +58,30 @@ const INSTANT_MODEL = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
 const WEB_LLM_URL = "https://esm.run/@mlc-ai/web-llm@0.2.84";
 const STATUS_EVENT = "flux-local-askai-status";
 const MODEL_CACHE_KEY = "flux-askai-instant-model-v1";
+// Remembers that the browser runtime could not start here. The engine is
+// fetched from a CDN and weighs hundreds of megabytes, so a device that failed
+// once will fail again — retrying on every message just spends the user's data
+// and surfaces a raw "Load failed" from the fetch layer.
+const UNSUPPORTED_KEY = "flux-askai-instant-unavailable-v1";
+
+function markUnsupported(): void {
+  try {
+    window.localStorage.setItem(UNSUPPORTED_KEY, String(Date.now()));
+  } catch {
+    /* private mode; the in-memory guard still holds for this session */
+  }
+}
+
+function knownUnsupported(): boolean {
+  if (sessionUnsupported) return true;
+  try {
+    return Boolean(window.localStorage.getItem(UNSUPPORTED_KEY));
+  } catch {
+    return false;
+  }
+}
+
+let sessionUnsupported = false;
 
 let enginePromise: Promise<LocalEngine> | null = null;
 let activeEngine: LocalEngine | null = null;
@@ -91,6 +115,7 @@ export function subscribeLocalAskAIStatus(listener: (status: LocalAskAIStatus) =
 
 export function localAskAISupported(): boolean {
   if (typeof window === "undefined") return false;
+  if (knownUnsupported()) return false;
   return !!(navigator as NavigatorWithAIHints).gpu;
 }
 
@@ -135,7 +160,18 @@ async function getEngine(onProgress: (label: string, progress?: number) => void)
   })().catch((error) => {
     enginePromise = null;
     activeEngine = null;
-    publishStatus({ phase: "error", label: "The browser model could not start. Instant tools are still available.", progress: null, modelId: null, error: error instanceof Error ? error.message : "Model loading failed." });
+    // WebGPU can be advertised and still be unusable, and the CDN import fails
+    // outright on locked-down networks. Record it so Instant stops trying and
+    // quietly uses the built-in tools instead.
+    sessionUnsupported = true;
+    markUnsupported();
+    publishStatus({
+      phase: "error",
+      label: "On-device model unavailable here — using Flux's instant tools.",
+      progress: null,
+      modelId: null,
+      error: error instanceof Error ? error.message : "Model loading failed.",
+    });
     throw error;
   });
 

@@ -24,10 +24,23 @@ for (const legacy of ["social-rebuild.css", "flux-v5.css", "flux-social-2027.css
 }
 
 const layout = read("src/app/(main)/layout.tsx");
-for (const marker of ["flux8-app-shell", "flux8-main-column", "Sidebar", "RightRail", "MobileNav"]) {
+for (const marker of ["flux8-app-shell", "flux8-main-column", "Sidebar", "RightRail", "MobileNav", "TopBar", "RouteProgress"]) {
   requireText(layout, marker, "X-style Flux shell");
 }
 forbidText(layout, "DesktopTopbar", "X-style Flux shell");
+
+// The global bar: brand and search left, destinations centre, actions right.
+const topBar = read("src/components/layout/top-bar.tsx");
+for (const marker of ["flux9-topbar-search", "flux9-topbar-tabs", "flux9-topbar-actions", "flux9-topbar-avatar"]) {
+  requireText(topBar, marker, "Flux top bar");
+}
+
+// A voice call has no <video> on screen, so the remote stream needs its own
+// sink or nobody is heard. This is the regression that must not come back.
+const call = read("src/app/(main)/messages/call/page.tsx");
+for (const marker of ["remoteAudio", "attachRemote", "remoteStreamRef", "flux-call-dock"]) {
+  requireText(call, marker, "Flux call surface");
+}
 
 const sidebar = read("src/components/layout/sidebar.tsx");
 for (const marker of ["Home", "Explore", "Notifications", "Messages", "AskAI", "Bookmarks", "Communities", "Premium", "Profile", "More", "flux8-sidebar-create"]) {
@@ -58,6 +71,10 @@ for (const marker of [
   "--v8-feed: 600px",
   "--v8-rail: 350px",
   "grid-template-columns: var(--v8-nav-w) minmax(0, var(--v8-feed)) minmax(290px, var(--v8-rail))",
+  "--v8-top-h: 56px",
+  "--v8-canvas:",
+  ".flux9-topbar",
+  ".flux-call-dock",
   ".flux8-sidebar",
   ".flux8-right-rail",
   ".flux8-mobile-header",

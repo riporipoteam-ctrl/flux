@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
-import { Camera, CameraOff, Loader2, Mic, MicOff, PhoneOff, Video } from "lucide-react";
+import { Camera, CameraOff, Loader2, Mic, MicOff, Phone, PhoneOff, Video, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/auth-context";
@@ -48,9 +48,14 @@ function CallInner() {
   const [status, setStatus] = useState("Preparing call…");
   const [error, setError] = useState<string | null>(null);
   const [micOn, setMicOn] = useState(true);
+  const [needsSound, setNeedsSound] = useState(false);
   const [cameraOn, setCameraOn] = useState(requestedMode === "video");
   const localVideo = useRef<HTMLVideoElement>(null);
   const remoteVideo = useRef<HTMLVideoElement>(null);
+  // A voice call has no <video> on screen, so the remote stream needs its own
+  // sink — without one `ontrack` had nothing to attach to and nobody was heard.
+  const remoteAudio = useRef<HTMLAudioElement>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const cleanupRef = useRef<Array<() => void>>([]);
@@ -62,9 +67,19 @@ function CallInner() {
     peerRef.current = null;
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
+    remoteStreamRef.current = null;
+    if (remoteAudio.current) remoteAudio.current.srcObject = null;
+    if (remoteVideo.current) remoteVideo.current.srcObject = null;
   };
 
   useEffect(() => cleanup, []);
+
+  // The sink element changes when the call mode resolves, so re-point the
+  // stream whenever the layout that renders it changes.
+  useEffect(() => {
+    attachRemote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accepted, call?.mode, call?.status]);
 
   useEffect(() => {
     if (!user || startedRef.current) return;
@@ -136,6 +151,24 @@ function CallInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  /**
+   * Points whichever element is on screen at the remote stream. Video mode uses
+   * the <video>; voice mode uses the hidden <audio>. Browsers block autoplay
+   * until a gesture, so a rejected play() is surfaced rather than swallowed.
+   */
+  const attachRemote = () => {
+    const stream = remoteStreamRef.current;
+    if (!stream) return;
+    const wantsVideo = stream.getVideoTracks().length > 0;
+    const sink = wantsVideo ? remoteVideo.current : remoteAudio.current;
+    const idle = wantsVideo ? remoteAudio.current : remoteVideo.current;
+    if (idle && idle.srcObject) idle.srcObject = null;
+    if (!sink) return;
+    if (sink.srcObject !== stream) sink.srcObject = stream;
+    sink.muted = false;
+    void sink.play().catch(() => setNeedsSound(true));
+  };
+
   const getMedia = async (mode: CallMode) => {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -154,7 +187,9 @@ function CallInner() {
     };
     peer.ontrack = (event) => {
       const [stream] = event.streams;
-      if (remoteVideo.current && stream) remoteVideo.current.srcObject = stream;
+      if (!stream) return;
+      remoteStreamRef.current = stream;
+      attachRemote();
     };
     peer.onconnectionstatechange = () => {
       if (peer.connectionState === "connected") setStatus("Connected");
@@ -226,43 +261,60 @@ function CallInner() {
   const isVideo = call?.mode === "video" || requestedMode === "video";
 
   return (
-    <main className="relative flex h-[calc(100dvh_-_53px_-_env(safe-area-inset-top))] min-h-[520px] flex-col overflow-hidden bg-[#090b0e] text-white lg:h-[100dvh]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(29,155,240,.18),transparent_36%)]" />
+    <main className="flux-call">
+      <div className="flux-call-glow" aria-hidden />
 
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden">
+      {/* Always mounted: this is what carries a voice call's audio. */}
+      <audio ref={remoteAudio} autoPlay playsInline className="hidden" />
+
+      <div className="flux-call-stage">
         {isVideo ? (
-          <video ref={remoteVideo} autoPlay playsInline className="h-full w-full object-cover" />
+          <video ref={remoteVideo} autoPlay playsInline className="flux-call-remote" />
         ) : (
-          <div className="text-center">
-            <UserAvatar user={otherUser} size="xl" className="mx-auto h-32 w-32" clickable={false} />
-            <h1 className="mt-5 text-3xl font-bold">{otherUser?.displayName || "Flux call"}</h1>
-            <p className="mt-2 text-sm text-white/65">{status}</p>
+          <div className="flux-call-voice">
+            <span className="flux-call-halo" data-live={call?.status === "active" ? "true" : undefined} aria-hidden />
+            <UserAvatar user={otherUser} size="xl" className="relative h-32 w-32" clickable={false} />
+            <h1>{otherUser?.displayName || "Flux call"}</h1>
+            <p>{status}</p>
+            {otherUser?.username ? <small>@{otherUser.username}</small> : null}
           </div>
         )}
 
         {isVideo ? (
-          <div className="absolute left-0 right-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-5 pb-20 pt-[max(1.25rem,env(safe-area-inset-top))]">
-            <h1 className="text-xl font-bold">{otherUser?.displayName || "Video call"}</h1>
-            <p className="text-sm text-white/70">{status}</p>
+          <div className="flux-call-topbar">
+            <h1>{otherUser?.displayName || "Video call"}</h1>
+            <p>{status}</p>
           </div>
         ) : null}
 
-        {isVideo ? <video ref={localVideo} autoPlay muted playsInline className="absolute bottom-28 right-4 h-40 w-28 rounded-2xl border border-white/20 bg-black object-cover shadow-2xl sm:h-52 sm:w-36" /> : <video ref={localVideo} autoPlay muted playsInline className="hidden" />}
+        <video
+          ref={localVideo}
+          autoPlay
+          muted
+          playsInline
+          className={isVideo ? "flux-call-self" : "hidden"}
+          data-off={isVideo && !cameraOn ? "true" : undefined}
+        />
       </div>
 
-      {error ? <div className="relative border-t border-red-400/20 bg-red-500/10 px-4 py-3 text-center text-sm text-red-200">{error}</div> : null}
+      {needsSound ? (
+        <button type="button" className="flux-call-notice is-action" onClick={() => { setNeedsSound(false); attachRemote(); }}>
+          <Volume2 className="h-4 w-4" /> Tap to turn on call audio
+        </button>
+      ) : null}
+      {error ? <div className="flux-call-notice is-error">{error}</div> : null}
 
-      <div className="relative flex items-center justify-center gap-4 border-t border-white/10 bg-black/45 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <div className="flux-call-dock">
         {isIncoming ? (
           <>
-            <Button onClick={() => void end("declined")} className="h-14 rounded-full bg-red-500 px-7 text-white hover:bg-red-600"><PhoneOff className="h-5 w-5" />Decline</Button>
-            <Button onClick={() => void accept()} className="h-14 rounded-full bg-emerald-500 px-7 text-white hover:bg-emerald-600">{isVideo ? <Video className="h-5 w-5" /> : <Mic className="h-5 w-5" />}Answer</Button>
+            <Button onClick={() => void end("declined")} className="flux-call-answer is-decline"><PhoneOff className="h-5 w-5" />Decline</Button>
+            <Button onClick={() => void accept()} className="flux-call-answer is-accept">{isVideo ? <Video className="h-5 w-5" /> : <Phone className="h-5 w-5" />}Answer</Button>
           </>
         ) : (
           <>
             <CallButton onClick={toggleMic} active={micOn} label={micOn ? "Mute" : "Unmute"}>{micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</CallButton>
             {isVideo ? <CallButton onClick={toggleCamera} active={cameraOn} label={cameraOn ? "Camera off" : "Camera on"}>{cameraOn ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}</CallButton> : null}
-            <button type="button" onClick={() => void end()} className="grid h-14 w-14 place-items-center rounded-full bg-red-500 text-white hover:bg-red-600" aria-label="End call"><PhoneOff className="h-6 w-6" /></button>
+            <button type="button" onClick={() => void end()} className="flux-call-hangup" aria-label="End call"><PhoneOff className="h-6 w-6" /></button>
           </>
         )}
       </div>
@@ -271,9 +323,9 @@ function CallInner() {
 }
 
 function CallButton({ onClick, active, label, children }: { onClick: () => void; active: boolean; label: string; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className={active ? "grid h-14 w-14 place-items-center rounded-full bg-white/15 text-white hover:bg-white/25" : "grid h-14 w-14 place-items-center rounded-full bg-white text-black"} aria-label={label}>{children}</button>;
+  return <button type="button" onClick={onClick} className="flux-call-toggle" data-off={active ? undefined : "true"} aria-label={label} aria-pressed={!active}>{children}</button>;
 }
 
 function CallLoading() {
-  return <div className="grid min-h-[70vh] place-items-center bg-[#090b0e] text-white"><Loader2 className="h-7 w-7 animate-spin" /></div>;
+  return <div className="grid min-h-[70dvh] place-items-center bg-[#0b0f14] text-white"><Loader2 className="h-7 w-7 animate-spin" /></div>;
 }

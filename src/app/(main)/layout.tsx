@@ -10,6 +10,7 @@ import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
 import { IncomingCallBanner } from "@/components/messages/incoming-call-banner";
 import { RouteProgress } from "@/components/layout/route-progress";
+import { TopBar } from "@/components/layout/top-bar";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, refreshProfile, signOut } = useAuth();
@@ -73,6 +74,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="flux8-app-shell min-h-[100dvh] overflow-x-clip" data-rail={hideRail ? "off" : "on"}>
       <RouteProgress />
       <IncomingCallBanner />
+      <TopBar />
       <Sidebar />
       <main className="flux8-main-column min-w-0 pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">
         <MobileAppHeader />
