@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { QueryDocumentSnapshot } from "firebase/firestore";
 import { AlertCircle, Newspaper, RefreshCw, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { ComposeBox } from "@/components/posts/compose-box";
@@ -15,23 +16,17 @@ type FeedTab = "foryou" | "following";
 type FeedCache = { posts: PostWithAuthor[]; savedAt: number };
 
 function cacheKey(uid: string, tab: FeedTab): string {
-  return `flux-feed-cache-v1-${uid}-${tab}`;
+  return `flux-feed-cache-v2-${uid}-${tab}`;
 }
 
 function readCache(uid: string, tab: FeedTab): FeedCache | null {
-  try {
-    return JSON.parse(sessionStorage.getItem(cacheKey(uid, tab)) || "null") as FeedCache | null;
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(sessionStorage.getItem(cacheKey(uid, tab)) || "null") as FeedCache | null; }
+  catch { return null; }
 }
 
 function saveCache(uid: string, tab: FeedTab, posts: PostWithAuthor[]): void {
-  try {
-    sessionStorage.setItem(cacheKey(uid, tab), JSON.stringify({ posts: posts.slice(0, 60), savedAt: Date.now() }));
-  } catch {
-    // Storage can be unavailable in private browsing; the live feed still works.
-  }
+  try { sessionStorage.setItem(cacheKey(uid, tab), JSON.stringify({ posts: posts.slice(0, 80), savedAt: Date.now() })); }
+  catch { /* private browsing */ }
 }
 
 async function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
@@ -39,9 +34,7 @@ async function withTimeout<T>(promise: Promise<T>, milliseconds: number): Promis
   try {
     return await Promise.race([
       promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("Feed loading timed out")), milliseconds);
-      }),
+      new Promise<T>((_, reject) => { timer = setTimeout(() => reject(new Error("Feed loading timed out")), milliseconds); }),
     ]);
   } finally {
     if (timer) clearTimeout(timer);
@@ -56,16 +49,16 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const loadingMoreRef = useRef(false);
+  const cursorRef = useRef<QueryDocumentSnapshot | null>(null);
   const hasMoreRef = useRef(true);
-  const postsLenRef = useRef(0);
+  const loadingMoreRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async (force = false) => {
     if (!user) return;
     const cached = readCache(user.uid, tab);
     if (cached?.posts.length && !force) {
       setPosts(cached.posts);
-      postsLenRef.current = cached.posts.length;
       setLoading(false);
       setRefreshing(true);
     } else {
@@ -73,15 +66,21 @@ export default function HomePage() {
     }
     setError(null);
     hasMoreRef.current = true;
+    cursorRef.current = null;
 
     try {
-      const data = tab === "following"
-        ? await withTimeout(getFollowingFeed(user.uid), 12_000)
-        : (await withTimeout(getForYouFeed(user.uid, 20), 12_000)).posts;
-      setPosts(data);
-      saveCache(user.uid, tab, data);
-      postsLenRef.current = data.length;
-      hasMoreRef.current = tab === "foryou" && data.length >= 20;
+      if (tab === "following") {
+        const data = await withTimeout(getFollowingFeed(user.uid), 12_000);
+        setPosts(data);
+        saveCache(user.uid, tab, data);
+        hasMoreRef.current = false;
+      } else {
+        const page = await withTimeout(getForYouFeed(user.uid, 20), 12_000);
+        setPosts(page.posts);
+        saveCache(user.uid, tab, page.posts);
+        cursorRef.current = page.lastDoc;
+        hasMoreRef.current = Boolean(page.lastDoc) && page.posts.length >= 20;
+      }
     } catch (cause) {
       console.error(cause);
       if (!cached?.posts.length) setPosts([]);
@@ -92,43 +91,39 @@ export default function HomePage() {
     }
   }, [tab, user]);
 
+  const loadMore = useCallback(async () => {
+    if (!user || tab !== "foryou" || loadingMoreRef.current || !hasMoreRef.current || !cursorRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const page = await withTimeout(getForYouFeed(user.uid, 20, cursorRef.current), 12_000);
+      cursorRef.current = page.lastDoc;
+      hasMoreRef.current = Boolean(page.lastDoc) && page.posts.length >= 20;
+      setPosts((current) => {
+        const known = new Set(current.map((post) => post.id));
+        const next = [...current, ...page.posts.filter((post) => !known.has(post.id))];
+        saveCache(user.uid, tab, next);
+        return next;
+      });
+    } catch {
+      hasMoreRef.current = false;
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [tab, user]);
+
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    if (tab !== "foryou" || !user) return;
-    const onScroll = () => {
-      if (loadingMoreRef.current || !hasMoreRef.current) return;
-      if (window.innerHeight + window.scrollY < document.documentElement.scrollHeight - 500) return;
-      loadingMoreRef.current = true;
-      setLoadingMore(true);
-      const previousLength = postsLenRef.current;
-      withTimeout(getForYouFeed(user.uid, Math.min(previousLength + 20, 60)), 12_000)
-        .then(({ posts: data }) => {
-          setPosts((previous) => {
-            const ids = new Set(previous.map((post) => post.id));
-            const merged = [...previous];
-            let added = 0;
-            for (const post of data) {
-              if (!ids.has(post.id)) {
-                merged.push(post);
-                added += 1;
-              }
-            }
-            postsLenRef.current = merged.length;
-            if (added === 0) hasMoreRef.current = false;
-            saveCache(user.uid, tab, merged);
-            return merged;
-          });
-        })
-        .catch(() => { hasMoreRef.current = false; })
-        .finally(() => {
-          loadingMoreRef.current = false;
-          setLoadingMore(false);
-        });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [tab, user]);
+    const target = sentinelRef.current;
+    if (!target || tab !== "foryou") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+    }, { rootMargin: "700px 0px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMore, tab]);
 
   return (
     <main className="flux8-feed">
@@ -144,28 +139,24 @@ export default function HomePage() {
 
       {error ? <div className="flex items-center gap-3 border-b border-border bg-amber-500/8 px-4 py-3 text-sm"><AlertCircle className="h-4 w-4 text-amber-600" /><span className="min-w-0 flex-1">{error}. {posts.length ? "Showing your saved timeline." : "Try again."}</span><button type="button" onClick={() => void load(true)} className="font-bold text-primary">Retry</button></div> : null}
 
-      <section className="flux8-composer-card">
-        <ComposeBox onSuccess={() => void load(true)} placeholder="What is happening?!" />
-      </section>
-
-      <section className="flux8-story-card"><StoryRail /></section>
+      <section className="flux8-composer-card"><ComposeBox onSuccess={() => void load(true)} placeholder="What is happening?" /></section>
+      <section className="flux8-story-card"><StoryRail compact /></section>
 
       <FeedList
         loading={loading}
-        loadingMore={loadingMore}
         posts={posts}
         emptyTitle={tab === "following" ? "No posts from people you follow" : "Your timeline is quiet"}
         emptyDescription={tab === "following" ? "Follow people to build your Following timeline." : "Post something or follow people to fill this timeline."}
         emptyIcon={tab === "following" ? Users : Newspaper}
         onRefresh={() => void load(true)}
-        setPosts={(update) => {
-          setPosts((previous) => {
-            const next = typeof update === "function" ? update(previous) : update;
-            if (user) saveCache(user.uid, tab, next);
-            return next;
-          });
-        }}
+        setPosts={(update) => setPosts((previous) => {
+          const next = typeof update === "function" ? update(previous) : update;
+          if (user) saveCache(user.uid, tab, next);
+          return next;
+        })}
       />
+      <div ref={sentinelRef} className="h-1" aria-hidden="true" />
+      {loadingMore ? <div className="flux8-loading-more">Loading more posts…</div> : null}
     </main>
   );
 }
@@ -174,7 +165,7 @@ function FeedTabButton({ active, onClick, children }: { active: boolean; onClick
   return <button type="button" onClick={onClick} className={active ? "is-active" : ""}><span>{children}</span></button>;
 }
 
-function FeedList({ loading, posts, emptyTitle, emptyDescription, emptyIcon = Newspaper, onRefresh, setPosts, loadingMore = false }: {
+function FeedList({ loading, posts, emptyTitle, emptyDescription, emptyIcon = Newspaper, onRefresh, setPosts }: {
   loading: boolean;
   posts: PostWithAuthor[];
   emptyTitle: string;
@@ -182,13 +173,8 @@ function FeedList({ loading, posts, emptyTitle, emptyDescription, emptyIcon = Ne
   emptyIcon?: typeof Newspaper;
   onRefresh: () => void;
   setPosts: React.Dispatch<React.SetStateAction<PostWithAuthor[]>>;
-  loadingMore?: boolean;
 }) {
-  if (loading) {
-    return <div aria-label="Loading posts">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="flux8-post-skeleton"><div className="skeleton h-10 w-10 shrink-0 rounded-full" /><div className="min-w-0 flex-1 space-y-2"><div className="skeleton h-4 w-40 rounded" /><div className="skeleton h-4 w-full rounded" /><div className="skeleton h-4 w-4/5 rounded" />{index % 2 === 0 ? <div className="skeleton mt-3 aspect-video w-full rounded-2xl" /> : null}</div></div>)}</div>;
-  }
-
+  if (loading) return <div aria-label="Loading posts">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="flux8-post-skeleton"><div className="skeleton h-10 w-10 shrink-0 rounded-full" /><div className="min-w-0 flex-1 space-y-2"><div className="skeleton h-4 w-40 rounded" /><div className="skeleton h-4 w-full rounded" /><div className="skeleton h-4 w-4/5 rounded" />{index % 2 === 0 ? <div className="skeleton mt-3 aspect-video w-full rounded-2xl" /> : null}</div></div>)}</div>;
   if (!posts.length) return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={<Button variant="outline" onClick={onRefresh}>Refresh</Button>} />;
-
-  return <>{posts.map((post) => <div key={post.id} className="flux8-post-wrap"><PostCard post={post} onChange={(updated) => setPosts((previous) => updated.isDeleted ? previous.filter((item) => item.id !== updated.id) : previous.map((item) => item.id === updated.id ? updated : item))} /></div>)}{loadingMore ? <div className="flux8-loading-more">Loading more…</div> : null}</>;
+  return <>{posts.map((post) => <div key={post.id} className="flux8-post-wrap"><PostCard post={post} onChange={(updated) => setPosts((previous) => updated.isDeleted ? previous.filter((item) => item.id !== updated.id) : previous.map((item) => item.id === updated.id ? updated : item))} /></div>)}</>;
 }
