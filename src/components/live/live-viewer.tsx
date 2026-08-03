@@ -79,10 +79,9 @@ export default function LiveViewer() {
 
   useEffect(() => {
     if (!id || !user || stream?.status !== "live" || stream.hostId === user.uid) return;
-    let heartbeat = 0;
     joinedAtRef.current = Date.now();
     void joinLiveStream(id, user.uid);
-    heartbeat = window.setInterval(() => void heartbeatLiveViewer(id, user.uid), 20_000);
+    const heartbeat = window.setInterval(() => void heartbeatLiveViewer(id, user.uid), 20_000);
 
     const leave = () => {
       const watched = joinedAtRef.current
@@ -93,7 +92,7 @@ export default function LiveViewer() {
     window.addEventListener("pagehide", leave);
     return () => {
       window.removeEventListener("pagehide", leave);
-      if (heartbeat) window.clearInterval(heartbeat);
+      window.clearInterval(heartbeat);
       leave();
       joinedAtRef.current = null;
     };
@@ -180,11 +179,12 @@ export default function LiveViewer() {
           void queue.add(candidate);
         });
         peerUnsubscribe = subscribeLivePeer(id, user.uid, (data) => {
-          if (!data?.offer || cancelled) return;
+          const offer = data?.offer;
+          if (!offer || cancelled) return;
           void (async () => {
-            const offerChanged = peer.remoteDescription?.sdp !== data.offer?.sdp;
+            const offerChanged = peer.remoteDescription?.sdp !== offer.sdp;
             if (!offerChanged) return;
-            await peer.setRemoteDescription(new RTCSessionDescription(data.offer));
+            await peer.setRemoteDescription(new RTCSessionDescription(offer));
             await queue.flush();
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
