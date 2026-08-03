@@ -6,10 +6,14 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
+  Award,
   Boxes,
+  CalendarDays,
   Dice5,
+  Flame,
   Gamepad2,
   Heart,
+  History,
   Loader2,
   Search,
   Sparkles,
@@ -27,6 +31,13 @@ import {
 } from "@/data/browser-games";
 import { GameCoverArt } from "@/components/game/game-cover-art";
 import { listPublishedCommunityGames, type PublishedCommunityGame } from "@/services/studio-projects";
+import {
+  ARCADE_ACHIEVEMENTS,
+  dailyChallengeGame,
+  readArcadeProgress,
+  recentBrowserGames,
+  type ArcadeProgress,
+} from "@/lib/game-progress";
 
 const FAVORITES_KEY = "flux-games-favorites";
 const PAGE_SIZE = 30;
@@ -45,14 +56,24 @@ export default function GamesHub() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [community, setCommunity] = useState<PublishedCommunityGame[]>([]);
   const [communityLoading, setCommunityLoading] = useState(true);
+  const [progress, setProgress] = useState<ArcadeProgress | null>(null);
+  const [dailyGame, setDailyGame] = useState<BrowserGame | undefined>();
   const hero = FEATURED_GAMES[0] ?? BROWSER_GAMES[0];
 
   useEffect(() => {
     try { setFavorites(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as string[]); } catch { setFavorites([]); }
+    setProgress(readArcadeProgress());
+    setDailyGame(dailyChallengeGame(BROWSER_GAMES));
+    const onProgress = (event: Event) => {
+      const custom = event as CustomEvent<ArcadeProgress>;
+      setProgress(custom.detail || readArcadeProgress());
+    };
+    window.addEventListener("flux:arcade-progress", onProgress);
     listPublishedCommunityGames(24)
       .then(setCommunity)
       .catch(() => setCommunity([]))
       .finally(() => setCommunityLoading(false));
+    return () => window.removeEventListener("flux:arcade-progress", onProgress);
   }, []);
 
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [category, deferredQuery]);
@@ -75,6 +96,8 @@ export default function GamesHub() {
     .map((slug) => BROWSER_GAMES.find((game) => game.slug === slug))
     .filter(Boolean)
     .slice(0, 6) as BrowserGame[];
+  const recentGames = progress ? recentBrowserGames(BROWSER_GAMES, 6) : [];
+  const unlockedAchievements = new Set(progress?.achievements || []);
 
   const toggleFavorite = (slug: string) => {
     setFavorites((current) => {
@@ -125,6 +148,20 @@ export default function GamesHub() {
           <Stat value="Global" label="Leaderboards" />
         </section>
 
+        {dailyGame ? (
+          <section className="mt-5 overflow-hidden rounded-[22px] border border-[var(--v8-line)] bg-[var(--v8-panel)]">
+            <div className="grid min-h-[220px] sm:grid-cols-[minmax(0,1fr)_minmax(300px,.9fr)]">
+              <div className="relative min-h-[220px] overflow-hidden sm:order-2"><GameCoverArt game={dailyGame} compact /></div>
+              <div className="flex flex-col justify-center p-5 sm:p-7">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em] text-[var(--v8-accent)]"><CalendarDays className="h-4 w-4" />Daily challenge</div>
+                <h2 className="mt-3 text-3xl font-black tracking-[-.045em]">{dailyGame.title}</h2>
+                <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">One featured Arcade challenge changes every day. Beat its target and add another win to your profile.</p>
+                <Link href={hrefForGame(dailyGame)} className="x-btn x-btn-ink mt-5 w-fit"><Trophy className="h-4 w-4" />Play today&apos;s challenge</Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="mt-5 rounded-[22px] border border-[var(--v8-line)] bg-[var(--v8-panel)] p-3 sm:p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
@@ -135,6 +172,29 @@ export default function GamesHub() {
             {GAME_CATEGORIES.map((item) => <button key={item} type="button" onClick={() => setCategory(item)} data-active={item === category} className="x-chip shrink-0">{item}</button>)}
           </div>
         </section>
+
+        {recentGames.length ? (
+          <section className="mt-8">
+            <div className="flex items-center gap-2"><History className="h-5 w-5 text-[var(--v8-accent)]" /><h2 className="text-xl font-black tracking-tight">Continue playing</h2><span className="ml-auto text-xs font-bold text-muted-foreground">{progress?.totalRounds || 0} rounds</span></div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{recentGames.map((game, index) => <GameCard key={game.slug} game={game} index={index} favorite={favorites.includes(game.slug)} onToggleFavorite={toggleFavorite} />)}</div>
+          </section>
+        ) : null}
+
+        {progress ? (
+          <section className="mt-8 overflow-hidden rounded-[22px] border border-[var(--v8-line)] bg-[var(--v8-panel)] p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-orange-500/12 text-orange-500"><Flame className="h-5 w-5" /></span>
+              <div><h2 className="font-black">Arcade achievements</h2><p className="text-xs text-muted-foreground">{unlockedAchievements.size} of {ARCADE_ACHIEVEMENTS.length} unlocked · {progress.streak} day streak</p></div>
+              <span className="ml-auto text-xs font-black text-muted-foreground">{progress.totalWins} wins</span>
+            </div>
+            <div className="no-scrollbar mt-4 flex gap-3 overflow-x-auto pb-1">
+              {ARCADE_ACHIEVEMENTS.map((achievement) => {
+                const unlocked = unlockedAchievements.has(achievement.id);
+                return <div key={achievement.id} className={cn("w-[170px] shrink-0 rounded-2xl border p-3", unlocked ? "border-[var(--v8-accent)]/30 bg-[var(--v8-accent-soft)]" : "border-[var(--v8-line)] bg-[var(--v8-panel-2)] opacity-55")}><span className="text-2xl">{unlocked ? achievement.symbol : "🔒"}</span><p className="mt-2 text-sm font-black">{achievement.title}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">{achievement.description}</p></div>;
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {favoriteGames.length ? (
           <section className="mt-8">
