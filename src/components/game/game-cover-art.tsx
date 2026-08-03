@@ -74,7 +74,12 @@ export function GameCoverArt({ game, compact = false }: { game: BrowserGame; com
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/14 to-black/5" />
       {!compact ? (
-        <span className="absolute right-5 top-5 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-[10px] font-black text-white backdrop-blur-md">Play on Flux</span>
+        <>
+          {/* Cover art often carries its own title, so the hero's text column
+              needs a scrim of its own or the two sets of words collide. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/88 via-black/55 to-transparent" />
+          <span className="absolute right-5 top-5 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-[10px] font-black text-white backdrop-blur-md">Play on Flux</span>
+        </>
       ) : null}
     </div>
   );
