@@ -9,6 +9,8 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
 import { IncomingCallBanner } from "@/components/messages/incoming-call-banner";
+import { RouteProgress } from "@/components/layout/route-progress";
+import { TopBar } from "@/components/layout/top-bar";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, refreshProfile, signOut } = useAuth();
@@ -24,11 +26,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isImmersive = isAskAI || isCall || isLiveRoom;
   const hideRail = isMessages || isGames || isLive;
 
+  // Someone who already picked a username is onboarded, whatever the flag says.
+  // Trusting the flag alone sent people back through setup whenever a profile
+  // read came back thin.
+  const needsOnboarding = Boolean(
+    profile && !profile.onboardingComplete && !String(profile.username || "").trim()
+  );
+
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
-    else if (profile && !profile.onboardingComplete) router.replace("/onboarding");
-  }, [user, profile, loading, router]);
+    else if (needsOnboarding) router.replace("/onboarding");
+  }, [user, needsOnboarding, loading, router]);
 
   if (loading) return <LoadingScreen label="Loading Flux" />;
   if (!user) return <LoadingScreen label="Opening sign in" />;
@@ -46,11 +55,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (!profile.onboardingComplete) return <LoadingScreen label="Continuing setup" />;
+  if (needsOnboarding) return <LoadingScreen label="Continuing setup" />;
 
   if (isStudio) {
     return (
       <div className="h-[100dvh] w-full overflow-hidden bg-black">
+        <RouteProgress />
         <IncomingCallBanner />
         {children}
       </div>
@@ -60,6 +70,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (isImmersive) {
     return (
       <div className="h-[100dvh] w-full overflow-hidden bg-background">
+        <RouteProgress />
         <IncomingCallBanner />
         {children}
       </div>
@@ -68,7 +79,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="flux8-app-shell min-h-[100dvh] overflow-x-clip" data-rail={hideRail ? "off" : "on"}>
+      <RouteProgress />
       <IncomingCallBanner />
+      <TopBar />
       <Sidebar />
       <main className="flux8-main-column min-w-0 pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-0">
         <MobileAppHeader />

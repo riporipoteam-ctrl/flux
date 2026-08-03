@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   setDoc,
   updateDoc,
@@ -115,8 +116,22 @@ export async function ensureUserDocument(
   avatarUrl?: string | null
 ): Promise<UserProfile> {
   const ref = doc(db, "users", uid);
-  const existing = await getDoc(ref);
   const owner = isOwnerEmail(email || "");
+
+  let existing = await getDoc(ref);
+  if (!existing.exists()) {
+    // `getDoc` answers from the local cache when the SDK has not connected
+    // yet, and Safari evicts that cache after a week of not visiting — so a
+    // reload right after a deploy can report "no such user" for an account
+    // that plainly exists. Creating on that answer used to reset the profile
+    // and bounce the person back through onboarding, so never create without
+    // asking the server first.
+    try {
+      existing = await getDocFromServer(ref);
+    } catch {
+      throw new Error("Flux could not reach your profile. Check your connection and try again.");
+    }
+  }
 
   if (existing.exists()) {
     const data = existing.data() || {};
@@ -203,7 +218,7 @@ export async function ensureUserDocument(
     lastActiveAt: serverTimestamp(),
   });
 
-  await setDoc(ref, payload);
+  await setDoc(ref, payload, { merge: true });
   return mapUser(uid, payload as DocumentData);
 }
 

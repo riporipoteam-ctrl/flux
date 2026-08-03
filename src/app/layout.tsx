@@ -70,6 +70,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" data-accent="blue" suppressHydrationWarning>
       <head>
+        {/* Paint the stored background before first paint. Without this the
+            page flashes white on every load for anyone on Dim or Lights out. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem("flux-theme-v2");var a=localStorage.getItem("flux-accent-v1");var r=document.documentElement;if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}if(t==="light"||t==="dim"||t==="dark"){r.classList.remove("light","dim","dark");r.classList.add(t);r.style.colorScheme=t==="light"?"light":"dark"}if(a){r.dataset.accent=a}}catch(e){}})()`,

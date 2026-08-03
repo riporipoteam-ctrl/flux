@@ -54,4 +54,19 @@ const giftsService = read("src/services/gift-experience.ts");
 requireText(giftsService, "GiftVisual", "Gift definitions");
 forbidText(giftsService, "emoji:", "Gift definitions");
 
+
+// A cached "no such user" must never be allowed to create — and therefore
+// overwrite — a real profile, which is what used to reset onboarding and wipe
+// a person's account on the first load after a deploy.
+const users = read("src/services/users.ts");
+for (const marker of ["getDocFromServer", "{ merge: true }"]) {
+  requireText(users, marker, "Profile creation guard");
+}
+forbidText(users, "await setDoc(ref, payload);", "Profile creation guard");
+
+// Nobody with a username gets sent back through setup.
+for (const file of ["src/app/(main)/layout.tsx", "src/app/(auth)/layout.tsx", "src/app/page.tsx"]) {
+  requireText(read(file), 'String(profile.username || "").trim()', "Onboarding redirect guard");
+}
+
 console.log("Flux recovery audit passed.");

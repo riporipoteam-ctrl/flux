@@ -19,9 +19,17 @@ type ramp and motion.
 
 Key conventions:
 
+- **A global bar, then three columns.** Facebook's shape on top — brand and
+  search left, the primary destinations as icon tabs in the middle, actions and
+  account right — over X's column discipline underneath. The bar earns its space
+  from 1000px up; phones keep the compact header and the bottom bar, and every
+  sticky offset hangs off `--v8-top-h` so it collapses to zero with it.
+- **Columns float on a canvas.** `--v8-canvas` sits behind the shell and the
+  reading column is a rounded panel on it, which is what makes Default, Dim and
+  Lights out read as three different surfaces rather than three palettes.
 - **One reading column.** Content lives in a 600px column between a 275px nav
   and a 350px rail. Screens that need the space (Games, Studio, Live, Messages)
-  set `data-rail="off"` on the shell and the column expands.
+  set `data-rail="off"` on the shell, and the column goes edge to edge.
 - **Sticky header + tabs.** `XHeader` is 53px with a blurred backdrop; `XTabs`
   sticks beneath it and animates its underline with a shared `layoutId`.
 - **Motion is a token, not a decoration.** `--v8-ease`, `--v8-spring` and the
@@ -33,8 +41,12 @@ Key conventions:
   three variables; the choice is stored per browser and painted by an inline
   script before first paint so no theme flashes white.
 - **Breakpoints.** Wide (≥1400), desktop (1200–1399), laptop (1000–1199, icon
-  rail), tablet (640–999, single column + bottom nav), phone (<640, edge to
-  edge, dialogs become bottom sheets).
+  rail), tablet (640–999, single column + bottom bar), phone (<640, cards on the
+  canvas, dialogs become bottom sheets).
+- **The phone gets the same idea, phrased for a thumb.** Wordmark and round
+  action buttons in the header, the feed as full-bleed cards with air between
+  them, and a bar that floats clear of the home indicator instead of sitting on
+  the edge.
 
 ---
 
@@ -85,20 +97,49 @@ place of the synthesised voice.
 
 ---
 
+## AskAI
+
+Two engines behind one switch.
+
+**AskAI 1.0 Instant** runs the model in the browser through WebGPU, so a chat
+never leaves the device. Where WebGPU is missing — or the model download fails —
+it falls back to Flux's built-in instant tools rather than erroring out.
+
+**AskAI 1.0 Pro** is the connected, high-reasoning half. It speaks the
+OpenAI-compatible `/chat/completions` shape, which is what Moonshot's Kimi API
+and every gateway in front of it expose, and it streams: reasoning tokens drive
+the progress line, answer tokens land in the bubble as they are written.
+
+It resolves a connection in this order:
+
+1. **What the person configured** in AskAI → *Connect Pro* — endpoint, key,
+   model and reasoning effort, stored in that browser only and sent straight to
+   the endpoint they chose.
+2. **A build-time endpoint**, if `NEXT_PUBLIC_KIMI_K3_ENDPOINT` is set.
+3. **`/api/askai-pro`**, Flux's own proxy, which keeps the key server-side. It
+   exists only where the app runs a server — GitHub Pages strips `src/app/api`
+   — and reads `KIMI_API_KEY`, `KIMI_BASE_URL` and `KIMI_MODEL`.
+
+That ordering is what makes Pro work on the static Pages build at all: there is
+no server there to hold a secret, so the browser has to bring its own.
+
+---
+
 ## Platform features
 
 - **Feed** — For You + Following, infinite scroll, posts with media and polls
 - **Post detail** — full comment and reply threads
 - **Explore** — trends, plus post/people/community search
 - **Notifications** and **Activity** — filtered timelines
-- **Messages** — 1:1 DMs with a live Firestore subscription, plus calls
+- **Messages** — 1:1 DMs with a live Firestore subscription, plus voice and
+  video calls over WebRTC
 - **Communities** and **Events** — create, join, discuss
 - **Stories** — editor, viewer, per-viewer analytics
 - **Live** — streaming studio and viewer
 - **Studio** — visual game/website editor with versions and publishing
 - **Games** — Flux Farm plus an open-source browser library and community builds
 - **Shop, Gifts, Rewards, Premium** — the Flux Coin economy
-- **AskAI** — feed-aware assistant (`/api/ask-ai`)
+- **AskAI** — feed-aware assistant, in two halves (see below)
 - **Admin** — verification, reports and coin tools
 
 Schema and rules: `firestore.rules`, `storage.rules`, `docs/SCHEMA.md`.

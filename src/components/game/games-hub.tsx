@@ -141,7 +141,7 @@ export default function GamesHub() {
 
       <main className="mx-auto w-full max-w-[1180px] px-3 pt-3 sm:px-5 sm:pt-5">
         <section className="relative overflow-hidden rounded-[24px] border border-[var(--v8-line)] bg-black">
-          <div className="relative min-h-[470px] sm:min-h-[540px]">
+          <div className="relative min-h-[420px] sm:min-h-[540px]">
             <GameCoverArt game={hero} />
             <motion.div
               className="absolute inset-0 flex max-w-2xl flex-col justify-end p-6 sm:p-10"
@@ -151,7 +151,7 @@ export default function GamesHub() {
             >
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/60">Featured this week</p>
               <h2 className="mt-3 text-4xl font-black leading-[0.92] tracking-[-0.06em] text-white sm:text-6xl">{hero.title}</h2>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-white/72 sm:text-base">{hero.description}</p>
+              <p className="mt-4 line-clamp-4 max-w-xl text-sm leading-6 text-white/72 sm:line-clamp-none sm:text-base">{hero.description}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {hero.categories.map((item) => (
                   <span key={item} className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 text-[10px] font-bold text-white/80 backdrop-blur-md">{item}</span>

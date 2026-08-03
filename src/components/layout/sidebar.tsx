@@ -62,6 +62,12 @@ const moreItems: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+/** Tapping the tab you are already on scrolls the timeline back to the top. */
+function backToTop(event: React.MouseEvent) {
+  event.preventDefault();
+  window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { profile, user } = useAuth();
@@ -88,7 +94,13 @@ export function Sidebar() {
           const Icon = item.icon;
           const badge = item.badge === "notifications" ? unread : 0;
           return (
-            <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={cn("flux8-sidebar-link", active && "is-active")}>
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              onClick={active ? backToTop : undefined}
+              className={cn("flux8-sidebar-link", active && "is-active")}
+            >
               <span className="flux8-sidebar-icon"><Icon className="h-[25px] w-[25px]" strokeWidth={active ? 2.45 : 2} />{badge > 0 ? <em>{badge > 99 ? "99+" : badge}</em> : null}</span>
               <strong>{item.label}</strong>
             </Link>

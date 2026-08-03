@@ -16,15 +16,20 @@ export default function AuthLayout({
   const { user, profile, loading } = useAuth();
   const router = useRouter();
 
+  // A username is proof of onboarding; the flag alone is not, and trusting it
+  // sent people back through setup whenever a profile read came back thin.
+  const onboarded = Boolean(
+    profile && (profile.onboardingComplete || String(profile.username || "").trim())
+  );
+
   useEffect(() => {
     if (loading) return;
-    if (user && profile?.onboardingComplete) router.replace("/home");
-    else if (user && profile && !profile.onboardingComplete)
-      router.replace("/onboarding");
-  }, [user, profile, loading, router]);
+    if (user && onboarded) router.replace("/home");
+    else if (user && profile && !onboarded) router.replace("/onboarding");
+  }, [user, profile, onboarded, loading, router]);
 
   if (loading) return <LoadingScreen />;
-  if (user && profile?.onboardingComplete) return <LoadingScreen />;
+  if (user && onboarded) return <LoadingScreen />;
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">

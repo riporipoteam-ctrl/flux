@@ -13,6 +13,7 @@ import {
   PhoneOff,
   RefreshCw,
   Video,
+  Volume2,
   WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +65,7 @@ function CallInner() {
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(requestedMode === "video");
   const [remoteReady, setRemoteReady] = useState(false);
+  const [needsSound, setNeedsSound] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
@@ -74,6 +76,10 @@ function CallInner() {
 
   const localVideo = useRef<HTMLVideoElement>(null);
   const remoteVideo = useRef<HTMLVideoElement>(null);
+  // A voice call renders no <video>, so the remote stream needs a sink of its
+  // own — without one nothing was ever heard, which is why video worked and
+  // voice did not.
+  const remoteAudio = useRef<HTMLAudioElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const queueRef = useRef<IceCandidateQueue | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -94,6 +100,17 @@ function CallInner() {
       remoteVideo.current.srcObject = remoteStreamRef.current;
       void remoteVideo.current.play().catch(() => undefined);
     }
+    // Only one element carries the audio, or the caller is heard twice: the
+    // <video> when the remote is sending pictures, the <audio> when it is not.
+    const audible = remoteStreamRef.current.getVideoTracks().length === 0;
+    if (remoteAudio.current) {
+      const next = audible ? remoteStreamRef.current : null;
+      if (remoteAudio.current.srcObject !== next) remoteAudio.current.srcObject = next;
+      if (audible) {
+        remoteAudio.current.muted = false;
+        void remoteAudio.current.play().catch(() => setNeedsSound(true));
+      }
+    }
   };
 
   const cleanup = () => {
@@ -111,6 +128,7 @@ function CallInner() {
     remoteStreamRef.current.getTracks().forEach((track) => remoteStreamRef.current.removeTrack(track));
     if (localVideo.current) localVideo.current.srcObject = null;
     if (remoteVideo.current) remoteVideo.current.srcObject = null;
+    if (remoteAudio.current) remoteAudio.current.srcObject = null;
   };
 
   useEffect(() => cleanup, []);
@@ -407,6 +425,17 @@ function CallInner() {
 
   return (
     <main className="relative flex h-[calc(100dvh_-_53px_-_env(safe-area-inset-top))] min-h-[520px] flex-col overflow-hidden bg-[#0f1419] text-white lg:h-[100dvh]">
+      {/* Always mounted: this is what carries a voice call's audio. */}
+      <audio ref={remoteAudio} autoPlay playsInline className="hidden" />
+      {needsSound ? (
+        <button
+          type="button"
+          onClick={() => { setNeedsSound(false); attachStreams(); }}
+          className="relative z-20 flex w-full items-center justify-center gap-2 bg-[#1d9bf0] px-4 py-3 text-sm font-black text-white"
+        >
+          <Volume2 className="h-4 w-4" /> Tap to turn on call audio
+        </button>
+      ) : null}
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         {isVideo ? <video ref={remoteVideo} autoPlay playsInline onClick={() => void remoteVideo.current?.play()} className="h-full w-full bg-black object-cover" /> : <div className="text-center"><UserAvatar user={otherUser} size="xl" className="mx-auto h-32 w-32" clickable={false} /><h1 className="mt-5 text-3xl font-bold">{otherUser?.displayName || "Flux call"}</h1><p className="mt-2 text-sm text-white/65">{status}</p>{status === "Connected" ? <p className="mt-2 font-mono text-xs text-white/45">{formatDuration(seconds)}</p> : null}</div>}
 
