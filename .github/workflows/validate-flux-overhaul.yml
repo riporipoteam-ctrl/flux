@@ -60,6 +60,9 @@ jobs:
       - name: Flux X V3 and Games audit
         run: node scripts/flux-x-games-v3-audit.mjs
 
+      - name: Live X3 release audit
+        run: node scripts/live-release-audit.mjs
+
       - name: TypeScript check
         run: npx tsc --noEmit
 
