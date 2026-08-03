@@ -8,13 +8,19 @@ function requireText(source, text, label) {
   if (!source.includes(text)) throw new Error(`${label}: missing ${JSON.stringify(text)}`);
 }
 
+function requireAnyText(source, alternatives, label) {
+  if (!alternatives.some((text) => source.includes(text))) {
+    throw new Error(`${label}: missing one of ${alternatives.map(JSON.stringify).join(", ")}`);
+  }
+}
+
 function forbidText(source, text, label) {
   if (source.includes(text)) throw new Error(`${label}: forbidden legacy text ${JSON.stringify(text)}`);
 }
 
 const live = read("src/components/live/live-studio-v2.tsx");
 requireText(live, "const attachPreview", "Live persistent canvas");
-requireText(live, "element.srcObject = captured.stream", "Live stream attachment");
+requireAnyText(live, ["element.srcObject = captured.stream", "element.srcObject = capture.stream"], "Live stream attachment");
 requireText(live, "source === \"screen\" && !screenSupported", "Live platform capability guard");
 const liveVideos = live.match(/<video\b/g)?.length || 0;
 if (liveVideos !== 1) throw new Error(`Live persistent canvas: expected exactly one video element, found ${liveVideos}`);

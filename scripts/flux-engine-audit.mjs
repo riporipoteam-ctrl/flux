@@ -32,7 +32,7 @@ for (const marker of [
   "capture",
 ]) requireText(viewport, marker, "3D viewport");
 
-const shell = read("src/components/studio/engine/flux-engine-studio.tsx");
+const engine = read("src/components/studio/engine/flux-engine-studio.tsx");
 for (const marker of [
   "Hierarchy",
   "Inspector",
@@ -45,7 +45,7 @@ for (const marker of [
   "publishEngineProject",
   "Ctrl K",
   "F6",
-]) requireText(shell, marker, "Engine editor shell");
+]) requireText(engine, marker, "Engine editor shell");
 
 const projects = read("src/services/flux-engine-projects.ts");
 for (const marker of [
@@ -61,7 +61,10 @@ for (const marker of [
 ]) requireText(projects, marker, "Engine project system");
 
 const studioPage = read("src/app/(main)/studio/page.tsx");
-requireText(studioPage, "FluxEngineStudio", "Studio route");
+requireText(studioPage, "FluxStudioShell", "Studio route");
+const studioShell = read("src/components/studio/flux-studio-shell.tsx");
+requireText(studioShell, "FluxEngineStudio", "Studio engine composition");
+requireText(studioShell, "Build with AskAI", "Studio AskAI composition");
 
 const mainLayout = read("src/app/(main)/layout.tsx");
 requireText(mainLayout, "if (isStudio)", "Immersive Studio layout");

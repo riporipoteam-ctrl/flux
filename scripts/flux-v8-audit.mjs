@@ -38,7 +38,7 @@ for (const marker of ["flux9-topbar-search", "flux9-topbar-tabs", "flux9-topbar-
 // A voice call has no <video> on screen, so the remote stream needs its own
 // sink or nobody is heard. This is the regression that must not come back.
 const call = read("src/app/(main)/messages/call/page.tsx");
-for (const marker of ["remoteAudio", "attachRemote", "remoteStreamRef", "flux-call-dock"]) {
+for (const marker of ["remoteAudio", "attachStreams", "remoteStreamRef", "getVideoTracks().length === 0"]) {
   requireText(call, marker, "Flux call surface");
 }
 
@@ -76,7 +76,6 @@ for (const marker of [
   "--v8-top-h: 56px",
   "--v8-canvas:",
   ".flux9-topbar",
-  ".flux-call-dock",
   // The phone gets the same canvas-and-cards idea as the desktop shell.
   ".flux8-mobile-header-actions",
   "border-radius: 22px",

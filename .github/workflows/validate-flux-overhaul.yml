@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,8 +30,11 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install app dependencies
         run: npm ci
+
+      - name: Install Firebase Function dependencies
+        run: npm install --prefix functions --no-audit --no-fund
 
       - name: Recovery regression audit
         run: node scripts/recovery-audit.mjs
@@ -48,8 +51,17 @@ jobs:
       - name: Flux V8 redesign audit
         run: node scripts/flux-v8-audit.mjs
 
+      - name: Firebase reliability audit
+        run: node scripts/firebase-reliability-audit.mjs
+
+      - name: Platform reliability V2 audit
+        run: node scripts/platform-reliability-v2-audit.mjs
+
       - name: TypeScript check
         run: npx tsc --noEmit
+
+      - name: Firebase Functions TypeScript check
+        run: npm run build --prefix functions
 
       - name: Production build
         run: npm run build

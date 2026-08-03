@@ -14,7 +14,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("The selected image could not be decoded."));
+      reject(new Error("The selected image could not be decoded. Try a JPEG, PNG or WebP image."));
     };
     image.src = url;
   });
@@ -27,6 +27,72 @@ function canvasBlob(canvas: HTMLCanvasElement, type: string, quality: number): P
       else reject(new Error("Flux could not process this image."));
     }, type, quality);
   });
+}
+
+function safeBaseName(name: string, fallback: string): string {
+  return name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80) || fallback;
+}
+
+async function cropImage(
+  file: File,
+  options: { width: number; height: number; quality?: number; maxBytes?: number; fallbackName: string }
+): Promise<ProcessedImage> {
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  if (!file.size) throw new Error("The selected image is empty.");
+  if (file.size > 30 * 1024 * 1024) throw new Error("Images must be under 30 MB before processing.");
+
+  const image = await loadImage(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = options.width;
+  canvas.height = options.height;
+  const context = canvas.getContext("2d", { alpha: false });
+  if (!context) throw new Error("Flux could not prepare the image canvas.");
+
+  const targetRatio = options.width / options.height;
+  const sourceRatio = image.naturalWidth / image.naturalHeight;
+  let sourceWidth = image.naturalWidth;
+  let sourceHeight = image.naturalHeight;
+  let sourceX = 0;
+  let sourceY = 0;
+  if (sourceRatio > targetRatio) {
+    sourceWidth = image.naturalHeight * targetRatio;
+    sourceX = (image.naturalWidth - sourceWidth) / 2;
+  } else {
+    sourceHeight = image.naturalWidth / targetRatio;
+    sourceY = (image.naturalHeight - sourceHeight) / 2;
+  }
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, options.width, options.height);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, options.width, options.height);
+
+  const maxBytes = options.maxBytes ?? 1_500_000;
+  const qualities = [options.quality ?? 0.86, 0.76, 0.66, 0.56];
+  let blob: Blob | null = null;
+  for (const quality of qualities) {
+    blob = await canvasBlob(canvas, "image/webp", quality);
+    if (blob.size <= maxBytes) break;
+  }
+  if (!blob) throw new Error("Flux could not encode this image.");
+
+  return {
+    file: new File([blob], `${safeBaseName(file.name, options.fallbackName)}.webp`, {
+      type: "image/webp",
+      lastModified: Date.now(),
+    }),
+    width: options.width,
+    height: options.height,
+  };
+}
+
+export async function processProfileAvatar(file: File): Promise<ProcessedImage> {
+  return cropImage(file, { width: 512, height: 512, quality: 0.86, maxBytes: 900_000, fallbackName: "avatar" });
+}
+
+export async function processProfileBanner(file: File): Promise<ProcessedImage> {
+  return cropImage(file, { width: 1500, height: 500, quality: 0.84, maxBytes: 2_400_000, fallbackName: "banner" });
 }
 
 export async function processStoryImage(
@@ -48,7 +114,7 @@ export async function processStoryImage(
   if (!context) throw new Error("Flux could not prepare the Story canvas.");
   context.drawImage(image, 0, 0, width, height);
   const blob = await canvasBlob(canvas, "image/webp", options.quality ?? 0.84);
-  const name = `${file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "-") || "story"}.webp`;
+  const name = `${safeBaseName(file.name, "story")}.webp`;
   return { file: new File([blob], name, { type: "image/webp", lastModified: Date.now() }), width, height };
 }
 
@@ -70,36 +136,8 @@ export async function imageToFirestoreFallback(file: File): Promise<string> {
 }
 
 export async function studioThumbnailToDataUrl(file: File): Promise<string> {
-  if (!file.type.startsWith("image/")) throw new Error("Choose an image for the game thumbnail.");
-  const image = await loadImage(file);
-  const targetWidth = 960;
-  const targetHeight = 540;
-  const canvas = document.createElement("canvas");
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-  const context = canvas.getContext("2d", { alpha: false });
-  if (!context) throw new Error("Flux could not prepare the thumbnail canvas.");
-
-  const sourceRatio = image.naturalWidth / image.naturalHeight;
-  const targetRatio = targetWidth / targetHeight;
-  let sourceWidth = image.naturalWidth;
-  let sourceHeight = image.naturalHeight;
-  let sourceX = 0;
-  let sourceY = 0;
-  if (sourceRatio > targetRatio) {
-    sourceWidth = image.naturalHeight * targetRatio;
-    sourceX = (image.naturalWidth - sourceWidth) / 2;
-  } else {
-    sourceHeight = image.naturalWidth / targetRatio;
-    sourceY = (image.naturalHeight - sourceHeight) / 2;
-  }
-  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
-  const blob = await canvasBlob(canvas, "image/webp", 0.76);
-  if (blob.size > 420_000) {
-    const smaller = await canvasBlob(canvas, "image/webp", 0.58);
-    return fileToDataUrl(new File([smaller], "thumbnail.webp", { type: "image/webp" }));
-  }
-  return fileToDataUrl(new File([blob], "thumbnail.webp", { type: "image/webp" }));
+  const processed = await cropImage(file, { width: 960, height: 540, quality: 0.76, maxBytes: 420_000, fallbackName: "thumbnail" });
+  return fileToDataUrl(processed.file);
 }
 
 export function fileToDataUrl(file: File): Promise<string> {

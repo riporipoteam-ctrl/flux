@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { MobileBoot } from "@/components/providers/mobile-boot";
+import { RouteMotion } from "@/components/providers/route-motion";
 import "./globals.css";
 import "@/styles/editor-surfaces.css";
 import "@/styles/flux-engine.css";
@@ -11,6 +12,7 @@ import "@/styles/askai-workspace.css";
 import "@/styles/askai-workspace-v2.css";
 import "@/styles/flux-v8.css";
 import "@/styles/flux-v8-tokens.css";
+import "@/styles/flux-polish.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -80,7 +82,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <MobileBoot />
-            {children}
+            <RouteMotion>{children}</RouteMotion>
             <Toaster
               position="top-center"
               richColors
