@@ -1,5 +1,5 @@
-import FluxEngineStudio from "@/components/studio/engine/flux-engine-studio";
+import FluxStudioShell from "@/components/studio/flux-studio-shell";
 
 export default function StudioPage() {
-  return <FluxEngineStudio />;
+  return <FluxStudioShell />;
 }

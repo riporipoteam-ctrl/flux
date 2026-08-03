@@ -5,13 +5,10 @@ import { useRouter } from "next/navigation";
 import {
   Activity,
   Camera,
-  Check,
   Clock3,
   Copy,
   Eye,
-  Heart,
   Loader2,
-  MessageCircle,
   Mic,
   MicOff,
   MonitorUp,
@@ -19,7 +16,7 @@ import {
   ScreenShare,
   Send,
   Settings2,
-  Share2,
+  Signal,
   Square,
   Users,
   Video,
@@ -35,6 +32,7 @@ import {
   endLiveStream,
   sendLiveComment,
   setLivePeerOffer,
+  setLivePeerStatus,
   subscribeLiveCandidates,
   subscribeLiveComments,
   subscribeLivePeer,
@@ -42,6 +40,7 @@ import {
   subscribeLiveViewerAnalytics,
   syncLiveAnalytics,
   type LiveComment,
+  type LivePeer,
   type LiveViewerAnalytics,
 } from "@/services/live";
 import {
@@ -72,7 +71,8 @@ const CATEGORIES = ["Chatting", "Gaming", "Music", "Creative", "News", "Sports",
 
 function isIOSBrowser(): boolean {
   if (typeof navigator === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
 export default function LiveStudioV2() {
@@ -82,8 +82,8 @@ export default function LiveStudioV2() {
   const captureRef = useRef<CapturedMedia | null>(null);
   const peersRef = useRef(new Map<string, RTCPeerConnection>());
   const queuesRef = useRef(new Map<string, IceCandidateQueue>());
-  const handledViewerIds = useRef(new Set<string>());
-  const subscriptionsRef = useRef<Array<() => void>>([]);
+  const peerSubscriptionsRef = useRef(new Map<string, Array<() => void>>());
+  const globalSubscriptionsRef = useRef<Array<() => void>>([]);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -100,7 +100,7 @@ export default function LiveStudioV2() {
   const [preparing, setPreparing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
-  const [mediaStatus, setMediaStatus] = useState("No media source opened");
+  const [mediaStatus, setMediaStatus] = useState("Open your camera or screen to begin");
   const [streamId, setStreamId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [secondsLive, setSecondsLive] = useState(0);
@@ -115,38 +115,35 @@ export default function LiveStudioV2() {
   const screenSupported = useMemo(() => supportsScreenShare() && !isIOSBrowser(), []);
   const isLive = Boolean(streamId);
 
-  const attachPreview = async () => {
+  useEffect(() => {
+    void refreshDevices();
+  }, []);
+
+  useEffect(() => {
+    if (!startedAt) return;
+    const timer = window.setInterval(() => {
+      setSecondsLive(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1_000);
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
+
+  useEffect(() => () => cleanupEverything(), []);
+
+  const attachPreview = async (capture = captureRef.current) => {
     const element = videoRef.current;
-    const captured = captureRef.current;
-    if (!element || !captured) return;
-    if (element.srcObject !== captured.stream) element.srcObject = captured.stream;
+    if (!element || !capture) return;
+    if (element.srcObject !== capture.stream) element.srcObject = capture.stream;
     element.muted = true;
     element.playsInline = true;
     await element.play().catch(() => undefined);
   };
 
-  useEffect(() => {
-    void attachPreview();
-  }, [streamId, previewReady]);
-
-  useEffect(() => {
-    if (!startedAt) return;
-    const timer = window.setInterval(() => setSecondsLive(Math.floor((Date.now() - startedAt) / 1000)), 1000);
-    return () => window.clearInterval(timer);
-  }, [startedAt]);
-
-  useEffect(() => {
-    return () => cleanupEverything();
-    // cleanupEverything intentionally reads refs only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const refreshDevices = async () => {
     const devices = await listMediaDevices().catch(() => ({ microphones: [], cameras: [] }));
     setMicrophones(devices.microphones);
     setCameras(devices.cameras);
-    if (!audioInputId && devices.microphones[0]) setAudioInputId(devices.microphones[0].deviceId);
-    if (!videoInputId && devices.cameras[0]) setVideoInputId(devices.cameras[0].deviceId);
+    setAudioInputId((current) => current || devices.microphones[0]?.deviceId || "");
+    setVideoInputId((current) => current || devices.cameras[0]?.deviceId || "");
   };
 
   const stopCapture = () => {
@@ -154,19 +151,18 @@ export default function LiveStudioV2() {
     captureRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setPreviewReady(false);
-    setMediaStatus("No media source opened");
   };
 
   const openPreview = async (): Promise<CapturedMedia | null> => {
     if (!captureSupported) {
-      const message = "Camera and microphone need HTTPS and browser permission.";
+      const message = "Camera and microphone require HTTPS and browser permission.";
       setPermissionError(message);
       toast.error(message);
       return null;
     }
     if (source === "screen" && !screenSupported) {
       const message = isIOSBrowser()
-        ? "iPhone and iPad browsers cannot broadcast the screen through a normal web page. Use camera live here, or use desktop Chrome/Edge/Safari for screen sharing."
+        ? "iPhone and iPad browsers cannot broadcast the screen from a normal web page. Camera live works here; screen sharing needs desktop Chrome, Edge or Safari."
         : "This browser does not support screen sharing.";
       setPermissionError(message);
       toast.error(message);
@@ -177,7 +173,7 @@ export default function LiveStudioV2() {
     setPermissionError(null);
     stopCapture();
     try {
-      const captured = await captureFluxMedia({
+      const capture = await captureFluxMedia({
         source,
         microphone: microphoneEnabled,
         camera: cameraEnabled,
@@ -185,25 +181,22 @@ export default function LiveStudioV2() {
         audioInputId: audioInputId || undefined,
         videoInputId: videoInputId || undefined,
       });
-      captureRef.current = captured;
+      captureRef.current = capture;
       setPreviewReady(true);
-      setMediaStatus(`${captured.source === "screen" ? "Screen" : "Camera"} ready · ${captured.stream.getVideoTracks().length ? "video" : "no video"} · ${captured.stream.getAudioTracks().length ? "audio" : "no audio"}`);
-      const videoTrack = captured.stream.getVideoTracks()[0];
-      videoTrack?.addEventListener(
-        "ended",
-        () => {
-          setMediaStatus("The selected media source ended");
-          toast.message("The captured source ended. End the live or open another preview.");
-        },
-        { once: true }
-      );
+      setMediaStatus(`${capture.source === "screen" ? "Screen" : "Camera"} ready · ${capture.stream.getVideoTracks().length ? "video" : "no video"} · ${capture.stream.getAudioTracks().length ? "audio" : "no audio"}`);
+      const videoTrack = capture.stream.getVideoTracks()[0];
+      videoTrack?.addEventListener("ended", () => {
+        setMediaStatus("The selected media source ended");
+        if (streamId) toast.error("Your broadcast source ended. End the live or open a new source.");
+        else setPreviewReady(false);
+      }, { once: true });
       await refreshDevices();
-      window.requestAnimationFrame(() => void attachPreview());
-      return captured;
+      window.requestAnimationFrame(() => void attachPreview(capture));
+      return capture;
     } catch (error) {
       const message = describeMediaError(error);
       setPermissionError(message);
-      setMediaStatus("Media source failed");
+      setMediaStatus("Could not open media");
       toast.error(message);
       return null;
     } finally {
@@ -211,54 +204,98 @@ export default function LiveStudioV2() {
     }
   };
 
-  const connectViewer = async (activeStreamId: string, viewerId: string, media: MediaStream) => {
-    if (peersRef.current.has(viewerId)) return;
-    const peer = new RTCPeerConnection({ iceServers: getFluxIceServers() });
+  const cleanupPeer = (viewerId: string) => {
+    peerSubscriptionsRef.current.get(viewerId)?.forEach((unsubscribe) => unsubscribe());
+    peerSubscriptionsRef.current.delete(viewerId);
+    queuesRef.current.get(viewerId)?.clear();
+    queuesRef.current.delete(viewerId);
+    peersRef.current.get(viewerId)?.close();
+    peersRef.current.delete(viewerId);
+    setConnectedViewers([...peersRef.current.values()].filter((peer) => peer.connectionState === "connected").length);
+  };
+
+  const connectViewer = async (
+    activeStreamId: string,
+    livePeer: LivePeer,
+    media: MediaStream
+  ) => {
+    const viewerId = livePeer.viewerId;
+    if (peersRef.current.has(viewerId) || livePeer.status === "failed") return;
+
+    const peer = new RTCPeerConnection({
+      iceServers: getFluxIceServers(),
+      iceCandidatePoolSize: 4,
+      bundlePolicy: "max-bundle",
+    });
     const queue = createIceCandidateQueue(peer);
     peersRef.current.set(viewerId, peer);
     queuesRef.current.set(viewerId, queue);
-    media.getTracks().forEach((track) => peer.addTrack(track, media));
+    media.getTracks().filter((track) => track.readyState === "live").forEach((track) => peer.addTrack(track, media));
 
     peer.onicecandidate = (event) => {
       if (event.candidate) void addLiveCandidate(activeStreamId, viewerId, "host", event.candidate.toJSON());
     };
     peer.onconnectionstatechange = () => {
       setConnectedViewers([...peersRef.current.values()].filter((item) => item.connectionState === "connected").length);
-      if (["failed", "closed"].includes(peer.connectionState)) {
-        queue.clear();
-        peer.close();
-        peersRef.current.delete(viewerId);
-        queuesRef.current.delete(viewerId);
-        handledViewerIds.current.delete(viewerId);
+      if (peer.connectionState === "connected") {
+        void setLivePeerStatus(activeStreamId, viewerId, "connected");
+      } else if (peer.connectionState === "failed") {
+        void setLivePeerStatus(activeStreamId, viewerId, "failed");
+        cleanupPeer(viewerId);
+      } else if (peer.connectionState === "closed") {
+        cleanupPeer(viewerId);
+      }
+    };
+    peer.oniceconnectionstatechange = () => {
+      if (peer.iceConnectionState === "failed") {
+        try { peer.restartIce(); } catch { /* viewer retry creates a new handshake */ }
       }
     };
 
-    subscriptionsRef.current.push(
-      subscribeLiveCandidates(activeStreamId, viewerId, "viewer", (candidate) => void queue.add(candidate))
-    );
-    subscriptionsRef.current.push(
+    const subscriptions = [
+      subscribeLiveCandidates(activeStreamId, viewerId, "viewer", (candidate) => void queue.add(candidate)),
       subscribeLivePeer(activeStreamId, viewerId, (data) => {
-        if (!data?.answer || peer.currentRemoteDescription) return;
-        void peer
-          .setRemoteDescription(new RTCSessionDescription(data.answer))
+        if (!data?.answer || peer.remoteDescription?.sdp === data.answer.sdp) return;
+        void peer.setRemoteDescription(new RTCSessionDescription(data.answer))
           .then(() => queue.flush())
-          .catch(() => undefined);
-      })
-    );
+          .catch((error) => console.error("Host could not apply live answer", error));
+      }),
+    ];
+    peerSubscriptionsRef.current.set(viewerId, subscriptions);
 
-    const offer = await peer.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
+    const offer = await peer.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false,
+      iceRestart: livePeer.attempt > 1,
+    });
     await peer.setLocalDescription(offer);
     await setLivePeerOffer(activeStreamId, viewerId, { type: offer.type, sdp: offer.sdp });
+  };
+
+  const reconcilePeers = (activeStreamId: string, items: LivePeer[], media: MediaStream) => {
+    const currentIds = new Set(items.map((item) => item.viewerId));
+    for (const viewerId of peersRef.current.keys()) {
+      if (!currentIds.has(viewerId)) cleanupPeer(viewerId);
+    }
+    for (const item of items) {
+      if (!peersRef.current.has(item.viewerId) && item.status !== "failed") {
+        void connectViewer(activeStreamId, item, media).catch((error) => {
+          console.error("Could not connect live viewer", error);
+          cleanupPeer(item.viewerId);
+          void setLivePeerStatus(activeStreamId, item.viewerId, "failed");
+        });
+      }
+    }
   };
 
   const startLive = async () => {
     if (!user || starting || !title.trim()) return;
     setStarting(true);
     try {
-      const captured = captureRef.current || (await openPreview());
-      if (!captured) return;
-      if (!captured.stream.getTracks().some((track) => track.readyState === "live")) {
-        throw new Error("The selected media source is no longer active. Open the preview again.");
+      const capture = captureRef.current || await openPreview();
+      if (!capture) return;
+      if (!capture.stream.getTracks().some((track) => track.readyState === "live")) {
+        throw new Error("The selected camera or screen is no longer active. Open preview again.");
       }
 
       const id = await createLiveStream({
@@ -266,29 +303,22 @@ export default function LiveStudioV2() {
         title: title.trim(),
         description: description.trim(),
         category,
-        sourceType: captured.source,
+        sourceType: capture.source,
       });
       setStreamId(id);
       setStartedAt(Date.now());
+      setSecondsLive(0);
       setSettingsOpen(false);
-      subscriptionsRef.current.push(subscribeLiveComments(id, setComments));
-      subscriptionsRef.current.push(
-        subscribeLiveViewerAnalytics(id, (next) => {
-          setAnalytics(next);
-          setPeakViewers((current) => Math.max(current, next.activeViewers));
-          void syncLiveAnalytics(id, next).catch(() => undefined);
-        })
-      );
-      subscriptionsRef.current.push(
-        subscribeLivePeers(id, (items) => {
-          for (const item of items) {
-            if (handledViewerIds.current.has(item.viewerId)) continue;
-            handledViewerIds.current.add(item.viewerId);
-            void connectViewer(id, item.viewerId, captured.stream).catch(() => handledViewerIds.current.delete(item.viewerId));
-          }
-        })
-      );
-      window.requestAnimationFrame(() => void attachPreview());
+
+      globalSubscriptionsRef.current.push(subscribeLiveComments(id, setComments));
+      globalSubscriptionsRef.current.push(subscribeLiveViewerAnalytics(id, (next) => {
+        setAnalytics(next);
+        setPeakViewers((current) => Math.max(current, next.activeViewers));
+        void syncLiveAnalytics(id, next).catch(() => undefined);
+      }));
+      globalSubscriptionsRef.current.push(subscribeLivePeers(id, (items) => reconcilePeers(id, items, capture.stream)));
+
+      window.requestAnimationFrame(() => void attachPreview(capture));
       toast.success("You are live");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not start the livestream");
@@ -298,13 +328,9 @@ export default function LiveStudioV2() {
   };
 
   const cleanupEverything = () => {
-    subscriptionsRef.current.forEach((unsubscribe) => unsubscribe());
-    subscriptionsRef.current = [];
-    queuesRef.current.forEach((queue) => queue.clear());
-    queuesRef.current.clear();
-    peersRef.current.forEach((peer) => peer.close());
-    peersRef.current.clear();
-    handledViewerIds.current.clear();
+    globalSubscriptionsRef.current.forEach((unsubscribe) => unsubscribe());
+    globalSubscriptionsRef.current = [];
+    for (const viewerId of [...peersRef.current.keys()]) cleanupPeer(viewerId);
     captureRef.current?.cleanup();
     captureRef.current = null;
   };
@@ -321,19 +347,13 @@ export default function LiveStudioV2() {
   const toggleMicrophone = () => {
     const next = !microphoneEnabled;
     setMicrophoneEnabled(next);
-    captureRef.current?.stream.getAudioTracks().forEach((track) => {
-      track.enabled = next;
-    });
+    captureRef.current?.stream.getAudioTracks().forEach((track) => { track.enabled = next; });
   };
 
   const toggleCamera = () => {
     const next = !cameraEnabled;
     setCameraEnabled(next);
-    if (source === "camera") {
-      captureRef.current?.stream.getVideoTracks().forEach((track) => {
-        track.enabled = next;
-      });
-    }
+    if (source === "camera") captureRef.current?.stream.getVideoTracks().forEach((track) => { track.enabled = next; });
   };
 
   const copyLink = async () => {
@@ -345,144 +365,85 @@ export default function LiveStudioV2() {
 
   const postComment = async () => {
     if (!streamId || !user || !comment.trim()) return;
-    await sendLiveComment(streamId, user.uid, comment.trim());
-    setComment("");
+    try {
+      await sendLiveComment(streamId, user.uid, comment.trim());
+      setComment("");
+    } catch {
+      toast.error("Could not send this comment");
+    }
   };
 
   return (
-    <main className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/92 backdrop-blur-xl">
+    <main className="flux-live-stage min-h-screen text-white">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/75 backdrop-blur-2xl">
         <div className="mx-auto flex min-h-16 max-w-[1500px] items-center gap-3 px-3 sm:px-5">
           <span className={cn("flex items-center gap-2 rounded-full px-3 py-2 text-xs font-black", isLive ? "bg-red-500" : "bg-white/10 text-white/70")}>
-            <span className={cn("h-2 w-2 rounded-full", isLive ? "animate-pulse bg-white" : "bg-white/35")} />
-            {isLive ? "LIVE" : "PREVIEW"}
+            <span className={cn("h-2 w-2 rounded-full", isLive ? "flux-live-status-dot bg-white" : "bg-white/35")} />{isLive ? "LIVE" : "PREVIEW"}
           </span>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-black">{title.trim() || "Flux Live"}</h1>
-            <p className="truncate text-[11px] text-white/45">{mediaStatus}</p>
-          </div>
-          {isLive ? <button type="button" onClick={() => void copyLink()} className="grid h-11 w-11 place-items-center rounded-full bg-white/10" aria-label="Copy viewer link"><Copy className="h-5 w-5" /></button> : null}
-          <button type="button" onClick={() => setSettingsOpen((value) => !value)} className="grid h-11 w-11 place-items-center rounded-full bg-white/10 lg:hidden" aria-label="Open live settings"><Settings2 className="h-5 w-5" /></button>
-          {isLive ? (
-            <Button onClick={() => void stopLive()} className="h-11 rounded-full bg-white px-5 font-black text-black hover:bg-white/90"><Square className="h-4 w-4 fill-current" />End</Button>
-          ) : (
-            <Button onClick={() => void startLive()} disabled={starting || !previewReady || !title.trim()} className="h-11 rounded-full bg-red-500 px-5 font-black text-white hover:bg-red-600">{starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}Go live</Button>
-          )}
+          <div className="min-w-0 flex-1"><h1 className="truncate text-base font-black">{title.trim() || "Flux Live Studio"}</h1><p className="truncate text-[11px] text-white/45">{mediaStatus}</p></div>
+          {isLive ? <button type="button" onClick={() => void copyLink()} className="grid h-11 w-11 place-items-center rounded-full bg-white/10 hover:bg-white/15" aria-label="Copy viewer link"><Copy className="h-5 w-5" /></button> : null}
+          <button type="button" onClick={() => setSettingsOpen((value) => !value)} className="grid h-11 w-11 place-items-center rounded-full bg-white/10 hover:bg-white/15 lg:hidden" aria-label="Open live settings"><Settings2 className="h-5 w-5" /></button>
+          {isLive ? <Button onClick={() => void stopLive()} className="h-11 rounded-full bg-white px-5 font-black text-black hover:bg-white/90"><Square className="h-4 w-4 fill-current" />End</Button> : <Button onClick={() => void startLive()} disabled={starting || !previewReady || !title.trim()} className="h-11 rounded-full bg-red-500 px-5 font-black text-white hover:bg-red-600">{starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}Go live</Button>}
         </div>
       </header>
 
-      <div className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-[1500px] lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="relative flex min-h-[64dvh] items-center justify-center overflow-hidden bg-[#030303] lg:min-h-[calc(100dvh-4rem)]">
+      <div className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-[1500px] lg:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="relative flex min-h-[64dvh] items-center justify-center overflow-hidden bg-black lg:min-h-[calc(100dvh-4rem)]">
           <video ref={videoRef} autoPlay muted playsInline className="h-full max-h-[calc(100dvh-4rem)] w-full object-contain" />
-          {!previewReady ? (
-            <div className="absolute inset-0 grid place-items-center p-8 text-center">
-              <div className="max-w-sm">
-                <span className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-white/10 bg-white/5"><Camera className="h-7 w-7 text-white/60" /></span>
-                <h2 className="mt-5 text-2xl font-black">Open a real preview first</h2>
-                <p className="mt-2 text-sm leading-6 text-white/42">Flux will not create a fake live state without an active camera or supported screen capture.</p>
-                <Button onClick={() => void openPreview()} disabled={preparing} className="mt-5 h-11 rounded-full bg-white px-5 font-black text-black hover:bg-white/90">{preparing ? <Loader2 className="h-4 w-4 animate-spin" /> : source === "screen" ? <MonitorUp className="h-4 w-4" /> : <Camera className="h-4 w-4" />}Open preview</Button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="absolute left-3 top-3 flex flex-wrap gap-2 sm:left-5 sm:top-5">
-            <StatusPill icon={Eye} text={`${analytics.activeViewers} watching`} />
-            <StatusPill icon={Wifi} text={`${connectedViewers} connected`} />
-            {isLive ? <StatusPill icon={Clock3} text={formatDuration(secondsLive)} /> : null}
-          </div>
-
-          {permissionError ? (
-            <div className="absolute inset-x-3 top-20 z-20 rounded-2xl border border-red-400/30 bg-red-500/14 p-4 text-sm font-semibold leading-6 text-red-100 backdrop-blur-xl sm:inset-x-auto sm:left-5 sm:max-w-xl">{permissionError}</div>
-          ) : null}
-
-          <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/70 p-2 shadow-2xl backdrop-blur-xl">
-            <MediaButton active={microphoneEnabled} onClick={toggleMicrophone} on={Mic} off={MicOff} label="Microphone" />
-            <MediaButton active={cameraEnabled} disabled={source === "screen"} onClick={toggleCamera} on={Video} off={VideoOff} label="Camera" />
-            {isLive ? <button type="button" onClick={() => void copyLink()} className="grid h-12 w-12 place-items-center rounded-full bg-white/10" aria-label="Share live"><Share2 className="h-5 w-5" /></button> : <button type="button" onClick={() => void openPreview()} disabled={preparing} className="grid h-12 w-12 place-items-center rounded-full bg-white/10 disabled:opacity-50" aria-label="Restart preview">{preparing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}</button>}
-          </div>
+          {!previewReady ? <div className="absolute inset-0 grid place-items-center p-6 text-center"><div className="max-w-sm"><span className="mx-auto grid h-20 w-20 place-items-center rounded-[28px] bg-white/8"><Video className="h-8 w-8 text-white/45" /></span><h2 className="mt-5 text-2xl font-black">Open your preview</h2><p className="mt-2 text-sm leading-6 text-white/45">Check camera, microphone and framing before you broadcast.</p><Button onClick={() => void openPreview()} disabled={preparing} className="mt-5 h-12 rounded-full bg-white px-6 font-black text-black hover:bg-white/90">{preparing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}Open preview</Button></div></div> : null}
+          {isLive ? <div className="absolute left-4 top-4 flex flex-wrap gap-2"><StatusPill icon={Eye} text={`${analytics.activeViewers} watching`} /><StatusPill icon={Signal} text={`${connectedViewers} media links`} /><StatusPill icon={Clock3} text={formatDuration(secondsLive)} /></div> : null}
+          {previewReady ? <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full border border-white/10 bg-black/65 p-2 backdrop-blur-2xl"><ControlButton active={microphoneEnabled} label={microphoneEnabled ? "Mute microphone" : "Unmute microphone"} onClick={toggleMicrophone}>{microphoneEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</ControlButton><ControlButton active={cameraEnabled} label={cameraEnabled ? "Turn camera off" : "Turn camera on"} onClick={toggleCamera}>{cameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}</ControlButton>{!isLive ? <button type="button" onClick={() => void openPreview()} className="grid h-12 w-12 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Restart preview"><Activity className="h-5 w-5" /></button> : null}</div> : null}
         </section>
 
-        <aside className={cn("border-l border-white/10 bg-[#0b0b0c] lg:block", settingsOpen ? "block" : "hidden")}>
-          <div className="flex items-center border-b border-white/10 px-4 py-3 lg:hidden"><h2 className="font-black">Live controls</h2><button type="button" onClick={() => setSettingsOpen(false)} className="ml-auto grid h-10 w-10 place-items-center rounded-full bg-white/8"><X className="h-5 w-5" /></button></div>
-          {!isLive ? (
-            <div className="space-y-5 p-4">
-              <section>
-                <h2 className="text-sm font-black">Source</h2>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <SourceButton active={source === "camera"} icon={Camera} title="Camera" text="Front, rear or USB" onClick={() => { stopCapture(); setSource("camera"); }} />
-                  <SourceButton active={source === "screen"} disabled={!screenSupported} icon={ScreenShare} title="Screen" text={screenSupported ? "Tab, window or display" : isIOSBrowser() ? "Not available on iPhone web" : "Unavailable in this browser"} onClick={() => { stopCapture(); setSource("screen"); }} />
-                </div>
-              </section>
+        <aside className={cn("flex flex-col border-l border-white/10 bg-[#0d1016]/96 backdrop-blur-xl", settingsOpen ? "fixed inset-0 z-[70]" : "hidden lg:flex")}>
+          <div className="flex items-center border-b border-white/10 px-5 py-4"><div><h2 className="font-black">{isLive ? "Live control room" : "Broadcast settings"}</h2><p className="mt-0.5 text-[11px] text-white/40">Firebase signaling · direct WebRTC media</p></div>{settingsOpen ? <button type="button" onClick={() => setSettingsOpen(false)} className="ml-auto grid h-10 w-10 place-items-center rounded-full bg-white/8"><X className="h-5 w-5" /></button> : null}</div>
 
-              <section className="space-y-2">
-                <ToggleRow label="Microphone" detail="Noise suppression and echo cancellation" checked={microphoneEnabled} onChange={(value) => { stopCapture(); setMicrophoneEnabled(value); }} />
-                {source === "camera" ? <ToggleRow label="Camera" detail="Adaptive mobile-friendly quality" checked={cameraEnabled} onChange={(value) => { stopCapture(); setCameraEnabled(value); }} /> : <ToggleRow label="Screen audio" detail="Only when the selected source supplies audio" checked={systemAudioEnabled} onChange={(value) => { stopCapture(); setSystemAudioEnabled(value); }} />}
-              </section>
-
-              {(microphones.length || cameras.length) ? (
-                <section className="grid gap-3">
-                  {microphones.length ? <DeviceSelect label="Microphone" value={audioInputId} devices={microphones} onChange={(value) => { stopCapture(); setAudioInputId(value); }} /> : null}
-                  {source === "camera" && cameras.length ? <DeviceSelect label="Camera" value={videoInputId} devices={cameras} onChange={(value) => { stopCapture(); setVideoInputId(value); }} /> : null}
-                </section>
-              ) : null}
-
-              <section className="space-y-3 border-t border-white/10 pt-5">
-                <label className="block text-xs font-black text-white/65">Title<Input value={title} onChange={(event) => setTitle(event.target.value.slice(0, 100))} placeholder="What are you streaming?" className="mt-2 h-11 rounded-xl border-white/10 bg-white/5 text-white" /></label>
-                <label className="block text-xs font-black text-white/65">Description<textarea value={description} onChange={(event) => setDescription(event.target.value.slice(0, 500))} placeholder="Tell viewers what to expect" className="mt-2 min-h-24 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 text-sm outline-none" /></label>
-                <label className="block text-xs font-black text-white/65">Category<select value={category} onChange={(event) => setCategory(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold">{CATEGORIES.map((item) => <option key={item} className="bg-black">{item}</option>)}</select></label>
-              </section>
-
-              <Button onClick={() => void openPreview()} disabled={preparing || (source === "screen" && !screenSupported)} variant="outline" className="h-11 w-full rounded-full border-white/15 bg-transparent text-white hover:bg-white/8">{preparing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MonitorUp className="h-4 w-4" />}{previewReady ? "Restart preview" : "Open preview"}</Button>
-            </div>
-          ) : (
-            <div className="flex min-h-[42dvh] flex-col lg:min-h-[calc(100dvh-4rem)]">
-              <div className="grid grid-cols-3 gap-2 border-b border-white/10 p-3">
-                <Metric icon={Eye} label="Watching" value={analytics.activeViewers} />
-                <Metric icon={Users} label="Unique" value={analytics.uniqueViewers} />
-                <Metric icon={Activity} label="Peak" value={peakViewers} />
-                <Metric icon={Heart} label="Likes" value={analytics.likesCount} />
-                <Metric icon={Share2} label="Shares" value={analytics.sharesCount} />
-                <Metric icon={Clock3} label="Live" value={formatDuration(secondsLive)} />
-              </div>
-              <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3"><MessageCircle className="h-4 w-4 text-white/40" /><h2 className="text-sm font-black">Live chat</h2><span className="ml-auto text-[10px] text-white/35">{comments.length}</span></div>
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-                {comments.length ? comments.map((item) => <p key={item.id} className="text-sm leading-5"><strong className="mr-1.5">{item.author?.displayName || "Viewer"}</strong><span className="text-white/65">{item.text}</span></p>) : <p className="py-12 text-center text-xs text-white/30">Viewer comments will appear here.</p>}
-              </div>
-              <div className="flex gap-2 border-t border-white/10 p-3"><Input value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void postComment(); }} placeholder="Comment as host" className="h-11 rounded-full border-white/10 bg-white/5 text-white" /><Button size="icon" onClick={() => void postComment()} disabled={!comment.trim()} className="h-11 w-11 rounded-full"><Send className="h-4 w-4" /></Button></div>
-            </div>
-          )}
+          <div className="min-h-0 flex-1 overflow-y-auto p-5">
+            {!isLive ? <>
+              <label className="text-xs font-bold text-white/50">Title</label><Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={100} placeholder="What are you streaming?" className="mt-2 h-12 rounded-xl border-white/10 bg-white/5 text-white" />
+              <label className="mt-4 block text-xs font-bold text-white/50">Description</label><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} rows={3} className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 text-sm outline-none focus:border-blue-400/60" placeholder="Tell viewers what to expect" />
+              <label className="mt-4 block text-xs font-bold text-white/50">Category</label><select value={category} onChange={(event) => setCategory(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#151922] px-3 text-sm">{CATEGORIES.map((item) => <option key={item}>{item}</option>)}</select>
+              <div className="mt-5 grid grid-cols-2 gap-2"><SourceButton active={source === "camera"} icon={Camera} label="Camera" onClick={() => setSource("camera")} /><SourceButton active={source === "screen"} disabled={!screenSupported} icon={ScreenShare} label="Screen" onClick={() => setSource("screen")} /></div>
+              <div className="mt-4 space-y-3 rounded-2xl border border-white/8 bg-white/[.035] p-4"><ToggleRow label="Microphone" checked={microphoneEnabled} onClick={() => setMicrophoneEnabled((value) => !value)} /><ToggleRow label="Camera" checked={cameraEnabled} disabled={source === "screen"} onClick={() => setCameraEnabled((value) => !value)} />{source === "screen" ? <ToggleRow label="System audio" checked={systemAudioEnabled} onClick={() => setSystemAudioEnabled((value) => !value)} /> : null}</div>
+              {microphones.length ? <><label className="mt-4 block text-xs font-bold text-white/50">Microphone</label><select value={audioInputId} onChange={(event) => setAudioInputId(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#151922] px-3 text-xs">{microphones.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${index + 1}`}</option>)}</select></> : null}
+              {source === "camera" && cameras.length ? <><label className="mt-4 block text-xs font-bold text-white/50">Camera</label><select value={videoInputId} onChange={(event) => setVideoInputId(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#151922] px-3 text-xs">{cameras.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Camera ${index + 1}`}</option>)}</select></> : null}
+              {permissionError ? <p className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs leading-5 text-red-200">{permissionError}</p> : null}
+              <Button onClick={() => void openPreview()} disabled={preparing} className="mt-5 h-12 w-full rounded-xl bg-white font-black text-black hover:bg-white/90">{preparing ? <Loader2 className="h-4 w-4 animate-spin" /> : source === "screen" ? <MonitorUp className="h-4 w-4" /> : <Camera className="h-4 w-4" />}Open {source} preview</Button>
+            </> : <>
+              <div className="grid grid-cols-2 gap-2"><Metric icon={Users} label="Active" value={analytics.activeViewers} /><Metric icon={Wifi} label="Connected" value={connectedViewers} /><Metric icon={Eye} label="Reached" value={analytics.uniqueViewers} /><Metric icon={Activity} label="Peak" value={peakViewers} /></div>
+              <div className="mt-5 flex items-center gap-2"><Button onClick={() => void copyLink()} className="h-11 flex-1 rounded-xl bg-white text-black hover:bg-white/90"><Copy className="h-4 w-4" />Copy link</Button><Button onClick={() => void stopLive()} className="h-11 flex-1 rounded-xl bg-red-500 text-white hover:bg-red-600"><Square className="h-4 w-4 fill-current" />End live</Button></div>
+              <div className="mt-6 border-t border-white/10 pt-5"><h3 className="font-black">Host chat</h3><div className="mt-3 max-h-72 space-y-3 overflow-y-auto rounded-2xl bg-black/20 p-3">{comments.length ? comments.map((item) => <div key={item.id} className="text-sm"><strong>{item.author?.displayName || "Viewer"}</strong><span className="ml-2 text-white/60">{item.text}</span></div>) : <p className="py-8 text-center text-xs text-white/35">No comments yet</p>}</div><div className="mt-3 flex gap-2"><Input value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void postComment(); }} placeholder="Comment as host" className="h-11 rounded-full border-white/10 bg-white/5 text-white" /><Button size="icon" onClick={() => void postComment()} disabled={!comment.trim()} className="h-11 w-11 rounded-full"><Send className="h-4 w-4" /></Button></div></div>
+            </>}
+          </div>
         </aside>
       </div>
     </main>
   );
 }
 
-function MediaButton({ active, disabled, onClick, on: On, off: Off, label }: { active: boolean; disabled?: boolean; onClick: () => void; on: typeof Mic; off: typeof MicOff; label: string }) {
-  return <button type="button" onClick={onClick} disabled={disabled} aria-label={label} className={cn("grid h-12 w-12 place-items-center rounded-full transition disabled:opacity-30", active ? "bg-white/12 text-white" : "bg-white text-black")}>{active ? <On className="h-5 w-5" /> : <Off className="h-5 w-5" />}</button>;
+function ControlButton({ active, label, onClick, children }: { active: boolean; label: string; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} aria-label={label} className={cn("grid h-12 w-12 place-items-center rounded-full", active ? "bg-white text-black" : "bg-red-500 text-white")}>{children}</button>;
+}
+
+function SourceButton({ active, disabled, icon: Icon, label, onClick }: { active: boolean; disabled?: boolean; icon: typeof Camera; label: string; onClick: () => void }) {
+  return <button type="button" disabled={disabled} onClick={onClick} className={cn("flex h-20 flex-col items-center justify-center gap-2 rounded-2xl border text-sm font-bold", active ? "border-blue-400/60 bg-blue-400/12" : "border-white/8 bg-white/[.035]", disabled && "cursor-not-allowed opacity-30")}><Icon className="h-5 w-5" />{label}</button>;
+}
+
+function ToggleRow({ label, checked, disabled, onClick }: { label: string; checked: boolean; disabled?: boolean; onClick: () => void }) {
+  return <button type="button" disabled={disabled} onClick={onClick} className="flex w-full items-center justify-between text-sm disabled:opacity-35"><span>{label}</span><span className={cn("relative h-6 w-11 rounded-full", checked ? "bg-blue-500" : "bg-white/15")}><span className={cn("absolute top-1 h-4 w-4 rounded-full bg-white transition-transform", checked ? "translate-x-6" : "translate-x-1")} /></span></button>;
 }
 
 function StatusPill({ icon: Icon, text }: { icon: typeof Eye; text: string }) {
-  return <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/65 px-3 py-2 text-[11px] font-bold backdrop-blur-xl"><Icon className="h-3.5 w-3.5" />{text}</span>;
+  return <span className="flex items-center gap-1.5 rounded-full bg-black/65 px-3 py-1.5 text-[11px] font-bold backdrop-blur-xl"><Icon className="h-3.5 w-3.5" />{text}</span>;
 }
 
-function SourceButton({ active, disabled, icon: Icon, title, text, onClick }: { active: boolean; disabled?: boolean; icon: typeof Camera; title: string; text: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} disabled={disabled} className={cn("rounded-2xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-35", active ? "border-white bg-white text-black" : "border-white/10 bg-white/[.035] hover:bg-white/8")}><Icon className="h-5 w-5" /><p className="mt-3 text-sm font-black">{title}</p><p className={cn("mt-1 text-[10px] leading-4", active ? "text-black/55" : "text-white/38")}>{text}</p></button>;
-}
-
-function ToggleRow({ label, detail, checked, onChange }: { label: string; detail: string; checked: boolean; onChange: (value: boolean) => void }) {
-  return <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.025] p-3"><span className="min-w-0 flex-1"><span className="block text-sm font-black">{label}</span><span className="block text-[10px] leading-4 text-white/38">{detail}</span></span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-5 w-5 accent-white" /></label>;
-}
-
-function DeviceSelect({ label, value, devices, onChange }: { label: string; value: string; devices: MediaDeviceInfo[]; onChange: (value: string) => void }) {
-  return <label className="block text-[10px] font-black uppercase tracking-wider text-white/40">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold normal-case tracking-normal">{devices.map((device, index) => <option key={device.deviceId} value={device.deviceId} className="bg-black">{device.label || `${label} ${index + 1}`}</option>)}</select></label>;
-}
-
-function Metric({ icon: Icon, label, value }: { icon: typeof Eye; label: string; value: string | number }) {
-  return <div className="rounded-2xl border border-white/8 bg-white/[.035] p-3"><Icon className="h-4 w-4 text-white/35" /><p className="mt-2 text-lg font-black">{value}</p><p className="text-[9px] font-black uppercase tracking-wider text-white/28">{label}</p></div>;
+function Metric({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
+  return <div className="rounded-2xl border border-white/8 bg-white/[.035] p-4"><Icon className="h-4 w-4 text-white/40" /><strong className="mt-3 block text-2xl">{value}</strong><span className="text-[11px] text-white/35">{label}</span></div>;
 }
 
 function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = seconds % 60;
+  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}` : `${minutes}:${String(remaining).padStart(2, "0")}`;
 }
