@@ -52,7 +52,7 @@ for (const marker of ["var(--flux-visual-bottom)", "content-visibility: auto", "
 const root = read("src/app/layout.tsx");
 for (const marker of ["data-flux-ui=\"x3\"", "data-flux-release", "NEXT_PUBLIC_RELEASE_SHA", "flux-mobile-dock.css"]) requireText(root, marker, "Traceable Flux X3 release");
 
-const deploy = read(".github/workflows/deploy-pages.yml");
+const deploy = read(".github/workflows/publish-flux-live.yml");
 for (const marker of ["Force Pages to use GitHub Actions", "build_type=workflow", "release.json", "version.txt", "upload-pages-artifact@v3", "gh-pages", "data-flux-ui=\"x3\"", "flux-mobile-dock-portal"]) requireText(deploy, marker, "Dual Pages deployment");
 
 const media = read("src/services/media.ts");
