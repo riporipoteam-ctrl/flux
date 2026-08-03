@@ -235,49 +235,59 @@ export function generateTerrain(seed: number): Terrain {
     kind[index - WORLD_W] = "path";
   }
   for (let y = FARM_Y - 4; y < roadY; y += 1) {
-    const index = y * WORLD_W + (FARM_X - 3);
+    const index = y * WORLD_W + (FARM_X - 1);
     if (kind[index] !== "water") kind[index] = "path";
   }
 
-  // Trees and rocks outside the farm and off the road.
+  // A farmyard hugging the west and north edges of the field. In an isometric
+  // projection anything more than a few tiles away leaves the frame, so these
+  // sit deliberately tight to the plots. Depth (`h`) is the ridge direction:
+  // the roof kit tiles seamlessly along it, so buildings are deeper than wide.
+  const buildings: BuildingEntity[] = [
+    { id: "house", x: FARM_X - 4, y: FARM_Y, w: 2, h: 3 },
+    { id: "barn", x: FARM_X - 5, y: FARM_Y + 4, w: 3, h: 3 },
+    { id: "shed", x: FARM_X - 2, y: FARM_Y + 8, w: 1, h: 2 },
+    { id: "market", x: FARM_X + 1, y: FARM_Y - 3, w: 2, h: 2 },
+    { id: "well", x: FARM_X - 2, y: FARM_Y + 2, w: 1, h: 1 },
+    { id: "silo", x: FARM_X + 5, y: FARM_Y - 3, w: 1, h: 2, requiresUpgrade: "silo" },
+    { id: "greenhouse", x: FARM_X + 7, y: FARM_Y - 4, w: 2, h: 3, requiresUpgrade: "greenhouse" },
+    { id: "windmill", x: FARM_X - 4, y: FARM_Y - 4, w: 2, h: 2, requiresUpgrade: "windmill" },
+  ];
+
+  /** The yard the buildings stand in, kept clear of woodland. */
+  function inYard(x: number, y: number) {
+    return buildings.some(
+      (b) => x >= b.x - 1 && x < b.x + b.w + 1 && y >= b.y - 1 && y < b.y + b.h + 1
+    );
+  }
+
+  // Woodland everywhere outside the farm, the yard and the road. The density
+  // field gives the valley real stands of trees with clearings between them
+  // rather than an even dusting.
   for (let y = 1; y < WORLD_H - 1; y += 1) {
     for (let x = 1; x < WORLD_W - 1; x += 1) {
       const index = y * WORLD_W + x;
       const onFenceRing =
         x >= FARM_X - 1 && x <= FARM_X + FARM_W && y >= FARM_Y - 1 && y <= FARM_Y + FARM_H;
-      if (onFenceRing || kind[index] === "path" || kind[index] === "water" || kind[index] === "sand") continue;
+      if (onFenceRing || inYard(x, y)) continue;
+      if (kind[index] === "path" || kind[index] === "water" || kind[index] === "sand") continue;
       const roll = hash2(x, y, seed + 400);
       const density = smoothNoise(x, y, seed + 500, 9);
 
-      if (roll > 0.94 - density * 0.16) {
+      if (roll > 0.72 - density * 0.3) {
         const pine = smoothNoise(x, y, seed + 600, 12) > 0.55;
         props.push({ kind: pine ? "pine" : "tree", x, y, variant: Math.floor(roll * 3) });
         solid[index] = 1;
-      } else if (roll > 0.9) {
+      } else if (roll > 0.62) {
         props.push({ kind: "rock", x, y, variant: Math.floor(roll * 3) });
         solid[index] = 1;
-      } else if (roll > 0.86) {
-        props.push({ kind: "bush", x, y, variant: Math.floor(roll * 3) });
-      } else if (roll > 0.8) {
-        props.push({ kind: "flower", x, y, variant: Math.floor(roll * 4) });
+      } else if (roll > 0.5) {
+        props.push({ kind: "bush", x, y, variant: Math.floor(roll * 7) });
+      } else if (roll > 0.34) {
+        props.push({ kind: "flower", x, y, variant: Math.floor(roll * 11) });
       }
     }
   }
-
-  // Placed as a farmyard hugging the west and north edges of the field. In an
-  // isometric projection anything more than a few tiles away leaves the frame,
-  // so these sit deliberately tight to the plots.
-  const buildings: BuildingEntity[] = [
-    { id: "house", x: FARM_X - 2, y: FARM_Y, w: 1, h: 1 },
-    { id: "barn", x: FARM_X - 2, y: FARM_Y + 2, w: 1, h: 1 },
-    { id: "shed", x: FARM_X - 2, y: FARM_Y + 4, w: 1, h: 1 },
-    { id: "well", x: FARM_X - 1, y: FARM_Y + 6, w: 1, h: 1 },
-    { id: "market", x: FARM_X + 2, y: FARM_Y - 2, w: 1, h: 1 },
-    { id: "silo", x: FARM_X + 4, y: FARM_Y - 2, w: 1, h: 1, requiresUpgrade: "silo" },
-    { id: "greenhouse", x: FARM_X + 6, y: FARM_Y - 2, w: 1, h: 1, requiresUpgrade: "greenhouse" },
-    { id: "windmill", x: FARM_X - 2, y: FARM_Y - 2, w: 1, h: 1, requiresUpgrade: "windmill" },
-  ];
-
 
   // Fence the farm rectangle so the play space reads as a farm, not a field.
   for (let x = FARM_X - 1; x <= FARM_X + FARM_W; x += 1) {
@@ -390,9 +400,9 @@ export function createFarmSave(uid: string, displayName: string, avatarUrl: stri
     storyProgress: {},
     activeEvent: null,
 
-    // On the yard path level with the field gate, clear of every building
+    // On the yard lane level with the field gate, clear of every building
     // footprint (`nearestFreePoint` is the runtime safety net for old saves).
-    playerX: (FARM_X - 3) * TILE,
+    playerX: (FARM_X - 1) * TILE,
     playerY: (FARM_Y + 4) * TILE,
 
     stats: {

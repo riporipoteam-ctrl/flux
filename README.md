@@ -43,8 +43,9 @@ playable on phone, tablet and desktop.
 | `src/lib/flux-farm/content.ts` | Balance data: 12 crops, 4 seasons, 9 weather types, 15 ranks, 6 farmhands, 10 upgrades, 9 world events, 10 story chapters |
 | `src/lib/flux-farm/world.ts` | Deterministic 48×36 valley generation, plots, save schema and v1→v2 migration |
 | `src/lib/flux-farm/simulation.ts` | Time, growth, soil moisture, quality, weather, events, wages, economy, farmhand AI, movement, actions |
-| `src/lib/flux-farm/sprites.ts` | Procedural pixel-art atlas — tiles, crop stages, character walk cycles, buildings, props |
-| `src/lib/flux-farm/renderer.ts` | Layered canvas renderer: camera, Y-sorted entities, day/night lighting with point lights, weather particles, floaters |
+| `src/lib/flux-farm/iso-renderer.ts` | Isometric canvas renderer: sprite atlas, modular buildings, terrain, scenery, figures, lighting, weather, floaters |
+| `public/game-assets/flux-farm/` | The CC0 sprite atlas and its manifest (`CREDITS.md` records provenance) |
+| `scripts/vendor-flux-farm-art.py` | Re-cuts that atlas from the upstream CC0 packs |
 | `src/lib/flux-farm/audio.ts` | Web Audio engine — adaptive music sequencer plus synthesised ambience and SFX |
 | `src/components/game/flux-farm/flux-farm-game.tsx` | Canvas host, game loop, input, HUD and panels |
 
@@ -60,9 +61,15 @@ field expansions all read from `content.ts`.
 localStorage so a dropped connection never costs progress. The in-game
 leaderboard reads the same collection ordered by XP.
 
-**Controls.** Desktop — WASD/arrows, Space or E to use the tool, 1–5 to switch
-tools, Tab to change seed, Esc to pause. Touch — left stick to walk, hold the
-action button to work, or tap any nearby tile.
+**Art.** Buildings are assembled tile by tile out of Kenney's modular isometric
+farm kit — perimeter walls in all four rotations under a gabled roof — so a
+barn is a real barn rather than one sprite. Terrain, woodland and crops come
+from three CC0 packs; farmhands are drawn on the canvas because none of the
+packs ship characters in this style.
+
+**Controls.** Desktop — drag to pan, wheel to zoom, click a plot to work it,
+1–5 to switch tools, Tab to change seed, Esc to pause. Touch — drag to pan,
+pinch to zoom, tap a plot to work it.
 
 **Audio.** Music, weather and effects are synthesised live in the browser: no
 downloads, no licensing ambiguity, and the score reacts to season, clock and
