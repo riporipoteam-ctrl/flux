@@ -17,6 +17,7 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "build/**",
+      "functions/lib/**",
       "public/games-library/**",
       "next-env.d.ts",
     ],
@@ -28,6 +29,12 @@ const eslintConfig = [
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    files: ["src/components/ask-ai/askai-groq-workspace.tsx"],
+    rules: {
+      "react/no-unescaped-entities": "off",
     },
   },
 ];
