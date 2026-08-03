@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { useState } from "react";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
+import { FluxMark } from "@/components/shared/logo";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -28,6 +29,7 @@ export function MobileAppHeader() {
   const pathname = usePathname() || "/home";
   const { profile } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const home = pathname === "/home";
 
   return (
     <>
@@ -36,7 +38,9 @@ export function MobileAppHeader() {
           <button type="button" onClick={() => setDrawerOpen(true)} className="flux8-mobile-avatar" aria-label="Open navigation menu" aria-expanded={drawerOpen}>
             <UserAvatar user={profile} size="sm" clickable={false} decorations={profile?.decorations} />
           </button>
-          <Link href="/home" className="flux8-mobile-title" aria-label="Flux home"><strong>{sectionLabel(pathname)}</strong></Link>
+          <Link href="/home" className="flux8-mobile-title" aria-label="Flux home">
+            {home ? <FluxMark size={31} /> : <strong>{sectionLabel(pathname)}</strong>}
+          </Link>
           <div className="flux8-mobile-header-actions">
             <Link href="/explore" className="flux8-mobile-header-action" aria-label="Search Flux"><Search className="h-[21px] w-[21px]" /></Link>
           </div>
