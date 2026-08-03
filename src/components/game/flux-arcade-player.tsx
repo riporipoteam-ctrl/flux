@@ -4,15 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Award,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Crown,
-  Gamepad2,
   Loader2,
   Medal,
   Play,
   RefreshCw,
+  Share2,
   Sparkles,
   Trophy,
   Volume2,
@@ -22,6 +23,12 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import type { FluxArcadeGame } from "@/data/flux-arcade-games";
 import { getGameLeaderboard, submitGameScore, type GameLeaderboardEntry } from "@/services/game-leaderboards";
+import {
+  recordGameFinished,
+  recordGameOpened,
+  resultShareText,
+  type ArcadeAchievement,
+} from "@/lib/game-progress";
 import { cn } from "@/lib/utils";
 
 const LANES = [0, 1, 2] as const;
@@ -42,12 +49,14 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
   const { user, profile } = useAuth();
   const [phase, setPhase] = useState<Phase>("ready");
   const [score, setScore] = useState(0);
+  const scoreRef = useRef(0);
   const [timeLeft, setTimeLeft] = useState(game.roundSeconds);
   const [best, setBest] = useState(0);
   const [sound, setSound] = useState(true);
   const [leaderboard, setLeaderboard] = useState<GameLeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [newAchievements, setNewAchievements] = useState<ArcadeAchievement[]>([]);
 
   const [jumping, setJumping] = useState(false);
   const [obstacle, setObstacle] = useState(100);
@@ -62,6 +71,15 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
 
   const difficultyLabel = ["", "Easy", "Normal", "Skilled", "Hard", "Extreme"][game.difficulty];
 
+  const replaceScore = useCallback((value: number) => {
+    const clean = Math.max(0, Math.floor(value));
+    scoreRef.current = clean;
+    setScore(clean);
+    return clean;
+  }, []);
+
+  const addScore = useCallback((amount: number) => replaceScore(scoreRef.current + amount), [replaceScore]);
+
   const loadLeaderboard = useCallback(() => {
     setLeaderboardLoading(true);
     getGameLeaderboard(game.slug, 12)
@@ -71,9 +89,10 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
   }, [game.slug]);
 
   useEffect(() => {
+    recordGameOpened(game);
     try { setBest(Number(localStorage.getItem(localBestKey(game.slug)) || 0)); } catch { setBest(0); }
     loadLeaderboard();
-  }, [game.slug, loadLeaderboard]);
+  }, [game, loadLeaderboard]);
 
   const beep = useCallback((frequency = 520, duration = 0.055) => {
     if (!sound) return;
@@ -92,21 +111,24 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
       oscillator.stop(context.currentTime + duration);
       oscillator.addEventListener("ended", () => void context.close(), { once: true });
     } catch {
-      // Audio is a bonus and never blocks a round.
+      // Sound never blocks gameplay.
     }
   }, [sound]);
 
-  const finish = useCallback(async (finalScore = score) => {
+  const finish = useCallback(async (finalScore = scoreRef.current) => {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    const clean = Math.max(0, Math.floor(finalScore));
-    setScore(clean);
+    const clean = replaceScore(finalScore);
     setPhase("ended");
     setBest((current) => {
       const next = Math.max(current, clean);
       try { localStorage.setItem(localBestKey(game.slug), String(next)); } catch { /* private mode */ }
       return next;
     });
+
+    const progressResult = recordGameFinished(game, clean);
+    setNewAchievements(progressResult.unlocked);
+    progressResult.unlocked.forEach((achievement) => toast.success(`${achievement.symbol} Achievement unlocked: ${achievement.title}`));
     beep(clean >= game.targetScore ? 880 : 180, 0.14);
 
     if (!user) return;
@@ -120,19 +142,35 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
         avatarUrl: profile?.avatarUrl,
         score: clean,
       });
-      if (result.improved) toast.success("New leaderboard best!");
+      if (result.improved) toast.success("New global leaderboard best!");
       loadLeaderboard();
     } catch (error) {
       console.error(error);
-      toast.error("Score saved on this device, but the global leaderboard could not update.");
+      toast.error("Your score is saved on this device, but the global leaderboard could not update.");
     } finally {
       setSubmitting(false);
     }
-  }, [beep, game.slug, game.targetScore, loadLeaderboard, profile, score, user]);
+  }, [beep, game, loadLeaderboard, profile, replaceScore, user]);
+
+  const shareResult = useCallback(async () => {
+    const text = resultShareText(game, scoreRef.current);
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: game.title, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text}${url ? ` ${url}` : ""}`);
+      toast.success("Result copied to clipboard");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error("Could not share this result");
+    }
+  }, [game]);
 
   const resetRound = useCallback(() => {
     finishedRef.current = false;
-    setScore(0);
+    replaceScore(0);
     setTimeLeft(game.roundSeconds);
     setJumping(false);
     setObstacle(100);
@@ -143,9 +181,10 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
     setQuestStep(0);
     setPuzzleStep(0);
     setPuzzleTarget(Math.floor(seeded(game.seed, 2) * PUZZLE_SYMBOLS.length));
+    setNewAchievements([]);
     setPhase("playing");
     beep(440, 0.08);
-  }, [beep, game.roundSeconds, game.seed]);
+  }, [beep, game.roundSeconds, game.seed, replaceScore]);
 
   useEffect(() => {
     if (phase !== "playing") return;
@@ -153,7 +192,7 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
       setTimeLeft((current) => {
         if (current <= 1) {
           window.clearInterval(timer);
-          queueMicrotask(() => void finish());
+          queueMicrotask(() => void finish(scoreRef.current));
           return 0;
         }
         return current - 1;
@@ -168,35 +207,35 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
       setObstacle((current) => {
         const next = current - game.speed * 3.2;
         if (next <= 8) {
-          if (!jumping) queueMicrotask(() => void finish(score));
+          if (!jumping) queueMicrotask(() => void finish(scoreRef.current));
           else {
-            setScore((value) => value + 12 + game.difficulty * 2);
+            addScore(12 + game.difficulty * 2);
             beep(650);
           }
           return 100;
         }
         return next;
       });
-      setScore((value) => value + 1);
+      addScore(1);
     }, 90);
     return () => window.clearInterval(tick);
-  }, [beep, finish, game.difficulty, game.mode, game.speed, jumping, phase, score]);
+  }, [addScore, beep, finish, game.difficulty, game.mode, game.speed, jumping, phase]);
 
   useEffect(() => {
     if (phase !== "playing" || game.mode !== "survival") return;
     let wave = 0;
     const tick = window.setInterval(() => {
       wave += 1;
-      const nextLane = Math.floor(seeded(game.seed, wave + score) * 3);
+      const nextLane = Math.floor(seeded(game.seed, wave + scoreRef.current) * 3);
       setHazardLane(nextLane);
-      if (nextLane === lane) queueMicrotask(() => void finish(score));
+      if (nextLane === lane) queueMicrotask(() => void finish(scoreRef.current));
       else {
-        setScore((value) => value + 8 + game.difficulty * 3);
+        addScore(8 + game.difficulty * 3);
         beep(360 + nextLane * 90);
       }
     }, Math.max(430, 1080 - game.difficulty * 90));
     return () => window.clearInterval(tick);
-  }, [beep, finish, game.difficulty, game.mode, game.seed, lane, phase, score]);
+  }, [addScore, beep, finish, game.difficulty, game.mode, game.seed, lane, phase]);
 
   const jump = useCallback(() => {
     if (phase !== "playing" || game.mode !== "runner" || jumping) return;
@@ -213,42 +252,40 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
 
   const collect = useCallback(() => {
     if (phase !== "playing" || game.mode !== "tycoon") return;
-    setScore((current) => current + income);
+    addScore(income);
     beep(560 + Math.min(300, income * 8), 0.035);
-  }, [beep, game.mode, income, phase]);
+  }, [addScore, beep, game.mode, income, phase]);
 
   const upgrade = useCallback(() => {
-    if (phase !== "playing" || game.mode !== "tycoon" || score < upgradeCost) return;
-    setScore((current) => current - upgradeCost);
+    if (phase !== "playing" || game.mode !== "tycoon" || scoreRef.current < upgradeCost) return;
+    replaceScore(scoreRef.current - upgradeCost);
     setIncome((current) => current + 1 + Math.floor(game.difficulty / 2));
     setUpgradeCost((current) => Math.ceil(current * 1.7));
     beep(920, 0.1);
-  }, [beep, game.difficulty, game.mode, phase, score, upgradeCost]);
+  }, [beep, game.difficulty, game.mode, phase, replaceScore, upgradeCost]);
 
   const answerQuest = useCallback((choice: number) => {
     if (phase !== "playing" || game.mode !== "quest") return;
     const correct = Math.floor(seeded(game.seed, questStep + 20) * 3);
-    const nextScore = score + (choice === correct ? 120 : 35);
-    setScore(nextScore);
+    const nextScore = addScore(choice === correct ? 120 : 35);
     beep(choice === correct ? 820 : 230, 0.09);
     if (questStep >= 9) void finish(nextScore);
     else setQuestStep((current) => current + 1);
-  }, [beep, finish, game.mode, game.seed, phase, questStep, score]);
+  }, [addScore, beep, finish, game.mode, game.seed, phase, questStep]);
 
   const answerPuzzle = useCallback((choice: number) => {
     if (phase !== "playing" || game.mode !== "puzzle") return;
     if (choice !== puzzleTarget) {
-      void finish(score);
+      void finish(scoreRef.current);
       return;
     }
     const nextStep = puzzleStep + 1;
-    const nextScore = score + 100 + nextStep * 15;
-    setScore(nextScore);
+    const nextScore = addScore(100 + nextStep * 15);
     setPuzzleStep(nextStep);
     setPuzzleTarget(Math.floor(seeded(game.seed, nextStep + 3) * PUZZLE_SYMBOLS.length));
     beep(760 + nextStep * 12);
     if (nextStep >= 11) void finish(nextScore);
-  }, [beep, finish, game.mode, game.seed, phase, puzzleStep, puzzleTarget, score]);
+  }, [addScore, beep, finish, game.mode, game.seed, phase, puzzleStep, puzzleTarget]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -295,7 +332,7 @@ export function FluxArcadePlayer({ game }: { game: FluxArcadeGame }) {
               <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:48px_48px]" />
               <div className="absolute left-5 top-5 rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] backdrop-blur">{game.symbol} {game.genre}</div>
               {phase === "ready" ? <ReadyOverlay game={game} onStart={resetRound} /> : null}
-              {phase === "ended" ? <EndOverlay game={game} score={score} best={best} submitting={submitting} onRestart={resetRound} /> : null}
+              {phase === "ended" ? <EndOverlay game={game} score={score} best={best} submitting={submitting} achievements={newAchievements} onRestart={resetRound} onShare={() => void shareResult()} /> : null}
               {phase === "playing" ? (
                 <div className="absolute inset-0 flex items-center justify-center p-5 sm:p-8">
                   {game.mode === "runner" ? <RunnerStage jumping={jumping} obstacle={obstacle} symbol={game.symbol} onJump={jump} /> : null}
@@ -329,9 +366,9 @@ function ReadyOverlay({ game, onStart }: { game: FluxArcadeGame; onStart: () => 
   return <div className="absolute inset-0 z-10 grid place-items-center bg-black/26 p-6 text-center backdrop-blur-[2px]"><div className="max-w-lg"><span className="mx-auto grid h-24 w-24 place-items-center rounded-[32px] border border-white/15 bg-white/10 text-5xl shadow-2xl backdrop-blur-xl">{game.symbol}</span><p className="mt-6 text-[11px] font-black uppercase tracking-[.2em] text-white/50">Flux Arcade original</p><h2 className="mt-2 text-4xl font-black tracking-[-.055em] sm:text-6xl">{game.title}</h2><p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/58">{game.shortDescription}</p><button onClick={onStart} className="mx-auto mt-7 flex h-14 items-center gap-2 rounded-full bg-white px-8 text-sm font-black text-black shadow-xl transition hover:scale-[1.02] active:scale-95"><Play className="h-5 w-5 fill-current" />Start round</button></div></div>;
 }
 
-function EndOverlay({ game, score, best, submitting, onRestart }: { game: FluxArcadeGame; score: number; best: number; submitting: boolean; onRestart: () => void }) {
+function EndOverlay({ game, score, best, submitting, achievements, onRestart, onShare }: { game: FluxArcadeGame; score: number; best: number; submitting: boolean; achievements: ArcadeAchievement[]; onRestart: () => void; onShare: () => void }) {
   const won = score >= game.targetScore;
-  return <div className="absolute inset-0 z-10 grid place-items-center bg-black/58 p-6 text-center backdrop-blur-md"><div className="max-w-lg"><span className={cn("mx-auto grid h-20 w-20 place-items-center rounded-[28px] text-4xl", won ? "bg-emerald-400/18" : "bg-white/10")}>{won ? "🏆" : game.symbol}</span><p className="mt-5 text-[11px] font-black uppercase tracking-[.2em] text-white/45">{won ? "Target cleared" : "Round complete"}</p><h2 className="mt-2 text-5xl font-black tracking-[-.06em]">{score.toLocaleString()}</h2><p className="mt-2 text-sm text-white/48">Personal best {best.toLocaleString()}{submitting ? " · syncing leaderboard…" : ""}</p><button onClick={onRestart} className="mx-auto mt-7 flex h-13 items-center gap-2 rounded-full bg-white px-7 text-sm font-black text-black transition active:scale-95"><RefreshCw className="h-4 w-4" />Play again</button></div></div>;
+  return <div className="absolute inset-0 z-10 grid place-items-center overflow-y-auto bg-black/64 p-6 text-center backdrop-blur-md"><div className="max-w-lg py-6"><span className={cn("mx-auto grid h-20 w-20 place-items-center rounded-[28px] text-4xl", won ? "bg-emerald-400/18" : "bg-white/10")}>{won ? "🏆" : game.symbol}</span><p className="mt-5 text-[11px] font-black uppercase tracking-[.2em] text-white/45">{won ? "Target cleared" : "Round complete"}</p><h2 className="mt-2 text-5xl font-black tracking-[-.06em]">{score.toLocaleString()}</h2><p className="mt-2 text-sm text-white/48">Personal best {best.toLocaleString()}{submitting ? " · syncing leaderboard…" : ""}</p>{achievements.length ? <div className="mx-auto mt-5 max-w-sm rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-left"><p className="flex items-center gap-2 text-xs font-black text-amber-200"><Award className="h-4 w-4" />New achievement{achievements.length > 1 ? "s" : ""}</p>{achievements.map((achievement) => <p key={achievement.id} className="mt-2 text-xs text-white/70">{achievement.symbol} <strong>{achievement.title}</strong> — {achievement.description}</p>)}</div> : null}<div className="mt-7 flex flex-wrap justify-center gap-3"><button onClick={onRestart} className="flex h-12 items-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black transition active:scale-95"><RefreshCw className="h-4 w-4" />Play again</button><button onClick={onShare} className="flex h-12 items-center gap-2 rounded-full border border-white/18 bg-white/10 px-6 text-sm font-black text-white transition hover:bg-white/16 active:scale-95"><Share2 className="h-4 w-4" />Share result</button></div></div></div>;
 }
 
 function RunnerStage({ jumping, obstacle, symbol, onJump }: { jumping: boolean; obstacle: number; symbol: string; onJump: () => void }) {
@@ -343,7 +380,7 @@ function SurvivalStage({ lane, hazardLane, symbol, onMove }: { lane: number; haz
 }
 
 function TycoonStage({ score, income, upgradeCost, symbol, onCollect, onUpgrade }: { score: number; income: number; upgradeCost: number; symbol: string; onCollect: () => void; onUpgrade: () => void }) {
-  return <div className="w-full max-w-xl text-center"><button onClick={onCollect} className="mx-auto grid h-48 w-48 place-items-center rounded-[54px] border border-white/15 bg-white/12 text-7xl shadow-2xl transition hover:scale-[1.03] active:scale-90">{symbol}</button><p className="mt-5 text-sm font-black">Tap to earn +{income}</p><button onClick={onUpgrade} disabled={score < upgradeCost} className="mt-5 h-13 rounded-full bg-white px-6 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-35"><Sparkles className="mr-2 inline h-4 w-4" />Upgrade income · {upgradeCost}</button></div>;
+  return <div className="w-full max-w-xl text-center"><button onClick={onCollect} className="mx-auto grid h-48 w-48 place-items-center rounded-[54px] border border-white/15 bg-white/12 text-7xl shadow-2xl transition hover:scale-[1.03] active:scale-90">{symbol}</button><p className="mt-5 text-sm font-black">Tap to earn +{income}</p><button onClick={onUpgrade} disabled={score < upgradeCost} className="mt-5 h-12 rounded-full bg-white px-6 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-35"><Sparkles className="mr-2 inline h-4 w-4" />Upgrade income · {upgradeCost}</button></div>;
 }
 
 function QuestStage({ game, step, onAnswer }: { game: FluxArcadeGame; step: number; onAnswer: (choice: number) => void }) {

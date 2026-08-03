@@ -1,0 +1,117 @@
+name: Publish Flux Live X3
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: flux-live-x3
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact release
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Force Pages to use GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
+          STATUS=$?
+          if [ "$STATUS" -ne 0 ]; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
+          fi
+          set -e
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare static-only build
+        run: rm -rf src/app/api
+
+      - name: Build static export
+        env:
+          GITHUB_PAGES: "true"
+          NEXT_PUBLIC_RELEASE_SHA: ${{ github.sha }}
+          NEXT_PUBLIC_ASK_AI_ENDPOINT: ${{ vars.NEXT_PUBLIC_ASK_AI_ENDPOINT }}
+          NEXT_PUBLIC_TURN_URL: ${{ vars.NEXT_PUBLIC_TURN_URL }}
+          NEXT_PUBLIC_TURN_USERNAME: ${{ vars.NEXT_PUBLIC_TURN_USERNAME }}
+          NEXT_PUBLIC_TURN_CREDENTIAL: ${{ secrets.NEXT_PUBLIC_TURN_CREDENTIAL }}
+        run: npm run build
+
+      - name: Verify the X3 shell and body-level dock
+        run: |
+          test -f out/index.html
+          test -f out/home/index.html
+          test -f out/games/index.html
+          grep -R -q 'data-flux-ui="x3"' out
+          grep -q 'createPortal' src/components/layout/mobile-nav.tsx
+          grep -R -q 'data-flux-mobile-dock' out/_next/static
+          grep -R -q 'flux-mobile-dock-portal' out/_next/static
+          grep -R -q '2147482000' out/_next/static
+
+      - name: Add release proof and no-cache fallbacks
+        run: |
+          touch out/.nojekyll
+          cp out/index.html out/404.html
+          printf '%s\n' '${{ github.sha }}' > out/version.txt
+          printf '{"release":"%s","ui":"x3","dock":"body-portal","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+      - name: Publish identical fallback to gh-pages branch
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          git init
+          git checkout -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Publish Flux ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin gh-pages
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 15
+    steps:
+      - name: Deploy verified Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Print deployed release
+        run: |
+          echo "Flux release: ${{ github.sha }}"
+          echo "Pages URL: ${{ steps.deployment.outputs.page_url }}"

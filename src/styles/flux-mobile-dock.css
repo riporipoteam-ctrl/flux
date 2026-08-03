@@ -1,0 +1,121 @@
+/* The phone dock lives in a body portal, outside RouteMotion transforms.
+   These rules are intentionally isolated and loaded last so no old Flux theme
+   can hide, clip or restyle the primary mobile navigation. */
+
+.flux-mobile-dock-portal {
+  display: none;
+}
+
+.flux-mobile-dock-label {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .flux-mobile-dock-portal {
+    position: fixed !important;
+    z-index: 2147482000 !important;
+    right: 0 !important;
+    bottom: max(0px, var(--flux-visual-bottom, 0px)) !important;
+    left: 0 !important;
+    display: block !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 0 0 env(safe-area-inset-bottom, 0px) !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-top: 1px solid var(--v8-line, rgba(15, 20, 25, .14)) !important;
+    border-radius: 0 !important;
+    background: color-mix(in srgb, var(--v8-panel, #fff) 96%, transparent) !important;
+    box-shadow: 0 -8px 30px rgba(15, 20, 25, .08) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    transform: translate3d(0, 0, 0) !important;
+    isolation: isolate;
+    contain: layout paint style;
+    backdrop-filter: blur(24px) saturate(1.45) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.45) !important;
+  }
+
+  .flux-mobile-dock-portal .flux8-mobile-nav-grid {
+    display: grid !important;
+    width: 100% !important;
+    height: 64px !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    align-items: center !important;
+    gap: 0 !important;
+    padding: 3px 6px 2px !important;
+  }
+
+  .flux-mobile-dock-portal .flux8-mobile-tab {
+    position: relative !important;
+    display: flex !important;
+    min-width: 0 !important;
+    height: 58px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: var(--v8-muted, #536471) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .flux-mobile-dock-portal .flux8-mobile-tab svg {
+    display: block !important;
+    flex: 0 0 auto !important;
+  }
+
+  .flux-mobile-dock-portal .flux8-mobile-tab.is-active {
+    color: var(--v8-text, #0f1419) !important;
+    font-weight: 800 !important;
+  }
+
+  .flux-mobile-dock-portal .flux8-mobile-tab.is-active::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 4px !important;
+    left: 50% !important;
+    width: 5px !important;
+    height: 5px !important;
+    border-radius: 999px !important;
+    background: var(--v8-accent, #1d9bf0) !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .flux-mobile-dock-portal .flux8-mobile-tab-create {
+    width: auto !important;
+    height: 58px !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: var(--v8-text, #0f1419) !important;
+    box-shadow: none !important;
+  }
+
+  .flux-mobile-dock-label {
+    display: block !important;
+    max-width: 100%;
+    overflow: hidden;
+    color: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .flux-mobile-dock-portal {
+    display: none !important;
+  }
+}
