@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Camera, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import {
+  ArrowLeft,
+  Camera,
+  CheckCircle2,
+  ImageIcon,
+  Loader2,
+  Save,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -14,22 +22,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { AvatarPicker } from "@/components/profile/avatar-picker";
-import {
-  claimUsername,
-  isUsernameAvailable,
-  updateUserProfile,
-} from "@/services/users";
+import { claimUsername, isUsernameAvailable, updateUserProfile } from "@/services/users";
 import { uploadAvatar, uploadBanner } from "@/services/media";
 import { MAX_BIO_LENGTH } from "@/lib/constants";
-import { MOOD_OPTIONS, PROFILE_ACCENTS } from "@/lib/default-avatars";
-import { cn, formatUsername } from "@/lib/utils";
-import { PageTransition } from "@/components/shared/page-transition";
+import { formatUsername } from "@/lib/utils";
 import { assetUrl } from "@/lib/asset-url";
 import { profilePath } from "@/lib/routes";
 
 export default function EditProfilePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, updateProfileOptimistic } = useAuth();
   const router = useRouter();
+  const bannerBlobRef = useRef<string | null>(null);
+  const avatarBlobRef = useRef<string | null>(null);
 
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
@@ -40,11 +44,7 @@ export default function EditProfilePage() {
   const [tiktok, setTiktok] = useState("");
   const [youtube, setYoutube] = useState("");
   const [xLink, setXLink] = useState("");
-  const [mood, setMood] = useState<string | null>(null);
-  const [accent, setAccent] = useState("#0f1419");
-  const [accountType, setAccountType] = useState<"personal" | "business">(
-    "personal"
-  );
+  const [accountType, setAccountType] = useState<"personal" | "business">("personal");
   const [businessName, setBusinessName] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -52,6 +52,8 @@ export default function EditProfilePage() {
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveStage, setSaveStage] = useState("Ready");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -64,8 +66,6 @@ export default function EditProfilePage() {
     setTiktok(profile.socialLinks?.tiktok || "");
     setYoutube(profile.socialLinks?.youtube || "");
     setXLink(profile.socialLinks?.x || "");
-    setMood(profile.mood);
-    setAccent(profile.profileAccent || "#0f1419");
     setAccountType(profile.accountType === "business" ? "business" : "personal");
     setBusinessName(profile.businessName || "");
     setIsPrivate(profile.isPrivate ?? false);
@@ -73,54 +73,75 @@ export default function EditProfilePage() {
     setBannerPreview(profile.bannerUrl);
   }, [profile]);
 
-  const save = async () => {
-    if (!user || !profile) return;
-    setSaving(true);
-    try {
-      let avatarUrl =
-        avatarPreview && !avatarPreview.startsWith("blob:")
-          ? avatarPreview
-          : profile.avatarUrl;
-      let bannerUrl =
-        bannerPreview && !bannerPreview.startsWith("blob:")
-          ? bannerPreview
-          : profile.bannerUrl;
-      if (avatarFile) avatarUrl = await uploadAvatar(user.uid, avatarFile);
-      if (bannerFile) bannerUrl = await uploadBanner(user.uid, bannerFile);
+  useEffect(() => () => {
+    if (avatarBlobRef.current) URL.revokeObjectURL(avatarBlobRef.current);
+    if (bannerBlobRef.current) URL.revokeObjectURL(bannerBlobRef.current);
+  }, []);
 
+  const setLocalFile = (kind: "avatar" | "banner", file: File) => {
+    if (!file.type.startsWith("image/")) return toast.error("Choose an image file.");
+    if (file.size > 30 * 1024 * 1024) return toast.error("Image must be under 30 MB before compression.");
+    const url = URL.createObjectURL(file);
+    if (kind === "avatar") {
+      if (avatarBlobRef.current) URL.revokeObjectURL(avatarBlobRef.current);
+      avatarBlobRef.current = url;
+      setAvatarFile(file);
+      setAvatarPreview(url);
+    } else {
+      if (bannerBlobRef.current) URL.revokeObjectURL(bannerBlobRef.current);
+      bannerBlobRef.current = url;
+      setBannerFile(file);
+      setBannerPreview(url);
+    }
+  };
+
+  const save = async () => {
+    if (!user || !profile || saving) return;
+    setSaving(true);
+    setUploadProgress(null);
+    const warnings: string[] = [];
+
+    try {
       const nextUsername = formatUsername(username);
       if (nextUsername !== profile.username) {
+        setSaveStage("Checking username…");
         const available = await isUsernameAvailable(nextUsername);
-        if (!available) {
-          toast.error("Username is taken");
-          setSaving(false);
-          return;
-        }
+        if (!available) throw new Error("Username is taken");
         await claimUsername(user.uid, nextUsername);
       }
 
-      await updateUserProfile(user.uid, {
+      let avatarUrl = profile.avatarUrl || "/avatars/fox.png";
+      let bannerUrl = profile.bannerUrl ?? null;
+
+      if (avatarFile) {
+        setSaveStage("Compressing and uploading avatar…");
+        try {
+          avatarUrl = await uploadAvatar(user.uid, avatarFile, setUploadProgress);
+        } catch (error) {
+          warnings.push(`Avatar: ${error instanceof Error ? error.message : "upload failed"}`);
+        }
+      }
+
+      if (bannerFile) {
+        setSaveStage("Compressing and uploading banner…");
+        setUploadProgress(0);
+        try {
+          bannerUrl = await uploadBanner(user.uid, bannerFile, setUploadProgress);
+        } catch (error) {
+          warnings.push(`Banner: ${error instanceof Error ? error.message : "upload failed"}`);
+        }
+      }
+
+      const patch = {
         displayName: displayName.trim() || profile.displayName || "Flux User",
         bio: bio.trim().slice(0, MAX_BIO_LENGTH),
         location: location.trim() || null,
         website: website.trim() || null,
-        avatarUrl: avatarUrl || profile.avatarUrl || "/avatars/fox.png",
-        bannerUrl: bannerUrl ?? null,
-        mood: mood === "none" || !mood ? null : mood,
-        profileAccent: accent || "#0f1419",
+        avatarUrl,
+        bannerUrl,
         accountType,
-        businessName:
-          accountType === "business" ? businessName.trim() || displayName : null,
+        businessName: accountType === "business" ? businessName.trim() || displayName.trim() : null,
         isPrivate,
-        // Business accounts get the briefcase verified style
-        ...(accountType === "business"
-          ? {
-              isVerified: true,
-              verifiedType: "business" as const,
-            }
-          : profile.verifiedType === "business"
-            ? { verifiedType: "flux" as const }
-            : {}),
         socialLinks: {
           instagram: instagram.trim(),
           tiktok: tiktok.trim(),
@@ -128,290 +149,86 @@ export default function EditProfilePage() {
           x: xLink.trim(),
           website: website.trim(),
         },
-      });
+      } as const;
 
-      await refreshProfile();
-      toast.success("Profile updated");
+      setSaveStage("Saving profile…");
+      updateProfileOptimistic(patch);
+      await updateUserProfile(user.uid, {
+        ...patch,
+        ...(accountType === "business"
+          ? { isVerified: true, verifiedType: "business" as const }
+          : profile.verifiedType === "business"
+            ? { verifiedType: "flux" as const }
+            : {}),
+      });
+      await refreshProfile().catch(() => undefined);
+
+      setAvatarFile(null);
+      setBannerFile(null);
+      setSaveStage("Saved");
+      setUploadProgress(100);
+      if (warnings.length) {
+        toast.warning(`Profile text saved. ${warnings.join(" · ")}`);
+      } else {
+        toast.success("Profile updated everywhere");
+      }
       router.push(nextUsername ? profilePath(nextUsername) : "/home");
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "Failed to save profile");
+    } catch (error) {
+      console.error(error);
+      setSaveStage("Could not save");
+      toast.error(error instanceof Error ? error.message : "Failed to save profile");
     } finally {
       setSaving(false);
+      window.setTimeout(() => setUploadProgress(null), 1200);
     }
   };
 
+  if (!profile) {
+    return <div className="grid min-h-[65vh] place-items-center"><div className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /><p className="mt-3 text-sm text-muted-foreground">Opening profile settings…</p></div></div>;
+  }
+
   return (
-    <div className="min-h-screen">
-      <header className="x-header justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/settings"
-            className="rounded-full p-2 transition hover:bg-muted"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-lg font-bold">Edit profile</h1>
-        </div>
-        <Button onClick={save} disabled={saving} className="min-w-[96px]">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-        </Button>
+    <main className="min-h-screen pb-24">
+      <header className="x-header sticky top-0 z-30 justify-between bg-background/92 backdrop-blur-xl">
+        <div className="flex items-center gap-3"><Link href="/settings" className="rounded-full p-2 hover:bg-muted"><ArrowLeft className="h-5 w-5" /></Link><div><h1 className="text-lg font-bold">Edit profile</h1><p className="text-xs text-muted-foreground">Your identity updates across Flux</p></div></div>
+        <Button onClick={() => void save()} disabled={saving} className="min-w-[104px] rounded-full">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? "Saving" : "Save"}</Button>
       </header>
 
-      <PageTransition className="pb-12">
-        <div
-          className="relative h-36 sm:h-44"
-          style={{
-            background: `linear-gradient(120deg, ${accent}55, #a855f755, #ec489955)`,
-          }}
-        >
-          {bannerPreview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={assetUrl(bannerPreview)}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : null}
-          <label className="absolute bottom-3 right-3 z-10 inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white backdrop-blur transition hover:bg-black/85">
-            <Camera className="h-3.5 w-3.5" />
-            Change banner
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                if (f.size > 8 * 1024 * 1024) {
-                  toast.error("Banner must be under 8MB");
-                  return;
-                }
-                setBannerFile(f);
-                setBannerPreview(URL.createObjectURL(f));
-                toast.success("Banner selected — click Save");
-              }}
-            />
-          </label>
+      <section className="border-b border-border bg-card">
+        <div className="relative aspect-[3/1] min-h-36 overflow-hidden bg-muted">
+          {bannerPreview ? <img src={bannerPreview.startsWith("blob:") ? bannerPreview : assetUrl(bannerPreview)} alt="Profile banner preview" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center bg-[linear-gradient(135deg,var(--v8-panel-3),var(--v8-accent-soft))]"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
+          <label className="absolute bottom-3 right-3 inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/75 px-4 py-2 text-xs font-bold text-white backdrop-blur hover:bg-black"><Camera className="h-4 w-4" />Change banner<input type="file" accept="image/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) setLocalFile("banner", file); event.currentTarget.value = ""; }} /></label>
         </div>
-
-        <div className="relative -mt-12 px-4">
-          <UserAvatar
-            user={{
-              displayName,
-              username,
-              avatarUrl: avatarPreview,
-            }}
-            size="xl"
-            className="ring-4 ring-card"
-            ring
-          />
+        <div className="relative mx-auto max-w-2xl px-4 pb-5">
+          <div className="-mt-14 flex items-end justify-between gap-4"><UserAvatar user={{ ...profile, displayName, username, avatarUrl: avatarPreview }} size="xl" className="h-28 w-28 ring-4 ring-background" clickable={false} /><span className="mb-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground">Images are cropped and compressed automatically</span></div>
         </div>
+      </section>
 
-        <div className="mt-6 space-y-6 px-4">
-          <section className="surface-card p-4">
-            <AvatarPicker
-              value={avatarPreview}
-              onChange={(url) => {
-                setAvatarFile(null);
-                setAvatarPreview(url);
-              }}
-              onUpload={(f) => {
-                setAvatarFile(f);
-                setAvatarPreview(URL.createObjectURL(f));
-              }}
-            />
-          </section>
+      {(saving || uploadProgress !== null) ? <div className="sticky top-[53px] z-20 border-b border-border bg-background px-4 py-3"><div className="mx-auto max-w-2xl"><div className="flex items-center justify-between text-xs"><span className="font-semibold">{saveStage}</span><span className="text-muted-foreground">{uploadProgress !== null ? `${uploadProgress}%` : ""}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${uploadProgress ?? (saving ? 12 : 100)}%` }} /></div></div></div> : null}
 
-          <section className="surface-card space-y-3 p-4">
-            <h2 className="text-sm font-bold">Account type</h2>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={accountType === "personal" ? "sky" : "outline"}
-                onClick={() => setAccountType("personal")}
-              >
-                Personal
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={accountType === "business" ? "sky" : "outline"}
-                onClick={() => setAccountType("business")}
-              >
-                Business
-              </Button>
-            </div>
-            {accountType === "business" ? (
-              <Field label="Business name">
-                <Input
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  placeholder="Your brand or company"
-                />
-              </Field>
-            ) : null}
-          </section>
+      <div className="mx-auto max-w-2xl space-y-4 px-4 py-5">
+        <SettingsCard icon={UserRound} title="Profile photo" description="Upload a photo or choose a Flux avatar."><AvatarPicker value={avatarPreview} onChange={(url) => { setAvatarFile(null); setAvatarPreview(url); }} onUpload={(file) => setLocalFile("avatar", file)} /></SettingsCard>
 
-          <section className="surface-card p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-bold">Private account</h2>
-                <p className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">When enabled, only people you approve by following back can see your posts and activity.</p>
-              </div>
-              <Switch checked={isPrivate} onCheckedChange={setIsPrivate} aria-label="Private account" />
-            </div>
-          </section>
+        <SettingsCard icon={ShieldCheck} title="Account" description="Control your account type and privacy."><div className="grid grid-cols-2 gap-2"><ChoiceButton active={accountType === "personal"} onClick={() => setAccountType("personal")}>Personal</ChoiceButton><ChoiceButton active={accountType === "business"} onClick={() => setAccountType("business")}>Business</ChoiceButton></div>{accountType === "business" ? <Field label="Business name"><Input value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Brand or company" /></Field> : null}<div className="flex items-center justify-between gap-4 rounded-2xl border border-border p-3"><div><strong className="text-sm">Private account</strong><p className="mt-1 text-xs leading-5 text-muted-foreground">Only approved followers can see your activity.</p></div><Switch checked={isPrivate} onCheckedChange={setIsPrivate} /></div></SettingsCard>
 
-          <section className="surface-card space-y-4 p-4">
-            <Field label="Display name">
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                maxLength={50}
-              />
-            </Field>
-            <Field label="Username">
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  @
-                </span>
-                <Input
-                  className="pl-8"
-                  value={username}
-                  onChange={(e) =>
-                    setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))
-                  }
-                  maxLength={20}
-                />
-              </div>
-            </Field>
-            <Field label="Bio">
-              <Textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
-                rows={3}
-              />
-              <p className="mt-1 text-right text-xs text-muted-foreground">
-                {bio.length}/{MAX_BIO_LENGTH}
-              </p>
-            </Field>
-            <Field label="Location">
-              <Input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="City, country"
-              />
-            </Field>
-            <Field label="Website">
-              <Input
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://"
-              />
-            </Field>
-          </section>
+        <SettingsCard title="Public profile" description="What people see when they open your profile."><Field label="Display name"><Input value={displayName} onChange={(event) => setDisplayName(event.target.value.slice(0, 50))} /></Field><Field label="Username"><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span><Input value={username} onChange={(event) => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))} className="pl-8" /></div></Field><Field label="Bio"><Textarea value={bio} onChange={(event) => setBio(event.target.value.slice(0, MAX_BIO_LENGTH))} rows={4} /><p className="mt-1 text-right text-[11px] text-muted-foreground">{bio.length}/{MAX_BIO_LENGTH}</p></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="Location"><Input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="City, country" /></Field><Field label="Website"><Input value={website} onChange={(event) => setWebsite(event.target.value)} placeholder="https://" /></Field></div></SettingsCard>
 
-          <section className="surface-card space-y-3 p-4">
-            <h2 className="text-sm font-semibold">Mood status</h2>
-            <div className="flex flex-wrap gap-2">
-              {MOOD_OPTIONS.map((m) => {
-                const active = (mood || "none") === m.id;
-                return (
-                  <motion.button
-                    key={m.id}
-                    type="button"
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => setMood(m.id === "none" ? null : m.id)}
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                      active
-                        ? "border-primary bg-accent text-accent-foreground shadow-sm"
-                        : "border-border bg-card hover:bg-muted"
-                    )}
-                  >
-                    {m.emoji ? `${m.emoji} ` : ""}
-                    {m.label}
-                  </motion.button>
-                );
-              })}
-            </div>
-          </section>
+        <SettingsCard title="Social links" description="Usernames or full profile URLs."><Field label="Instagram"><Input value={instagram} onChange={(event) => setInstagram(event.target.value)} /></Field><Field label="TikTok"><Input value={tiktok} onChange={(event) => setTiktok(event.target.value)} /></Field><Field label="YouTube"><Input value={youtube} onChange={(event) => setYoutube(event.target.value)} /></Field><Field label="X / Twitter"><Input value={xLink} onChange={(event) => setXLink(event.target.value)} /></Field></SettingsCard>
 
-          <section className="surface-card space-y-3 p-4">
-            <h2 className="text-sm font-semibold">Profile accent color</h2>
-            <div className="flex flex-wrap gap-2.5">
-              {PROFILE_ACCENTS.map((a) => {
-                const active = accent === a.color;
-                return (
-                  <motion.button
-                    key={a.id}
-                    type="button"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.92 }}
-                    onClick={() => setAccent(a.color)}
-                    title={a.label}
-                    className={cn(
-                      "h-9 w-9 rounded-full border-2 shadow-sm transition",
-                      active ? "border-foreground scale-110" : "border-transparent"
-                    )}
-                    style={{ background: a.color }}
-                  />
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="surface-card space-y-3 p-4">
-            <h2 className="text-sm font-semibold">Social accounts</h2>
-            <Field label="Instagram">
-              <Input
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                placeholder="username or URL"
-              />
-            </Field>
-            <Field label="TikTok">
-              <Input
-                value={tiktok}
-                onChange={(e) => setTiktok(e.target.value)}
-                placeholder="username or URL"
-              />
-            </Field>
-            <Field label="YouTube">
-              <Input
-                value={youtube}
-                onChange={(e) => setYoutube(e.target.value)}
-                placeholder="channel URL"
-              />
-            </Field>
-            <Field label="X / Twitter">
-              <Input
-                value={xLink}
-                onChange={(e) => setXLink(e.target.value)}
-                placeholder="username or URL"
-              />
-            </Field>
-          </section>
-        </div>
-      </PageTransition>
-    </div>
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-emerald-500" /><div><strong className="text-sm">Firebase profile sync</strong><p className="text-xs text-muted-foreground">Avatar and banner URLs update across Flux after Save.</p></div></div><Button onClick={() => void save()} disabled={saving} className="rounded-full">Save changes</Button></div>
+      </div>
+    </main>
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {children}
-    </div>
-  );
+function SettingsCard({ icon: Icon, title, description, children }: { icon?: typeof UserRound; title: string; description: string; children: React.ReactNode }) {
+  return <section className="rounded-2xl border border-border bg-card p-4 sm:p-5"><header className="mb-4 flex items-start gap-3">{Icon ? <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span> : null}<div><h2 className="font-bold">{title}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p></div></header><div className="space-y-4">{children}</div></section>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
+}
+
+function ChoiceButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} className={active ? "rounded-xl border border-primary bg-primary px-4 py-3 text-sm font-bold text-white" : "rounded-xl border border-border bg-background px-4 py-3 text-sm font-bold hover:bg-muted"}>{children}</button>;
 }
