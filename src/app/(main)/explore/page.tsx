@@ -13,7 +13,7 @@ import { searchPosts } from "@/services/posts";
 import { getGroups } from "@/services/groups";
 import { getTrendingHashtags } from "@/services/hashtags";
 import type { Group, PostWithAuthor, UserProfile } from "@/types";
-import { XEmpty, XHeader, XPage, XRowSkeleton, XSwitch, XTabs } from "@/components/x/x-ui";
+import { XEmpty, XPage, XRowSkeleton, XSwitch, XTabs } from "@/components/x/x-ui";
 import { formatCount } from "@/lib/utils";
 
 type Tab = "posts" | "people" | "groups";
@@ -86,15 +86,15 @@ function ExploreInner() {
 
   return (
     <XPage>
-      <XHeader title="Explore" subtitle="Search Flux and see what is trending" icon={Search} hideOnMobile />
-
-      <div className="sticky top-0 z-30 border-b border-[var(--v8-line)] bg-[color-mix(in_srgb,var(--v8-panel)_85%,transparent)] p-3 backdrop-blur-md lg:top-[53px]">
+      {/* Explore puts the search field in the header itself, the way X does,
+          instead of stacking a title row on top of a search row. */}
+      <header className="x-header x-header-search">
         <label className="flux8-rail-search !static">
           <Search className="h-[18px] w-[18px] flex-none" />
           <input
             value={term}
             onChange={(event) => setTerm(event.target.value)}
-            placeholder="Search posts, people, hashtags, groups"
+            placeholder="Search Flux"
             aria-label="Search Flux"
           />
           {term ? (
@@ -103,7 +103,7 @@ function ExploreInner() {
             </button>
           ) : null}
         </label>
-      </div>
+      </header>
 
       {!searching ? (
         <>

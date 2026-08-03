@@ -27,6 +27,11 @@ Key conventions:
 - **Motion is a token, not a decoration.** `--v8-ease`, `--v8-spring` and the
   `x-*` keyframes cover rise, pop, burst, shimmer, sheet and stagger. Every
   animation collapses under `prefers-reduced-motion`.
+- **Three backgrounds, six highlights.** Default, Dim and Lights out, each with
+  a blue/yellow/pink/purple/orange/green accent, picked at
+  `/settings/display`. Everything hangs off `--v8-accent`, so a highlight is
+  three variables; the choice is stored per browser and painted by an inline
+  script before first paint so no theme flashes white.
 - **Breakpoints.** Wide (≥1400), desktop (1200–1399), laptop (1000–1199, icon
   rail), tablet (640–999, single column + bottom nav), phone (<640, edge to
   edge, dialogs become bottom sheets).

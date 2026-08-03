@@ -32,8 +32,8 @@
   --v8-accent: #1d9bf0;
   --v8-accent-2: #1a8cd8;
   --v8-accent-3: #0f7cc0;
-  --v8-accent-soft: rgba(29, 155, 240, 0.1);
-  --v8-accent-ring: rgba(29, 155, 240, 0.22);
+  --v8-accent-soft: color-mix(in srgb, var(--v8-accent) 10%, transparent);
+  --v8-accent-ring: color-mix(in srgb, var(--v8-accent) 22%, transparent);
   --v8-blue: #1d9bf0;
   --v8-green: #00ba7c;
   --v8-green-soft: rgba(0, 186, 124, 0.1);
@@ -117,8 +117,8 @@
   --v8-accent: #1d9bf0;
   --v8-accent-2: #1a8cd8;
   --v8-accent-3: #1683c9;
-  --v8-accent-soft: rgba(29, 155, 240, 0.14);
-  --v8-accent-ring: rgba(29, 155, 240, 0.32);
+  --v8-accent-soft: color-mix(in srgb, var(--v8-accent) 14%, transparent);
+  --v8-accent-ring: color-mix(in srgb, var(--v8-accent) 32%, transparent);
   --v8-green-soft: rgba(0, 186, 124, 0.14);
   --v8-red-soft: rgba(244, 33, 46, 0.14);
   --v8-pink-soft: rgba(249, 24, 128, 0.14);
@@ -135,6 +135,69 @@
   --v8-shadow-lg: 0 18px 60px rgba(0, 0, 0, 0.72);
   --v8-shadow-pop: 0 0 14px rgba(255, 255, 255, 0.06), 0 0 3px rgba(255, 255, 255, 0.1);
 }
+
+/* Dim — X's middle background. Navy panels, the same ink, softer lines. */
+.dim {
+  color-scheme: dark;
+
+  --v8-bg: #15202b;
+  --v8-panel: #15202b;
+  --v8-panel-2: #1e2732;
+  --v8-panel-3: #273340;
+  --v8-panel-4: #2f3d4c;
+  --v8-overlay: rgba(91, 112, 131, 0.4);
+
+  --v8-text: #f7f9f9;
+  --v8-text-2: #d3d9de;
+  --v8-muted: #8b98a5;
+  --v8-faint: #6e7c8a;
+
+  --v8-line: #38444d;
+  --v8-line-2: #3d4a54;
+  --v8-line-strong: #5b7083;
+
+  --v8-accent-soft: color-mix(in srgb, var(--v8-accent) 16%, transparent);
+  --v8-accent-ring: color-mix(in srgb, var(--v8-accent) 34%, transparent);
+  --v8-green-soft: rgba(0, 186, 124, 0.16);
+  --v8-red-soft: rgba(244, 33, 46, 0.16);
+  --v8-pink-soft: rgba(249, 24, 128, 0.16);
+
+  --v8-nav: #15202b;
+  --v8-nav-2: #1e2732;
+  --v8-nav-3: #273340;
+  --v8-nav-line: #38444d;
+  --v8-nav-text: #f7f9f9;
+  --v8-nav-muted: #8b98a5;
+
+  --v8-shadow-sm: none;
+  --v8-shadow-md: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --v8-shadow-lg: 0 18px 60px rgba(0, 0, 0, 0.62);
+  --v8-shadow-pop: 0 0 14px rgba(255, 255, 255, 0.06), 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+/* --------------------------------------------------------------------------
+   Accent
+   The whole palette hangs off --v8-accent, so a highlight colour is three
+   variables. Soft and ring are derived so every accent gets matching washes.
+   -------------------------------------------------------------------------- */
+
+[data-accent="blue"] { --v8-accent: #1d9bf0; --v8-accent-2: #1a8cd8; --v8-accent-3: #0f7cc0; }
+[data-accent="yellow"] { --v8-accent: #ffd400; --v8-accent-2: #e6bf00; --v8-accent-3: #ccaa00; }
+[data-accent="pink"] { --v8-accent: #f91880; --v8-accent-2: #de1370; --v8-accent-3: #c00f60; }
+[data-accent="purple"] { --v8-accent: #7856ff; --v8-accent-2: #6845e6; --v8-accent-3: #5836cc; }
+[data-accent="orange"] { --v8-accent: #ff7a00; --v8-accent-2: #e66e00; --v8-accent-3: #cc6200; }
+[data-accent="green"] { --v8-accent: #00ba7c; --v8-accent-2: #00a56e; --v8-accent-3: #009060; }
+
+[data-accent] {
+  --v8-on-accent: #ffffff;
+  --v8-accent-soft: color-mix(in srgb, var(--v8-accent) 10%, transparent);
+  --v8-accent-ring: color-mix(in srgb, var(--v8-accent) 22%, transparent);
+  --v8-blue: var(--v8-accent);
+  --flux-brand: var(--v8-accent);
+  --flux-brand-soft: var(--v8-accent-soft);
+}
+/* Yellow is too light to carry white text, so it takes ink instead. */
+[data-accent="yellow"] { --v8-on-accent: #0f1419; }
 
 /* --------------------------------------------------------------------------
    Base
@@ -322,7 +385,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
   border-radius: 999px;
   background: var(--v8-accent);
   padding: 0 4px;
-  color: #fff;
+  color: var(--v8-on-accent, #fff);
   font-size: 9px;
   font-style: normal;
   font-weight: 800;
@@ -348,13 +411,13 @@ a, button { -webkit-tap-highlight-color: transparent; }
   border: 0;
   border-radius: 999px;
   background: var(--v8-accent);
-  color: #fff;
+  color: var(--v8-on-accent, #fff);
   font-size: 17px;
   font-weight: 800;
-  box-shadow: 0 6px 18px rgba(29, 155, 240, 0.24);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--v8-accent) 26%, transparent);
   transition: background var(--v8-fast) ease, transform var(--v8-fast) var(--v8-ease), box-shadow var(--v8-base) ease;
 }
-.flux8-sidebar-create:hover { background: var(--v8-accent-2); box-shadow: 0 10px 26px rgba(29, 155, 240, 0.34); }
+.flux8-sidebar-create:hover { background: var(--v8-accent-2); box-shadow: 0 10px 26px color-mix(in srgb, var(--v8-accent) 36%, transparent); }
 .flux8-sidebar-create:active { transform: scale(0.97); }
 .flux8-sidebar-create svg { display: none; }
 
@@ -421,6 +484,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
   backdrop-filter: blur(12px) saturate(1.4);
   -webkit-backdrop-filter: blur(12px) saturate(1.4);
 }
+/* Explore's header is the search field, so it needs room to breathe. */
+.x-header-search { padding-block: 8px; }
+.x-header-search .flux8-rail-search { width: 100%; }
+
 .flux8-timeline-header { justify-content: space-between; }
 .flux8-timeline-header strong { font-size: 20px; font-weight: 800; }
 .flux8-timeline-header button,
@@ -518,7 +585,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
   padding: 12px var(--v8-gutter) 6px;
 }
 .flux8-composer-card textarea { font-size: 20px !important; }
-.flux8-composer-card button[class*="bg-primary"] { background: var(--v8-accent) !important; }
 
 .flux8-story-card {
   overflow-x: hidden;
@@ -580,6 +646,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .flux8-rail-search:focus-within {
   border-color: var(--v8-accent);
   background: var(--v8-panel);
+  /* X tints the magnifier as well as the ring once the field has focus. */
+  color: var(--v8-accent);
   box-shadow: 0 0 0 3px var(--v8-accent-soft);
 }
 .flux8-rail-search input {
@@ -749,7 +817,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
   border-radius: 999px;
   background: var(--v8-accent);
   padding: 0 3px;
-  color: #fff;
+  color: var(--v8-on-accent, #fff);
   font-size: 9px;
   font-style: normal;
   font-weight: 800;
@@ -767,8 +835,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
   place-items: center;
   border-radius: 999px;
   background: var(--v8-accent);
-  color: #fff;
-  box-shadow: 0 8px 24px rgba(29, 155, 240, 0.32);
+  color: var(--v8-on-accent, #fff);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--v8-accent) 34%, transparent);
   transition: transform var(--v8-base) var(--v8-spring), background var(--v8-fast) ease;
 }
 .flux8-mobile-create:hover { background: var(--v8-accent-2); }
@@ -860,7 +928,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
   background: var(--v8-text);
   color: var(--v8-panel);
 }
-.x-chip-accent[data-active="true"] { background: var(--v8-accent); color: #fff; }
+.x-chip-accent[data-active="true"] { background: var(--v8-accent); color: var(--v8-on-accent, #fff); }
 
 /* Solid / hollow buttons that match X exactly. */
 .x-btn {
@@ -873,7 +941,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
   border-radius: 999px;
   background: var(--v8-accent);
   padding: 0 20px;
-  color: #fff;
+  color: var(--v8-on-accent, #fff);
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;

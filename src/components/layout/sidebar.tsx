@@ -13,6 +13,7 @@ import {
   Mail,
   Menu,
   MoreHorizontal,
+  Palette,
   PenSquare,
   Radio,
   Search,
@@ -57,6 +58,7 @@ const moreItems: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/games", label: "Games", icon: Gamepad2 },
   { href: "/studio", label: "Studio", icon: Boxes },
   { href: "/gifts", label: "Gifts", icon: Gift },
+  { href: "/settings/display", label: "Display", icon: Palette },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
