@@ -1,6 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type ThemeMode = "light" | "dark" | "system";
+export type ThemeMode = "light" | "dim" | "dark" | "system";
+export type AccentColor = "blue" | "yellow" | "pink" | "purple" | "orange" | "green";
 export type VerifiedType = "flux" | "business" | "government" | null;
 export type AccountType = "personal" | "business";
 export type PostType = "post" | "reply" | "quote" | "repost";

@@ -11,7 +11,7 @@
   --popover: var(--v8-panel);
   --popover-foreground: var(--v8-text);
   --primary: var(--v8-accent);
-  --primary-foreground: #ffffff;
+  --primary-foreground: var(--v8-on-accent, #ffffff);
   --secondary: var(--v8-panel-3);
   --secondary-foreground: var(--v8-text);
   --muted: var(--v8-panel-2);
