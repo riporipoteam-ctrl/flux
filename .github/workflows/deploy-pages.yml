@@ -1,4 +1,4 @@
-name: Deploy Flux to GitHub Pages
+name: Publish Flux Live Site
 
 on:
   push:
@@ -7,20 +7,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
-  group: pages
+  group: flux-live-site
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
-      - name: Checkout
+      - name: Checkout exact release
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -28,6 +29,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Force Pages to use GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
+          STATUS=$?
+          if [ "$STATUS" -ne 0 ]; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
+          fi
+          set -e
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -48,26 +61,50 @@ jobs:
           NEXT_PUBLIC_TURN_CREDENTIAL: ${{ secrets.NEXT_PUBLIC_TURN_CREDENTIAL }}
         run: npm run build
 
-      - name: Verify this is the new Flux X2 build
+      - name: Verify the X3 shell and body-level dock
         run: |
           test -f out/index.html
           test -f out/home/index.html
-          grep -R -q 'data-flux-ui="x2"' out
-          grep -R -q 'Flux X2' out/_next/static out || true
-          grep -R -q 'flux8-mobile-nav' out/_next/static
-          grep -R -q 'z-index:1000\|z-index: 1000' out/_next/static
+          test -f out/games/index.html
+          grep -R -q 'data-flux-ui="x3"' out
+          grep -R -q 'data-flux-mobile-dock' out/_next/static
+          grep -R -q 'flux-mobile-dock-portal' out/_next/static
+          grep -R -q '2147482000' out/_next/static
+          grep -R -q 'createPortal' out/_next/static
 
-      - name: Add Pages fallbacks and release proof
+      - name: Add release proof and no-cache fallbacks
         run: |
           touch out/.nojekyll
           cp out/index.html out/404.html
           printf '%s\n' '${{ github.sha }}' > out/version.txt
-          printf '{"release":"%s","ui":"x2","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
+          printf '{"release":"%s","ui":"x3","dock":"body-portal","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
+          cat > out/_headers <<'HEADERS'
+          /release.json
+            Cache-Control: no-store, max-age=0
+          /version.txt
+            Cache-Control: no-store, max-age=0
+          /*.html
+            Cache-Control: no-cache
+          HEADERS
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
+
+      - name: Publish identical fallback to gh-pages branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          git init
+          git checkout -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Publish Flux ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin gh-pages
 
   deploy:
     environment:
@@ -75,7 +112,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 15
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy verified Pages artifact
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Print deployed release
+        run: |
+          echo "Flux release: ${{ github.sha }}"
+          echo "Pages URL: ${{ steps.deployment.outputs.page_url }}"
