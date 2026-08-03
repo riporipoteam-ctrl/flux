@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Configure Pages
@@ -36,27 +36,36 @@ jobs:
         run: npm ci
 
       - name: Prepare static-only build
-        run: |
-          # GitHub Pages cannot execute Next.js route handlers. Flux Search,
-          # Firebase features and externally configured AskAI remain available.
-          rm -rf src/app/api
+        run: rm -rf src/app/api
 
       - name: Build static export
         env:
           GITHUB_PAGES: "true"
+          NEXT_PUBLIC_RELEASE_SHA: ${{ github.sha }}
           NEXT_PUBLIC_ASK_AI_ENDPOINT: ${{ vars.NEXT_PUBLIC_ASK_AI_ENDPOINT }}
           NEXT_PUBLIC_TURN_URL: ${{ vars.NEXT_PUBLIC_TURN_URL }}
           NEXT_PUBLIC_TURN_USERNAME: ${{ vars.NEXT_PUBLIC_TURN_USERNAME }}
           NEXT_PUBLIC_TURN_CREDENTIAL: ${{ secrets.NEXT_PUBLIC_TURN_CREDENTIAL }}
         run: npm run build
 
-      - name: Add Pages fallbacks
+      - name: Verify this is the new Flux X2 build
+        run: |
+          test -f out/index.html
+          test -f out/home/index.html
+          grep -R -q 'data-flux-ui="x2"' out
+          grep -R -q 'Flux X2' out/_next/static out || true
+          grep -R -q 'flux8-mobile-nav' out/_next/static
+          grep -R -q 'z-index:1000\|z-index: 1000' out/_next/static
+
+      - name: Add Pages fallbacks and release proof
         run: |
           touch out/.nojekyll
           cp out/index.html out/404.html
+          printf '%s\n' '${{ github.sha }}' > out/version.txt
+          printf '{"release":"%s","ui":"x2","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./out
 

@@ -1,86 +1,162 @@
-/* Flux X Ultimate — final responsive override layer.
-   Loaded last so old experiments cannot cover the mobile nav or turn the feed
-   back into oversized floating cards. */
+/* Flux X2 — final shell. This file is loaded last on purpose.
+   It replaces the old floating-card/Facebook-like visual language across the
+   shared app surfaces on phone, tablet and desktop. */
 
 :root {
   --flux-visual-bottom: 0px;
-  --flux-mobile-nav-h: 62px;
-  --flux-x-surface: color-mix(in srgb, var(--v8-panel) 94%, transparent);
-  --flux-x-hover: color-mix(in srgb, var(--v8-text) 4%, transparent);
+  --flux-mobile-nav-h: 58px;
+  --flux-x-hover: color-mix(in srgb, var(--v8-text) 5%, transparent);
   --flux-x-ease: cubic-bezier(.22,1,.36,1);
+  --flux-mark-ink: #fff;
 }
 
 html { scroll-behavior: smooth; }
-body { overscroll-behavior-y: none; }
+body {
+  overscroll-behavior-y: none;
+  background: var(--v8-panel) !important;
+}
 
 @keyframes flux-x-enter {
-  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
   to { opacity: 1; transform: none; }
-}
-@keyframes flux-x-nav-in {
-  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.97); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes flux-x-soft-pulse {
-  0%, 100% { opacity: .55; }
-  50% { opacity: 1; }
 }
 @keyframes flux-x-media-in {
-  from { opacity: 0; filter: blur(8px); transform: scale(1.015); }
+  from { opacity: 0; filter: blur(7px); transform: scale(1.012); }
   to { opacity: 1; filter: none; transform: none; }
 }
+@keyframes flux-x-soft-pulse {
+  0%,100% { opacity: .45; }
+  50% { opacity: 1; }
+}
+
+.flux-brand-mark { color: var(--v8-text); }
+.flux-brand-word { color: var(--v8-text); }
+.dark .flux-brand-mark,
+.dim .flux-brand-mark { --flux-mark-ink: #000; color: #fff; }
+
+/* Old global top bar is deliberately removed. X uses per-column headers. */
+.flux9-topbar { display: none !important; }
 
 .flux8-app-shell {
-  background: var(--v8-bg) !important;
+  min-height: 100dvh;
+  background: var(--v8-panel) !important;
 }
 
 .flux8-main-column {
-  border-inline: 1px solid var(--v8-line);
-  background: var(--v8-panel);
+  min-width: 0;
+  min-height: 100dvh;
+  border-inline: 1px solid var(--v8-line) !important;
+  background: var(--v8-panel) !important;
 }
 
+/* Desktop navigation */
+.flux8-sidebar {
+  position: sticky !important;
+  top: 0 !important;
+  align-self: start;
+  height: 100dvh !important;
+  padding: 10px 14px 12px !important;
+  border: 0 !important;
+  background: var(--v8-panel) !important;
+  box-shadow: none !important;
+}
+.flux8-sidebar-brand {
+  width: fit-content !important;
+  min-height: 52px;
+  margin-bottom: 2px;
+  padding: 7px 10px !important;
+  border-radius: 999px !important;
+}
+.flux8-sidebar-brand:hover { background: var(--flux-x-hover) !important; }
+.flux8-sidebar-nav { gap: 1px !important; }
+.flux8-sidebar-link {
+  width: fit-content !important;
+  max-width: 100%;
+  min-height: 50px !important;
+  padding: 0 14px 0 11px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--v8-text) !important;
+  box-shadow: none !important;
+  font-size: 19px !important;
+  transition: background 140ms ease, transform 100ms ease !important;
+}
+.flux8-sidebar-link:hover { background: var(--flux-x-hover) !important; }
+.flux8-sidebar-link:active { transform: scale(.96); }
+.flux8-sidebar-link strong { font-weight: 480 !important; }
+.flux8-sidebar-link.is-active strong { font-weight: 850 !important; }
+.flux8-sidebar-icon { width: 30px !important; }
+.flux8-sidebar-create {
+  min-height: 50px !important;
+  margin-top: 8px !important;
+  border-radius: 999px !important;
+  background: var(--v8-accent) !important;
+  color: var(--v8-on-accent) !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  font-weight: 850 !important;
+}
+.flux8-sidebar-create:hover { filter: brightness(.95); }
+.flux8-sidebar-profile {
+  min-height: 60px !important;
+  margin-top: auto !important;
+  padding: 9px 10px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.flux8-sidebar-profile:hover { background: var(--flux-x-hover) !important; }
+
+/* Timeline: one flat continuous column. */
 .flux8-feed {
   width: 100%;
   max-width: 620px;
-  margin-inline: auto;
-  background: var(--v8-panel);
+  margin: 0 auto;
+  background: var(--v8-panel) !important;
 }
-
 .flux8-timeline-header,
-.flux8-feed-tabs,
-.flux8-mobile-header {
-  background: color-mix(in srgb, var(--v8-panel) 88%, transparent) !important;
-  backdrop-filter: blur(22px) saturate(1.35);
-  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+.x-header,
+.social-page-header {
+  min-height: 53px !important;
+  border-bottom: 1px solid var(--v8-line) !important;
+  background: color-mix(in srgb, var(--v8-panel) 90%, transparent) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
 }
-
 .flux8-feed-tabs {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 35;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2,minmax(0,1fr));
   min-height: 53px;
   border-bottom: 1px solid var(--v8-line);
+  background: color-mix(in srgb, var(--v8-panel) 90%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
 }
 .flux8-feed-tabs > button {
   position: relative;
   display: grid;
-  place-items: center;
   min-height: 53px;
+  place-items: center;
+  background: transparent !important;
   color: var(--v8-muted);
   font-size: 14px;
-  font-weight: 650;
-  transition: color 160ms ease, background 160ms ease;
+  font-weight: 600;
+  transition: background 140ms ease, color 140ms ease;
 }
-.flux8-feed-tabs > button:hover { background: var(--flux-x-hover); }
+.flux8-feed-tabs > button:hover { background: var(--flux-x-hover) !important; }
 .flux8-feed-tabs > button.is-active { color: var(--v8-text); font-weight: 800; }
 .flux8-feed-tabs > button.is-active::after {
   content: "";
   position: absolute;
   bottom: 0;
   left: 50%;
-  width: 62px;
+  width: 58px;
   height: 4px;
   border-radius: 999px;
   background: var(--v8-accent);
@@ -97,105 +173,152 @@ body { overscroll-behavior-y: none; }
   background: var(--v8-panel) !important;
   box-shadow: none !important;
 }
-
-.flux8-composer-card {
-  padding: 14px 16px 10px !important;
+.flux8-composer-card { padding: 12px 16px 8px !important; }
+.flux8-composer-card textarea {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  font-size: 19px !important;
+  line-height: 1.35 !important;
 }
-.flux8-story-card > section { border-bottom: 0 !important; }
-
+.flux8-story-card > section {
+  padding-block: 2px !important;
+  border: 0 !important;
+  background: var(--v8-panel) !important;
+}
 .flux8-post-wrap {
   content-visibility: auto;
-  contain-intrinsic-size: 190px;
+  contain-intrinsic-size: 210px;
 }
-.flux8-post-wrap .post-row {
+.flux8-post-wrap .post-row,
+.flux8-post-wrap article {
   border: 0 !important;
   border-radius: 0 !important;
-  padding: 12px 16px !important;
   background: transparent !important;
   box-shadow: none !important;
-  transition: background 150ms ease;
 }
-.flux8-post-wrap .post-row:hover { background: var(--flux-x-hover) !important; }
+.flux8-post-wrap .post-row { padding: 12px 16px !important; }
+.flux8-post-wrap:hover { background: var(--flux-x-hover) !important; }
 .flux8-post-wrap img,
-.flux8-post-wrap video { animation: flux-x-media-in 280ms var(--flux-x-ease) both; }
-
+.flux8-post-wrap video { animation: flux-x-media-in 260ms var(--flux-x-ease) both; }
 .flux8-post-skeleton {
   display: flex;
-  gap: 12px;
+  gap: 11px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--v8-line);
 }
-
 .flux8-loading-more {
   padding: 18px;
   border-bottom: 1px solid var(--v8-line);
-  text-align: center;
   color: var(--v8-muted);
+  text-align: center;
   font-size: 12px;
   font-weight: 700;
   animation: flux-x-soft-pulse 1.1s ease-in-out infinite;
 }
 
+/* Re-skin shared page/card surfaces so settings, profiles, groups, explore,
+   notifications and other routes inherit the same design. */
+.x-page,
+.settings-page,
+.profile-page,
+.social-page { background: var(--v8-panel) !important; }
+.x-card,
+.social-card,
+.settings-card,
+[class~="surface-card"] {
+  border: 1px solid var(--v8-line) !important;
+  border-radius: 16px !important;
+  background: var(--v8-panel) !important;
+  box-shadow: none !important;
+}
+.x-card:hover,
+.social-card:hover { border-color: var(--v8-line-strong) !important; }
+.x-chip {
+  border: 1px solid var(--v8-line-strong) !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--v8-text) !important;
+  box-shadow: none !important;
+}
+.x-chip[data-active="true"] {
+  border-color: var(--v8-text) !important;
+  background: var(--v8-text) !important;
+  color: var(--v8-panel) !important;
+}
+.x-btn { box-shadow: none !important; }
+
+/* Right discovery column */
+.flux8-right-rail {
+  position: sticky !important;
+  top: 0 !important;
+  height: 100dvh !important;
+  padding: 8px 18px 24px 26px !important;
+  border: 0 !important;
+  background: var(--v8-panel) !important;
+  box-shadow: none !important;
+}
+.flux8-right-rail > * {
+  border-color: var(--v8-line) !important;
+  box-shadow: none !important;
+}
+
+/* Games */
 .flux-game-card {
   content-visibility: auto;
-  contain-intrinsic-size: 320px;
+  contain-intrinsic-size: 310px;
+  border-radius: 16px !important;
   transform: translateZ(0);
-  transition: transform 220ms var(--flux-x-ease), box-shadow 220ms ease, border-color 220ms ease;
+  transition: transform 210ms var(--flux-x-ease), border-color 180ms ease !important;
 }
-.flux-game-card:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--v8-accent) 35%, var(--v8-line));
-  box-shadow: 0 18px 44px rgba(15,20,25,.12);
-}
-.flux-games-hero { transform: translateZ(0); }
+.flux-game-card:hover { transform: translateY(-3px); border-color: var(--v8-line-strong) !important; box-shadow: none !important; }
+.flux-games-hero { border-radius: 18px !important; transform: translateZ(0); }
 
-.flux-arcade-page button,
-.flux-games-v3 button,
-.flux-games-v3 a {
+button,a,[role="button"] {
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+button:active,a:active { transition-duration: 70ms !important; }
 
-/* Cleaner global interaction language. */
-button, a, [role="button"] {
-  touch-action: manipulation;
-}
-button:active,
-a:active { transition-duration: 70ms !important; }
-
-/* Phone and tablet shell */
-@media (max-width: 1023px) {
-  body { background: var(--v8-panel) !important; }
-
+@media (min-width: 1024px) {
   .flux8-app-shell {
-    display: block !important;
-    min-height: 100dvh;
-    padding: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(230px,275px) minmax(0,620px) minmax(290px,350px) !important;
+    justify-content: center;
+    width: 100%;
+    margin-inline: auto;
   }
+  .flux8-app-shell[data-rail="off"] {
+    grid-template-columns: minmax(230px,275px) minmax(0,980px) !important;
+  }
+}
 
+/* Phone and tablet: X-style fixed full-width navigation. */
+@media (max-width: 1023px) {
+  .flux8-app-shell { display: block !important; padding: 0 !important; }
   .flux8-main-column {
     width: 100% !important;
-    min-height: 100dvh;
-    padding-bottom: calc(var(--flux-mobile-nav-h) + var(--flux-visual-bottom) + env(safe-area-inset-bottom, 0px) + 22px) !important;
+    padding-bottom: calc(var(--flux-mobile-nav-h) + var(--flux-visual-bottom) + env(safe-area-inset-bottom,0px) + 10px) !important;
     border: 0 !important;
   }
-
   .flux8-feed { max-width: none; }
-
   .flux8-mobile-header {
     position: sticky;
     top: 0;
-    z-index: 55;
-    min-height: calc(53px + env(safe-area-inset-top, 0px));
-    padding-top: env(safe-area-inset-top, 0px);
-    border-bottom: 1px solid var(--v8-line);
+    z-index: 70;
+    min-height: calc(53px + env(safe-area-inset-top,0px));
+    padding-top: env(safe-area-inset-top,0px);
+    border-bottom: 1px solid var(--v8-line) !important;
+    background: color-mix(in srgb,var(--v8-panel) 92%,transparent) !important;
+    backdrop-filter: blur(20px) saturate(1.35);
+    -webkit-backdrop-filter: blur(20px) saturate(1.35);
   }
   .flux8-mobile-header-row {
-    position: relative;
     display: grid !important;
-    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    grid-template-columns: 48px minmax(0,1fr) 48px;
     align-items: center;
     min-height: 53px;
-    padding: 0 8px;
+    padding-inline: 7px;
   }
   .flux8-mobile-avatar,
   .flux8-mobile-header-action {
@@ -203,127 +326,94 @@ a:active { transition-duration: 70ms !important; }
     width: 42px !important;
     height: 42px !important;
     place-items: center;
+    border: 0 !important;
     border-radius: 999px !important;
     background: transparent !important;
-    color: var(--v8-text);
+    color: var(--v8-text) !important;
   }
-  .flux8-mobile-avatar:hover,
-  .flux8-mobile-header-action:hover { background: var(--v8-panel-3) !important; }
   .flux8-mobile-title {
-    justify-self: center;
+    display: flex;
     min-width: 0;
+    align-items: center;
+    justify-content: center;
+    color: var(--v8-text) !important;
     font-size: 17px;
     font-weight: 850;
   }
-  .flux8-mobile-header-actions {
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .flux8-feed-tabs { top: calc(53px + env(safe-area-inset-top, 0px)); }
+  .flux8-mobile-header-actions { display: flex; justify-content: flex-end; }
+  .flux8-feed-tabs { top: calc(53px + env(safe-area-inset-top,0px)); }
 
   .flux8-mobile-nav {
     position: fixed !important;
     z-index: 1000 !important;
-    right: 8px !important;
-    bottom: calc(var(--flux-visual-bottom) + env(safe-area-inset-bottom, 0px) + 8px) !important;
-    left: 8px !important;
+    right: 0 !important;
+    bottom: var(--flux-visual-bottom) !important;
+    left: 0 !important;
     display: block !important;
-    overflow: visible !important;
-    height: var(--flux-mobile-nav-h) !important;
-    padding: 0 !important;
-    border: 1px solid color-mix(in srgb, var(--v8-line-strong) 72%, transparent) !important;
-    border-radius: 22px !important;
-    background: color-mix(in srgb, var(--v8-panel) 88%, transparent) !important;
-    box-shadow: 0 16px 48px rgba(15,20,25,.18), 0 2px 10px rgba(15,20,25,.08) !important;
-    backdrop-filter: blur(24px) saturate(1.55) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(1.55) !important;
-    animation: flux-x-nav-in 360ms var(--flux-x-ease) both;
+    width: 100% !important;
+    height: calc(var(--flux-mobile-nav-h) + env(safe-area-inset-bottom,0px)) !important;
+    padding: 0 0 env(safe-area-inset-bottom,0px) !important;
+    border: 0 !important;
+    border-top: 1px solid var(--v8-line) !important;
+    border-radius: 0 !important;
+    background: color-mix(in srgb,var(--v8-panel) 94%,transparent) !important;
+    box-shadow: 0 -1px 12px rgba(15,20,25,.04) !important;
+    backdrop-filter: blur(24px) saturate(1.45) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(1.45) !important;
   }
-  .dark .flux8-mobile-nav,
-  .dim .flux8-mobile-nav { box-shadow: 0 18px 54px rgba(0,0,0,.58) !important; }
-
   .flux8-mobile-nav-grid {
     display: grid !important;
-    height: 100% !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    height: var(--flux-mobile-nav-h) !important;
+    grid-template-columns: repeat(5,minmax(0,1fr)) !important;
     align-items: center;
-    padding: 5px 7px;
+    padding-inline: 6px;
   }
   .flux8-mobile-tab {
     position: relative;
     display: grid !important;
-    min-width: 0;
     height: 50px !important;
     place-items: center;
-    border-radius: 16px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
     color: var(--v8-muted) !important;
-    transition: color 160ms ease, background 160ms ease, transform 120ms ease !important;
+    transition: color 140ms ease, transform 100ms ease !important;
   }
-  .flux8-mobile-tab:active { transform: scale(.86); }
-  .flux8-mobile-tab.is-active {
-    color: var(--v8-text) !important;
-    background: var(--v8-panel-3) !important;
-  }
+  .flux8-mobile-tab:active { transform: scale(.82); }
+  .flux8-mobile-tab.is-active { color: var(--v8-text) !important; }
   .flux8-mobile-tab.is-active::after {
     content: "";
     position: absolute;
-    bottom: 3px;
+    top: 3px;
     width: 5px;
     height: 5px;
     border-radius: 50%;
     background: var(--v8-accent);
   }
   .flux8-mobile-tab-create {
-    color: var(--v8-on-accent) !important;
-    background: var(--v8-accent) !important;
-    box-shadow: 0 8px 22px var(--v8-accent-ring);
+    width: 46px !important;
+    height: 46px !important;
+    margin: auto;
+    border-radius: 999px !important;
+    background: var(--v8-text) !important;
+    color: var(--v8-panel) !important;
+    box-shadow: none !important;
   }
-  .flux8-mobile-tab-create.is-active { background: var(--v8-accent) !important; }
-
   .flux8-mobile-create { display: none !important; }
-
-  .flux8-composer-card { padding: 12px 14px 8px !important; }
-  .flux8-story-card { overflow: hidden; }
-
-  .flux8-post-wrap .post-row { padding: 12px 14px !important; }
-
-  .flux-games-v3 main { padding-inline: 10px; }
-  .flux-games-hero { border-radius: 22px !important; }
-  .flux-games-hero > div { min-height: 390px !important; }
-}
-
-@media (max-width: 480px) {
-  .flux8-composer-card textarea {
-    min-height: 66px !important;
-    font-size: 16px !important;
-    line-height: 1.45 !important;
-  }
-  .flux8-composer-card button[aria-label="Photo or video"],
-  .flux8-composer-card button[aria-label="GIF"],
-  .flux8-composer-card button[aria-label="Poll"],
-  .flux8-composer-card button[aria-label="Emoji"] {
-    width: 36px;
-    height: 36px;
-  }
-  .flux8-mobile-nav { right: 6px !important; left: 6px !important; border-radius: 20px !important; }
-  .flux8-mobile-nav-grid { padding-inline: 4px; }
-  .flux8-mobile-tab { border-radius: 14px !important; }
-}
-
-@media (min-width: 1024px) {
-  .flux8-app-shell {
-    grid-template-columns: minmax(240px, var(--v8-nav-w)) minmax(0, 620px) minmax(290px, var(--v8-rail));
-  }
-  .flux8-app-shell[data-rail="off"] {
-    grid-template-columns: minmax(240px, var(--v8-nav-w)) minmax(0, 1fr);
-  }
-  .flux8-main-column { min-height: 100dvh; }
+  .flux8-composer-card { padding: 11px 13px 7px !important; }
+  .flux8-composer-card textarea { min-height: 60px !important; font-size: 17px !important; }
+  .flux8-post-wrap .post-row { padding: 11px 13px !important; }
+  .x-page > main,
+  .flux-games-v3 main { padding-inline: 0 !important; }
+  .x-card { border-inline: 0 !important; border-radius: 0 !important; }
+  .flux-games-v3 .flux-game-card { border-radius: 14px !important; }
+  .flux-games-v3 main > section:not(.flux-games-hero) { margin-inline: 10px; }
+  .flux-games-hero { margin-inline: 10px; border-radius: 16px !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  *,*::before,*::after {
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;

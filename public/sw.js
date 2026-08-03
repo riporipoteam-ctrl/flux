@@ -1,5 +1,5 @@
-/* Flux PWA service worker — network-first shell with safe offline fallback. */
-const CACHE = "flux-shell-v3";
+/* Flux X2 service worker — always prefer the deployed release. */
+const CACHE = "flux-shell-v4";
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const scoped = (path) => `${SCOPE_PATH}${path}`;
 const PRECACHE = [scoped("/"), scoped("/manifest.webmanifest"), scoped("/favicon.ico"), scoped("/flux-icon.png")];
@@ -20,10 +20,11 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.startsWith(scoped("/api/"))) return;
 
+  const isReleaseProof = /\/(version\.txt|release\.json)$/.test(url.pathname);
   event.respondWith(
-    fetch(request, { cache: request.mode === "navigate" ? "no-store" : "default" })
+    fetch(request, { cache: request.mode === "navigate" || isReleaseProof ? "no-store" : "default" })
       .then((response) => {
-        if (response.ok && request.mode !== "navigate") {
+        if (response.ok && request.mode !== "navigate" && !isReleaseProof) {
           const copy = response.clone();
           void caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => undefined);
         }
