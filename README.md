@@ -41,8 +41,12 @@ Key conventions:
   three variables; the choice is stored per browser and painted by an inline
   script before first paint so no theme flashes white.
 - **Breakpoints.** Wide (≥1400), desktop (1200–1399), laptop (1000–1199, icon
-  rail), tablet (640–999, single column + bottom nav), phone (<640, edge to
-  edge, dialogs become bottom sheets).
+  rail), tablet (640–999, single column + bottom bar), phone (<640, cards on the
+  canvas, dialogs become bottom sheets).
+- **The phone gets the same idea, phrased for a thumb.** Wordmark and round
+  action buttons in the header, the feed as full-bleed cards with air between
+  them, and a bar that floats clear of the home indicator instead of sitting on
+  the edge.
 
 ---
 

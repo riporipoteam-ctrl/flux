@@ -48,7 +48,9 @@ for (const marker of ["Home", "Explore", "Notifications", "Messages", "AskAI", "
 }
 
 const mobileHeader = read("src/components/layout/mobile-app-header.tsx");
-for (const marker of ["flux8-mobile-header", "MobileDrawer", "Settings"]) requireText(mobileHeader, marker, "X-style mobile header");
+for (const marker of ["flux8-mobile-header", "MobileDrawer", "Settings", "flux8-mobile-header-actions"]) {
+  requireText(mobileHeader, marker, "X-style mobile header");
+}
 const mobileNav = read("src/components/layout/mobile-nav.tsx");
 for (const marker of ["/home", "/explore", "/ask-ai", "/notifications", "/messages", "flux8-mobile-create"]) requireText(mobileNav, marker, "X-style mobile navigation");
 
@@ -75,6 +77,9 @@ for (const marker of [
   "--v8-canvas:",
   ".flux9-topbar",
   ".flux-call-dock",
+  // The phone gets the same canvas-and-cards idea as the desktop shell.
+  ".flux8-mobile-header-actions",
+  "border-radius: 22px",
   ".flux8-sidebar",
   ".flux8-right-rail",
   ".flux8-mobile-header",

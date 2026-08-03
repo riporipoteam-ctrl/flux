@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings } from "lucide-react";
+import { Search, Settings, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { Logo } from "@/components/shared/logo";
@@ -25,10 +25,17 @@ function sectionLabel(pathname: string): string {
   return "Home";
 }
 
+/**
+ * The phone header. Facebook's arrangement — wordmark on the left, a row of
+ * round action buttons on the right — with the avatar kept as the way into the
+ * navigation drawer. Deeper screens trade the wordmark for their own title so
+ * you always know where you are.
+ */
 export function MobileAppHeader() {
   const pathname = usePathname() || "/home";
   const { profile } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const home = pathname === "/home";
 
   return (
     <>
@@ -38,13 +45,21 @@ export function MobileAppHeader() {
             <UserAvatar user={profile} size="sm" clickable={false} decorations={profile?.decorations} />
           </button>
 
-          <Link href="/home" className="flux8-mobile-title" aria-label="Flux home">
-            {pathname === "/home" ? <Logo showWordmark={false} size={26} /> : <strong>{sectionLabel(pathname)}</strong>}
+          <Link href="/home" className="flux8-mobile-title" data-home={home ? "true" : undefined} aria-label="Flux home">
+            {home ? <Logo showWordmark size={24} /> : <strong>{sectionLabel(pathname)}</strong>}
           </Link>
 
-          <Link href="/settings" className="flux8-mobile-header-action" aria-label="Settings">
-            <Settings className="h-5 w-5" />
-          </Link>
+          <div className="flux8-mobile-header-actions">
+            <Link href="/explore" className="flux8-mobile-header-action" aria-label="Search Flux">
+              <Search className="h-[19px] w-[19px]" />
+            </Link>
+            <Link href="/ask-ai" className="flux8-mobile-header-action" aria-label="AskAI">
+              <Sparkles className="h-[19px] w-[19px]" />
+            </Link>
+            <Link href="/settings" className="flux8-mobile-header-action" aria-label="Settings">
+              <Settings className="h-[19px] w-[19px]" />
+            </Link>
+          </div>
         </div>
       </header>
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

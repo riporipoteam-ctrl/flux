@@ -26,11 +26,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isImmersive = isAskAI || isCall || isLiveRoom;
   const hideRail = isMessages || isGames || isLive;
 
+  // Someone who already picked a username is onboarded, whatever the flag says.
+  // Trusting the flag alone sent people back through setup whenever a profile
+  // read came back thin.
+  const needsOnboarding = Boolean(
+    profile && !profile.onboardingComplete && !String(profile.username || "").trim()
+  );
+
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
-    else if (profile && !profile.onboardingComplete) router.replace("/onboarding");
-  }, [user, profile, loading, router]);
+    else if (needsOnboarding) router.replace("/onboarding");
+  }, [user, needsOnboarding, loading, router]);
 
   if (loading) return <LoadingScreen label="Loading Flux" />;
   if (!user) return <LoadingScreen label="Opening sign in" />;
@@ -48,7 +55,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (!profile.onboardingComplete) return <LoadingScreen label="Continuing setup" />;
+  if (needsOnboarding) return <LoadingScreen label="Continuing setup" />;
 
   if (isStudio) {
     return (

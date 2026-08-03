@@ -774,23 +774,30 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 .flux8-mobile-header-row {
   display: grid;
-  height: var(--v8-header-h);
-  grid-template-columns: 44px 1fr 44px;
+  height: 54px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
-  padding: 0 8px;
+  gap: 8px;
+  padding: 0 10px;
 }
+.flux8-mobile-header-actions { display: flex; align-items: center; gap: 4px; }
+/* Facebook puts the wordmark hard left on the home feed and centres a title
+   everywhere else; the grid does both without changing the markup. */
+.flux8-mobile-title[data-home="true"] { justify-content: flex-start; padding-left: 4px; }
 .flux8-mobile-avatar,
 .flux8-mobile-header-action {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   place-items: center;
   border-radius: 999px;
   color: var(--v8-text);
   transition: background var(--v8-fast) ease, transform var(--v8-fast) var(--v8-ease);
 }
 .flux8-mobile-avatar:active,
-.flux8-mobile-header-action:active { background: var(--v8-panel-3); transform: scale(0.92); }
+.flux8-mobile-header-action { background: var(--v8-panel-3); }
+.flux8-mobile-header-action:active { transform: scale(0.9); }
+.flux8-mobile-avatar:active { background: var(--v8-panel-3); transform: scale(0.92); }
 .flux8-mobile-title { display: flex; align-items: center; justify-content: center; color: var(--v8-text); text-decoration: none; }
 .flux8-mobile-title strong { font-size: 17px; font-weight: 800; }
 
@@ -1203,6 +1210,65 @@ a, button { -webkit-tap-highlight-color: transparent; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* --------------------------------------------------------------------------
+   Phone
+   The same idea as the desktop shell — content on a canvas — expressed the way
+   a phone wants it: full-bleed cards with air between them, and a bar that
+   floats clear of the home indicator.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 999px) {
+  .flux8-app-shell { background: var(--v8-canvas); }
+  .flux8-main-column { background: transparent; }
+
+  .flux8-post-wrap,
+  .flux8-post-skeleton,
+  .flux8-composer-card,
+  .flux8-story-card,
+  .flux8-loading-more {
+    margin: 0 8px 8px;
+    border: 1px solid var(--v8-line);
+    border-radius: var(--v8-radius-md);
+    background: var(--v8-panel);
+    box-shadow: var(--v8-shadow-sm);
+  }
+  .flux8-post-wrap { border-bottom: 1px solid var(--v8-line); }
+  .flux8-composer-card { margin-top: 8px; }
+
+  /* Page chrome keeps its full-bleed bar; only the feed becomes cards. */
+  .x-header,
+  .flux8-feed-tabs,
+  .x-tabs {
+    background: color-mix(in srgb, var(--v8-panel) 92%, transparent);
+  }
+
+  .flux8-mobile-nav {
+    right: 10px;
+    bottom: calc(10px + var(--v8-safe-bottom));
+    left: 10px;
+    border: 1px solid var(--v8-line);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--v8-panel) 94%, transparent);
+    padding-bottom: 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+  }
+  .flux8-mobile-create { bottom: calc(88px + var(--v8-safe-bottom)); }
+  /* Clear the floating bar. Full-bleed screens scroll their own body, so they
+     need the room on the shell rather than on the column. */
+  .flux8-main-column,
+  .flux8-app-shell[data-rail="off"] .flux8-main-column {
+    padding-bottom: calc(78px + var(--v8-safe-bottom));
+  }
+}
+
+@media (max-width: 639px) {
+  .flux8-post-wrap,
+  .flux8-post-skeleton,
+  .flux8-composer-card,
+  .flux8-story-card,
+  .flux8-loading-more { margin-inline: 6px; }
 }
 
 /* --------------------------------------------------------------------------
