@@ -4,6 +4,11 @@ const read = (path) => readFileSync(path, "utf8");
 const requireText = (source, marker, label) => {
   if (!source.includes(marker)) throw new Error(`${label}: missing ${JSON.stringify(marker)}`);
 };
+const requireAnyText = (source, alternatives, label) => {
+  if (!alternatives.some((marker) => source.includes(marker))) {
+    throw new Error(`${label}: missing one of ${alternatives.map(JSON.stringify).join(", ")}`);
+  }
+};
 const forbidText = (source, marker, label) => {
   if (source.includes(marker)) throw new Error(`${label}: forbidden ${JSON.stringify(marker)}`);
 };
@@ -36,7 +41,7 @@ for (const marker of [
 ]) requireText(callPage, marker, "Voice and video calls");
 
 const live = read("src/components/live/live-studio-v2.tsx");
-requireText(live, "element.srcObject = captured.stream", "Live persistent preview");
+requireAnyText(live, ["element.srcObject = captured.stream", "element.srcObject = capture.stream"], "Live persistent preview");
 requireText(live, "getFluxIceServers", "Live TURN support");
 
 const firebase = read("firebase.json");
