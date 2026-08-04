@@ -3,23 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowLeft,
-  Code2,
-  ExternalLink,
   Expand,
   Gamepad2,
   Heart,
+  Info,
   RefreshCw,
-  Share2,
-  ShieldCheck,
   Smartphone,
+  X,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import type { BrowserGame } from "@/data/browser-games";
-import { GameCoverArt } from "@/components/game/game-cover-art";
 import { assetUrl } from "@/lib/asset-url";
+import { cn } from "@/lib/utils";
 
 const FAVORITES_KEY = "flux-games-favorites";
 const RECENT_KEY = "flux-games-recent";
@@ -29,10 +25,9 @@ export function BrowserGameShell({ game }: { game: BrowserGame }) {
   const [started, setStarted] = useState(false);
   const [frameKey, setFrameKey] = useState(0);
   const [favorite, setFavorite] = useState(false);
-  const [frameLoaded, setFrameLoaded] = useState(false);
-  const [showEmbedHelp, setShowEmbedHelp] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
+  const [chromeVisible, setChromeVisible] = useState(true);
   const gameUrl = assetUrl(game.playUrl);
-  const remote = /^https?:\/\//i.test(game.playUrl);
 
   useEffect(() => {
     try {
@@ -44,115 +39,113 @@ export function BrowserGameShell({ game }: { game: BrowserGame }) {
   }, [game.slug]);
 
   useEffect(() => {
-    if (!started || !remote) return;
-    setFrameLoaded(false);
-    setShowEmbedHelp(false);
-    const timer = window.setTimeout(() => {
-      if (!frameLoaded) setShowEmbedHelp(true);
-    }, 8_000);
+    if (!started) return;
+    const timer = window.setTimeout(() => setChromeVisible(false), 2_800);
     return () => window.clearTimeout(timer);
-  }, [frameKey, frameLoaded, remote, started]);
+  }, [started, frameKey]);
 
   const rememberGame = () => {
     try {
       const recent = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]") as string[];
       localStorage.setItem(RECENT_KEY, JSON.stringify([game.slug, ...recent.filter((slug) => slug !== game.slug)].slice(0, 8)));
-      window.dispatchEvent(new Event("flux-games-updated"));
     } catch {
-      // The game still launches when browser storage is blocked.
+      // Private browsing should never prevent a game from opening.
     }
   };
 
-  const launch = () => {
+  const launch = async () => {
     rememberGame();
     setStarted(true);
-  };
-
-  const reload = () => {
-    setFrameLoaded(false);
-    setShowEmbedHelp(false);
-    setFrameKey((value) => value + 1);
+    setChromeVisible(true);
+    try {
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        await shellRef.current?.requestFullscreen?.();
+      }
+    } catch {
+      // iPhone Safari may not expose element fullscreen. The game still fills the viewport.
+    }
   };
 
   const toggleFavorite = () => {
     try {
       const saved = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as string[];
-      const next = saved.includes(game.slug) ? saved.filter((slug) => slug !== game.slug) : [game.slug, ...saved];
+      const next = saved.includes(game.slug)
+        ? saved.filter((slug) => slug !== game.slug)
+        : [game.slug, ...saved];
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
       setFavorite(next.includes(game.slug));
-      window.dispatchEvent(new Event("flux-games-updated"));
     } catch {
       toast.error("Favorites are unavailable in this browser.");
     }
   };
 
-  const share = async () => {
-    try {
-      if (navigator.share) await navigator.share({ title: `${game.title} on Flux`, text: game.shortDescription, url: window.location.href });
-      else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success("Flux game link copied.");
-      }
-    } catch (error) {
-      if ((error as Error).name !== "AbortError") toast.error("Could not share this game.");
-    }
-  };
-
   const enterFullscreen = async () => {
     try {
-      await shellRef.current?.requestFullscreen();
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await shellRef.current?.requestFullscreen();
     } catch {
-      toast.error("Fullscreen is unavailable in this browser.");
+      toast.message("Your browser does not provide webpage fullscreen. The game is already using the full screen area.");
     }
   };
 
   return (
-    <div ref={shellRef} className="relative min-h-dvh overflow-hidden bg-[#05070c] text-white">
-      <header className="relative z-30 flex min-h-16 items-center gap-2 border-b border-white/10 bg-black/72 px-3 backdrop-blur-2xl sm:px-5">
-        <Link href="/games" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/5 transition hover:bg-white/10" aria-label="Back to games"><ArrowLeft className="h-5 w-5" /></Link>
-        <div className="min-w-0 flex-1"><p className="truncate text-sm font-black">{game.title}</p><p className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">{game.origin === "bundled" ? "Bundled open-source build" : "Original open-source web build"} · {game.license}</p></div>
-        <a href={game.sourceUrl} target="_blank" rel="noreferrer" className="hidden h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-xs font-black transition hover:bg-white/10 sm:flex"><Code2 className="h-4 w-4" />Source</a>
-        <button type="button" onClick={toggleFavorite} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 transition hover:bg-white/10" aria-label={favorite ? "Remove favorite" : "Add favorite"}><Heart className={`h-[18px] w-[18px] ${favorite ? "fill-rose-400 text-rose-400" : ""}`} /></button>
-        <button type="button" onClick={() => void share()} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 transition hover:bg-white/10" aria-label="Share game"><Share2 className="h-[18px] w-[18px]" /></button>
-        {started ? <><button type="button" onClick={reload} className="hidden h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-xs font-black transition hover:bg-white/10 sm:flex"><RefreshCw className="h-4 w-4" />Reload</button><button type="button" onClick={() => void enterFullscreen()} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 transition hover:bg-white/10" aria-label="Fullscreen"><Expand className="h-[18px] w-[18px]" /></button></> : null}
-      </header>
-
+    <div
+      ref={shellRef}
+      className="relative h-[100dvh] w-full overflow-hidden bg-[#03050a] text-white"
+      onPointerDown={() => started && setChromeVisible(true)}
+    >
       {started ? (
-        <div className="relative h-[calc(100dvh-4rem)] bg-black">
+        <>
           <iframe
             key={frameKey}
             src={gameUrl}
             title={game.title}
-            className="h-full w-full border-0 bg-black"
+            className="absolute inset-0 h-full w-full border-0 bg-black"
             allow="autoplay; fullscreen; gamepad; clipboard-write"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-modals allow-downloads"
+            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
             allowFullScreen
-            onLoad={() => { setFrameLoaded(true); setShowEmbedHelp(false); }}
           />
-          {showEmbedHelp ? <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-amber-300/20 bg-[#12100b]/95 p-4 shadow-2xl backdrop-blur-xl sm:left-auto sm:max-w-md"><div className="flex gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" /><div><p className="font-black">The original host may block embedding</p><p className="mt-1 text-xs leading-5 text-white/55">Flux cannot bypass another site’s iframe policy. The source and original game remain available directly.</p><div className="mt-3 flex flex-wrap gap-2"><a href={game.playUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-xs font-black text-black">Open original<ExternalLink className="h-3.5 w-3.5" /></a><button type="button" onClick={reload} className="inline-flex h-9 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-black"><RefreshCw className="h-3.5 w-3.5" />Retry</button></div></div></div></div> : null}
-        </div>
+          <header className={cn("absolute inset-x-0 top-0 z-30 flex items-center gap-2 bg-gradient-to-b from-black/85 via-black/45 to-transparent px-3 pb-10 pt-[max(.65rem,env(safe-area-inset-top))] transition duration-300", chromeVisible ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-4 opacity-0")}>
+            <Link href="/games" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/12 bg-black/45 backdrop-blur-xl" aria-label="Back to games"><ArrowLeft className="h-5 w-5" /></Link>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black">{game.title}</p>
+              <p className="truncate text-[9px] font-black uppercase tracking-[.15em] text-white/45">Flux Original · {game.dimension} · Touch ready</p>
+            </div>
+            <button type="button" onClick={toggleFavorite} className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-black/45 backdrop-blur-xl" aria-label="Favorite"><Heart className={cn("h-4.5 w-4.5", favorite && "fill-rose-400 text-rose-400")} /></button>
+            <button type="button" onClick={() => setControlsOpen(true)} className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-black/45 backdrop-blur-xl" aria-label="Controls"><Info className="h-4.5 w-4.5" /></button>
+            <button type="button" onClick={() => { setFrameKey((value) => value + 1); setChromeVisible(true); }} className="hidden h-10 w-10 place-items-center rounded-full border border-white/12 bg-black/45 backdrop-blur-xl sm:grid" aria-label="Restart game"><RefreshCw className="h-4.5 w-4.5" /></button>
+            <button type="button" onClick={() => void enterFullscreen()} className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-black/45 backdrop-blur-xl" aria-label="Fullscreen"><Expand className="h-4.5 w-4.5" /></button>
+          </header>
+          {!chromeVisible ? <button type="button" onClick={() => setChromeVisible(true)} className="absolute left-3 top-[max(.7rem,env(safe-area-inset-top))] z-20 h-1.5 w-16 rounded-full bg-white/25" aria-label="Show game controls" /> : null}
+        </>
       ) : (
-        <main className="relative grid min-h-[calc(100dvh-4rem)] place-items-center overflow-hidden px-4 py-8 sm:px-8">
-          <GameCoverArt game={game} />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,.08),rgba(0,0,0,.78)_72%)]" />
-          <motion.section initial={{ opacity: 0, y: 22, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.48, ease: "easeOut" }} className="relative z-10 w-full max-w-xl rounded-[30px] border border-white/15 bg-black/65 p-6 shadow-[0_40px_120px_rgba(0,0,0,.6)] backdrop-blur-2xl sm:rounded-[38px] sm:p-9">
-            <div className="flex flex-wrap gap-2"><span className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em]"><Code2 className="h-3 w-3" />Open source</span>{game.categories.slice(0, 3).map((category) => <span key={category} className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-white/70">{category}</span>)}</div>
-            <h1 className="mt-5 text-4xl font-black tracking-[-0.06em] sm:text-6xl">{game.title}</h1>
-            <p className="mt-2 text-xs font-bold text-white/45">By {game.author}</p>
-            <p className="mt-4 text-sm leading-6 text-white/65 sm:text-base sm:leading-7">{game.description}</p>
-            <div className="mt-6 grid gap-2 text-xs font-bold text-white/65 sm:grid-cols-2">
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3"><Smartphone className="h-4 w-4 text-cyan-300" />{game.devices.join(" · ")}</div>
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3"><Gamepad2 className="h-4 w-4 text-violet-300" />{game.controls}</div>
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 sm:col-span-2"><ShieldCheck className="h-4 w-4 text-emerald-300" />{game.license} · repository linked and credited</div>
+        <main className="relative grid h-full place-items-center overflow-hidden px-5 py-8">
+          <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 20%, ${game.palette[2]}66, transparent 32%), linear-gradient(145deg, ${game.palette[0]}, ${game.palette[1]})` }} />
+          <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_25%,rgba(255,255,255,.07)_25.5%,transparent_26%)] bg-[length:44px_44px] opacity-40" />
+          <Link href="/games" className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-10 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-black/30 backdrop-blur-xl" aria-label="Back to games"><ArrowLeft className="h-5 w-5" /></Link>
+          <section className="relative z-10 w-full max-w-lg rounded-[32px] border border-white/15 bg-black/48 p-6 text-center shadow-[0_40px_120px_rgba(0,0,0,.5)] backdrop-blur-2xl sm:p-9">
+            <span className="mx-auto grid h-24 w-24 place-items-center rounded-[30px] border border-white/12 bg-white/8 text-5xl shadow-2xl">{game.symbol}</span>
+            <p className="mt-5 text-[10px] font-black uppercase tracking-[.2em] text-white/50">Flux Original · {game.dimension}</p>
+            <h1 className="mt-2 text-4xl font-black tracking-[-.06em] sm:text-6xl">{game.title}</h1>
+            <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-white/58">{game.description}</p>
+            <div className="mt-6 grid gap-2 text-left text-xs font-bold text-white/65 sm:grid-cols-2">
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/6 p-3"><Smartphone className="h-4 w-4 text-cyan-300" /> Mobile controls included</div>
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/6 p-3"><Gamepad2 className="h-4 w-4 text-violet-300" /> {game.controls}</div>
             </div>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <button type="button" onClick={launch} className="inline-flex h-13 flex-1 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black shadow-[0_18px_45px_rgba(255,255,255,.16)] transition hover:-translate-y-0.5"><Gamepad2 className="h-5 w-5" />Play inside Flux</button>
-              <a href={game.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex h-13 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/7 px-6 text-sm font-black transition hover:bg-white/12">Source & license<ExternalLink className="h-4 w-4" /></a>
-            </div>
-            {remote ? <p className="mt-4 text-center text-[10px] leading-4 text-white/35">Flux embeds the project’s original hosted build. Some projects may require opening the original page due to their security headers.</p> : null}
-          </motion.section>
+            <button type="button" onClick={() => void launch()} className="mt-7 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-black text-black shadow-[0_18px_50px_rgba(255,255,255,.16)] transition hover:scale-[1.01]"><Gamepad2 className="h-5 w-5" /> Play now</button>
+          </section>
         </main>
       )}
+
+      {controlsOpen ? (
+        <div className="absolute inset-0 z-50 grid place-items-end bg-black/55 p-3 backdrop-blur-sm sm:place-items-center" onClick={() => setControlsOpen(false)}>
+          <section className="w-full max-w-md rounded-[28px] border border-white/12 bg-[#0b1018] p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/8"><Gamepad2 className="h-5 w-5" /></div><div className="min-w-0 flex-1"><h2 className="font-black">Controls</h2><p className="text-xs text-white/40">{game.title}</p></div><button type="button" onClick={() => setControlsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-white/7"><X className="h-4 w-4" /></button></div>
+            <p className="mt-5 rounded-2xl border border-white/8 bg-white/5 p-4 text-sm font-semibold leading-6 text-white/68">{game.controls}</p>
+            <button type="button" onClick={() => { setFrameKey((value) => value + 1); setControlsOpen(false); }} className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white text-sm font-black text-black"><RefreshCw className="h-4 w-4" /> Restart game</button>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
