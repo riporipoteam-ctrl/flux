@@ -1,0 +1,79 @@
+name: Deploy AskAI Firebase Backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "functions/**"
+      - "firebase.json"
+      - ".github/workflows/deploy-askai-firebase.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flux-askai-firebase
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FLUX_544A6 != '' && secrets.GROQ_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FLUX_544A6 }}
+
+      - name: Install function dependencies
+        run: npm ci --prefix functions
+
+      - name: Build Firebase Functions
+        run: npm run build --prefix functions
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools@latest
+
+      - name: Update GROQ_API_KEY in Firebase Secret Manager
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          echo "::add-mask::$GROQ_API_KEY"
+          printf '%s' "$GROQ_API_KEY" > "$RUNNER_TEMP/groq-key.txt"
+          firebase functions:secrets:set GROQ_API_KEY \
+            --project flux-544a6 \
+            --data-file "$RUNNER_TEMP/groq-key.txt" \
+            --force
+          rm -f "$RUNNER_TEMP/groq-key.txt"
+
+      - name: Deploy authenticated AskAI proxy
+        run: firebase deploy --only functions:askaiGroq --project flux-544a6 --non-interactive
+
+      - name: Verify deployed health endpoint
+        run: |
+          sleep 8
+          curl --fail --retry 6 --retry-delay 5 \
+            "https://europe-west1-flux-544a6.cloudfunctions.net/askaiGroq?health=1"
+
+  missing-secrets:
+    if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FLUX_544A6 == '' || secrets.GROQ_API_KEY == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain required repository secrets
+        run: |
+          echo "AskAI deployment skipped."
+          echo "Add FIREBASE_SERVICE_ACCOUNT_FLUX_544A6 and a NEW GROQ_API_KEY as GitHub Actions secrets."
+          echo "Do not reuse a key that was pasted into chat, source code, logs, issues or screenshots."
+          exit 1
