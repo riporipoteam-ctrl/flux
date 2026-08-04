@@ -14,6 +14,7 @@ function forbidText(source, text, label) {
 
 const route = read("src/app/(main)/ask-ai/page.tsx");
 requireText(route, "AskAIGroqWorkspace", "AskAI route");
+requireText(route, "AskAIConnectionStatus", "AskAI connection diagnostics");
 
 const workspace = read("src/components/ask-ai/askai-groq-workspace.tsx");
 for (const marker of [
@@ -36,9 +37,15 @@ for (const marker of [
   "getIdToken",
   "Authorization",
   "NEXT_PUBLIC_ASKAI_GROQ_ENDPOINT",
+  "checkAskAIGroqHealth",
 ]) requireText(client, marker, "Groq Firebase client");
-forbidText(client, "GROQ_API_KEY", "browser Groq client");
-forbidText(client, "gsk_", "browser Groq client");
+for (const forbidden of ["process.env.GROQ_API_KEY", "NEXT_PUBLIC_GROQ_API_KEY", "gsk_"]) {
+  forbidText(client, forbidden, "browser Groq client");
+}
+
+const status = read("src/components/ask-ai/askai-connection-status.tsx");
+for (const marker of ["missing-secret", "not-deployed", "Test again", "functions:secrets:set GROQ_API_KEY"]) requireText(status, marker, "AskAI diagnostic UI");
+forbidText(status, "gsk_", "AskAI diagnostic UI");
 
 const server = read("functions/src/index.ts");
 for (const marker of [
@@ -50,6 +57,7 @@ for (const marker of [
   'type: "code_interpreter"',
   'effort: mode === "pro" ? "high" : "low"',
   "askaiRateLimits",
+  "GROQ_SECRET_MISSING",
 ]) requireText(server, marker, "Firebase Groq proxy");
 forbidText(server, "gsk_", "Firebase Groq proxy");
 
