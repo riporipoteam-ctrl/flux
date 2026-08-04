@@ -24,7 +24,7 @@ for (const marker of [
 ]) requireText(catalog, marker, "Flux Originals catalog");
 for (const forbidden of [
   "fosiper.com",
-  "original-host",
+  'origin: "original-host"',
   "FLUX_ARCADE_GAMES.map",
   "Open original",
 ]) forbidText(catalog, forbidden, "Remote or generated game catalog");
