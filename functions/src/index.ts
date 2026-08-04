@@ -10,14 +10,10 @@ const groqApiKey = defineSecret("GROQ_API_KEY");
 const GROQ_RESPONSES_URL = "https://api.groq.com/openai/v1/responses";
 const INSTANT_MODEL = "openai/gpt-oss-20b";
 const PRO_MODEL = "openai/gpt-oss-120b";
+const FUNCTION_VERSION = "askai-groq-v2";
 
 type Mode = "instant" | "pro";
-
-type ClientMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
+type ClientMessage = { role: "user" | "assistant"; content: string };
 type RequestBody = {
   mode?: Mode;
   messages?: ClientMessage[];
@@ -29,6 +25,11 @@ type RequestBody = {
 function readBearer(value: string | undefined): string | null {
   if (!value?.startsWith("Bearer ")) return null;
   return value.slice(7).trim() || null;
+}
+
+function readGroqKey(): string {
+  try { return groqApiKey.value().trim(); }
+  catch { return ""; }
 }
 
 function cleanMessages(value: unknown): ClientMessage[] {
@@ -120,8 +121,33 @@ export const askaiGroq = onRequest({
   maxInstances: 10,
 }, async (request, response) => {
   response.set("Cache-Control", "no-store");
+  response.set("X-AskAI-Version", FUNCTION_VERSION);
+
+  const configured = Boolean(readGroqKey());
+  if (request.method === "GET" || request.method === "HEAD") {
+    response.status(configured ? 200 : 503).json({
+      ok: configured,
+      configured,
+      service: "Flux AskAI Groq proxy",
+      version: FUNCTION_VERSION,
+      models: { instant: INSTANT_MODEL, pro: PRO_MODEL },
+      tools: ["browser_search", "code_interpreter"],
+      error: configured ? null : "GROQ_API_KEY is not configured in Firebase Secret Manager.",
+    });
+    return;
+  }
+
   if (request.method !== "POST") {
     response.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  const apiKey = readGroqKey();
+  if (!apiKey) {
+    response.status(503).json({
+      error: "AskAI backend is deployed, but GROQ_API_KEY is missing from Firebase Secret Manager.",
+      code: "GROQ_SECRET_MISSING",
+    });
     return;
   }
 
@@ -159,11 +185,9 @@ export const askaiGroq = onRequest({
   }
 
   const model = mode === "pro" ? PRO_MODEL : INSTANT_MODEL;
-  const research = body.research === true;
-  const codeExecution = body.codeExecution === true;
   const tools: Array<Record<string, unknown>> = [];
-  if (research) tools.push({ type: "browser_search" });
-  if (codeExecution) tools.push({ type: "code_interpreter", container: { type: "auto" } });
+  if (body.research === true) tools.push({ type: "browser_search" });
+  if (body.codeExecution === true) tools.push({ type: "code_interpreter", container: { type: "auto" } });
 
   const instructions = [
     `You are ${mode === "pro" ? "AskAI 1.0 Pro" : "AskAI 1.0 Instant"} inside Flux social network.`,
@@ -175,30 +199,33 @@ export const askaiGroq = onRequest({
     String(body.workspaceContext || "").slice(0, 30_000),
   ].filter(Boolean).join("\n\n");
 
-  const groqResponse = await fetch(GROQ_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${groqApiKey.value()}`,
-      "Content-Type": "application/json",
-      "Groq-Beta": "inference-metrics",
-    },
-    body: JSON.stringify({
-      model,
-      instructions,
-      input: messages,
-      reasoning: { effort: mode === "pro" ? "high" : "low" },
-      max_output_tokens: mode === "pro" ? 8_192 : 4_096,
-      ...(tools.length ? { tools, tool_choice: "auto" } : {}),
-    }),
-  });
+  let groqResponse: globalThis.Response;
+  try {
+    groqResponse = await fetch(GROQ_RESPONSES_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Groq-Beta": "inference-metrics",
+      },
+      body: JSON.stringify({
+        model,
+        instructions,
+        input: messages,
+        reasoning: { effort: mode === "pro" ? "high" : "low" },
+        max_output_tokens: mode === "pro" ? 8_192 : 4_096,
+        ...(tools.length ? { tools, tool_choice: "auto" } : {}),
+      }),
+    });
+  } catch (error) {
+    response.status(502).json({ error: error instanceof Error ? `Could not reach Groq: ${error.message}` : "Could not reach Groq." });
+    return;
+  }
 
   const raw = await groqResponse.text();
   let data: Record<string, unknown> = {};
-  try {
-    data = JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    // Keep empty data so the normalized error below is returned.
-  }
+  try { data = JSON.parse(raw) as Record<string, unknown>; }
+  catch { /* normalized below */ }
 
   if (!groqResponse.ok) {
     const groqError = data.error && typeof data.error === "object"
@@ -206,6 +233,7 @@ export const askaiGroq = onRequest({
       : "";
     response.status(groqResponse.status).json({
       error: groqError.slice(0, 300) || `Groq returned ${groqResponse.status}.`,
+      code: groqResponse.status === 401 ? "GROQ_KEY_REJECTED" : "GROQ_REQUEST_FAILED",
     });
     return;
   }
@@ -223,5 +251,6 @@ export const askaiGroq = onRequest({
     sources: extractSources(data),
     usage: data.usage || null,
     metrics: data.metadata || null,
+    version: FUNCTION_VERSION,
   });
 });
