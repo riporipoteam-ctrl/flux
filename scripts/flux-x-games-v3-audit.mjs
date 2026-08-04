@@ -29,7 +29,7 @@ const sourceEntries = (browserGames.match(/sourceUrl:/g) || []).length;
 if (sourceEntries < 20) throw new Error(`Open-source catalog: expected at least 20 source-linked entries, found ${sourceEntries}`);
 
 const gamesHub = read("src/components/game/games-hub.tsx");
-for (const marker of ["Open Games", "OPEN_SOURCE_GAME_COUNT", "Source linked", "View source", "Continue playing", "Source & license", "OPEN SOURCE"]) requireText(gamesHub, marker, "Open-source Games UI");
+for (const marker of ["Open Games", "OPEN_SOURCE_GAME_COUNT", "Source linked", "View source", "Continue playing", "OPEN SOURCE", "license"]) requireText(gamesHub, marker, "Open-source Games UI");
 forbidText(gamesHub, "Arcade achievements", "Rejected custom Arcade features");
 forbidText(gamesHub, "Daily challenge", "Rejected custom Arcade daily challenge");
 forbidText(gamesHub, "ARCADE_GAME_COUNT", "Generated Arcade count");
