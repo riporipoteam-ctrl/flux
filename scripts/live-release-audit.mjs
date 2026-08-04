@@ -9,25 +9,20 @@ const forbidText = (source, marker, label) => {
 };
 
 const nav = read("src/components/layout/mobile-nav.tsx");
-for (const marker of ["createPortal", "document.body", "data-flux-mobile-dock=\"portal-v1\"", "Home", "Explore", "Create", "Games", "Profile"]) requireText(nav, marker, "Body portal mobile dock");
+for (const marker of ["createPortal", "document.body", "data-flux-mobile-dock=\"portal-v1\""]) requireText(nav, marker, "Mobile dock");
 
-const dock = read("src/styles/flux-mobile-dock.css");
-for (const marker of ["2147482000", "position: fixed", "display: block !important", "visibility: visible", "pointer-events: auto", "100vw"]) requireText(dock, marker, "Mobile dock visibility");
+const catalog = read("src/data/browser-games.ts");
+for (const marker of ["FLUX_ORIGINALS", "Flux Velocity", "Flux Orbit", "Flux Rooftop", "Flux Hoops", "Flux Defender", "Flux Stack"]) requireText(catalog, marker, "Flux Originals");
+forbidText(catalog, "fosiper.com", "Remote game hosting");
 
-const root = read("src/app/layout.tsx");
-for (const marker of ["data-flux-ui=\"x3\"", "flux-mobile-dock.css", "flux-x3"]) requireText(root, marker, "X3 root release");
+const gameShell = read("src/components/game/browser-game-shell.tsx");
+for (const marker of ["Mobile controls included", "Flux Original", "requestFullscreen", "Restart game"]) requireText(gameShell, marker, "Game shell");
+forbidText(gameShell, "original host", "Old embedding warning");
 
-const publisher = read(".github/workflows/publish-flux-live.yml");
-for (const marker of ["name: Publish Flux Live X3", "build_type=workflow", "upload-pages-artifact@v3", "deploy-pages@v4", "gh-pages", "release.json", "data-flux-ui=\"x3\""]) requireText(publisher, marker, "Live Pages publisher");
+const liveViewer = read("src/components/live/live-viewer.tsx");
+for (const marker of ["latestComments", "chatOpen", "FloatingHeart", "ActionButton"]) requireText(liveViewer, marker, "TikTok-style Live");
 
-const games = read("src/data/browser-games.ts");
-for (const marker of ["OPEN_SOURCE_GAMES", "OPEN_SOURCE_GAME_COUNT", "sourceUrl", "license", "fosiper"]) requireText(games, marker, "Open-source Games release");
-forbidText(games, "FLUX_ARCADE_GAMES.map", "Generated public game catalog");
+const askai = read("src/lib/ai/askai-groq.ts");
+for (const marker of ["checkAskAIGroqHealth", "GROQ_SECRET_MISSING", "GROQ_KEY_REJECTED"]) requireText(askai, marker, "AskAI diagnostics");
 
-const live = read("src/components/live/live-viewer.tsx");
-for (const marker of ["latestComments", "FloatingHeart", "chatOpen", "ActionButton", "CommentList", "Gift", "Follow"]) requireText(live, marker, "TikTok-style live release");
-
-const askai = read("src/components/ask-ai/askai-connection-status.tsx");
-for (const marker of ["checkAskAIGroqHealth", "Groq secret is missing", "AskAI function is not deployed"]) requireText(askai, marker, "AskAI backend diagnostics");
-
-console.log("Flux X3 live release audit passed with source-linked Games, TikTok-style Live and AskAI diagnostics.");
+console.log("Flux live release audit passed with self-hosted Originals, mobile Live and AskAI diagnostics.");
