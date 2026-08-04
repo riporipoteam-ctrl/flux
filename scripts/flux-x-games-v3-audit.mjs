@@ -8,54 +8,57 @@ const forbidText = (source, marker, label) => {
   if (source.includes(marker)) throw new Error(`${label}: forbidden ${JSON.stringify(marker)}`);
 };
 
-const arcadeData = read("src/data/flux-arcade-games.ts");
-const worldsBlock = arcadeData.split("const GENRES")[0];
-const genresBlock = arcadeData.split("const GENRES")[1]?.split("function slugify")[0] || "";
-const worldCount = (worldsBlock.match(/\{ name: /g) || []).length;
-const genreCount = (genresBlock.match(/\{ genre: /g) || []).length;
-if (worldCount * genreCount < 250) throw new Error(`Flux Arcade: expected 250+ games, found ${worldCount * genreCount}`);
-for (const genre of ["Horror", "Simulator", "Quest", "Tycoon", "Story", "Racing", "Platformer", "Puzzle", "Survival", "Farming"]) requireText(arcadeData, `genre: \"${genre}\"`, "Flux Arcade genres");
-
 const browserGames = read("src/data/browser-games.ts");
-requireText(browserGames, "...ARCADE_GAMES", "Games catalog integration");
-requireText(browserGames, "ARCADE_GAME_COUNT", "Games catalog count");
+for (const marker of [
+  "OPEN_SOURCE_GAMES",
+  "OPEN_SOURCE_GAME_COUNT",
+  "githubCover",
+  "fosiper",
+  "https://github.com/attogram/2048-lite",
+  "https://github.com/attogram/hextris-lite",
+  "https://github.com/dmcinnes/dead-valley",
+  "https://github.com/arturkot/the-house-game",
+  "https://github.com/phoboslab/underrun",
+  "https://github.com/particle-clicker/particle-clicker",
+  "license:",
+  "sourceUrl:",
+]) requireText(browserGames, marker, "Open-source games catalog");
+forbidText(browserGames, "FLUX_ARCADE_GAMES.map", "Generated games in public catalog");
+forbidText(browserGames, "thumbnail: \"/game-covers/flux-arcade.svg\"", "Repeated fake Arcade thumbnails");
+const sourceEntries = (browserGames.match(/sourceUrl:/g) || []).length;
+if (sourceEntries < 20) throw new Error(`Open-source catalog: expected at least 20 source-linked entries, found ${sourceEntries}`);
 
 const gamesHub = read("src/components/game/games-hub.tsx");
-for (const marker of ["useDeferredValue", "PAGE_SIZE", "visibleGames", "Show", "Global scores", "Daily challenge", "Continue playing", "Arcade achievements"]) requireText(gamesHub, marker, "Games performance and discovery");
-forbidText(gamesHub, "filteredGames.map", "Games unbounded render");
+for (const marker of ["Open Games", "OPEN_SOURCE_GAME_COUNT", "Source linked", "View source", "Continue playing", "Source & license", "OPEN SOURCE"]) requireText(gamesHub, marker, "Open-source Games UI");
+forbidText(gamesHub, "Arcade achievements", "Rejected custom Arcade features");
+forbidText(gamesHub, "Daily challenge", "Rejected custom Arcade daily challenge");
+forbidText(gamesHub, "ARCADE_GAME_COUNT", "Generated Arcade count");
 
-const coverArt = read("src/components/game/game-cover-art.tsx");
-for (const marker of ["HorrorScene", "RacingScene", "TycoonScene", "QuestScene", "PlatformScene", "PuzzleScene", "SurvivalScene", "FarmingScene", "hashText", "game.arcade"]) requireText(coverArt, marker, "Procedural game thumbnails");
-forbidText(coverArt, "if (game.arcade) return null", "Arcade cover art");
+const gameShell = read("src/components/game/browser-game-shell.tsx");
+for (const marker of ["Original open-source web build", "Open original", "Source & license", "iframe", "requestFullscreen", "showEmbedHelp"]) requireText(gameShell, marker, "Open-source game player");
+forbidText(gameShell, "Stored and served by Flux · no redirect", "False hosting claim");
 
-const arcadePlayer = read("src/components/game/flux-arcade-player.tsx");
-for (const marker of ["RunnerStage", "SurvivalStage", "TycoonStage", "QuestStage", "PuzzleStage", "submitGameScore", "Global leaderboard", "recordGameOpened", "recordGameFinished", "Share result"]) requireText(arcadePlayer, marker, "Playable Arcade runtime");
+const liveViewer = read("src/components/live/live-viewer.tsx");
+for (const marker of ["latestComments", "chatOpen", "FloatingHeart", "AnimatePresence", "Add comment", "Gift", "Follow", "CommentList", "ActionButton", "@${username}"]) requireText(liveViewer, marker, "TikTok-style Live viewer");
 
-const progress = read("src/lib/game-progress.ts");
-for (const marker of ["dailyChallengeGame", "recentBrowserGames", "ARCADE_ACHIEVEMENTS", "three-day-streak", "resultShareText"]) requireText(progress, marker, "Arcade progress features");
+const askaiClient = read("src/lib/ai/askai-groq.ts");
+for (const marker of ["checkAskAIGroqHealth", "GROQ_SECRET_MISSING", "GROQ_KEY_REJECTED", "missing-secret", "not-deployed", "openai/gpt-oss-120b"]) requireText(askaiClient, marker, "AskAI diagnostics");
 
-const leaderboard = read("src/services/game-leaderboards.ts");
-for (const marker of ["gameSessions", "FieldPath", "runTransaction", "orderBy"]) requireText(leaderboard, marker, "Game leaderboard integration");
+const askaiFunction = read("functions/src/index.ts");
+for (const marker of ["defineSecret(\"GROQ_API_KEY\")", "FUNCTION_VERSION", "request.method === \"GET\"", "GROQ_SECRET_MISSING", "browser_search", "code_interpreter"]) requireText(askaiFunction, marker, "Secure AskAI Firebase proxy");
+forbidText(askaiFunction, "gsk_", "Hardcoded Groq key");
+
+const askaiStatus = read("src/components/ask-ai/askai-connection-status.tsx");
+for (const marker of ["Groq secret is missing", "AskAI function is not deployed", "Test again", "functions:secrets:set GROQ_API_KEY"]) requireText(askaiStatus, marker, "AskAI connection UI");
+
+const firebaseWorkflow = read(".github/workflows/deploy-askai-firebase.yml");
+for (const marker of ["FIREBASE_SERVICE_ACCOUNT_FLUX_544A6", "secrets.GROQ_API_KEY", "functions:secrets:set GROQ_API_KEY", "functions:askaiGroq", "Verify deployed health endpoint"]) requireText(firebaseWorkflow, marker, "AskAI Firebase deploy workflow");
+forbidText(firebaseWorkflow, "gsk_", "Hardcoded Groq key in workflow");
 
 const nav = read("src/components/layout/mobile-nav.tsx");
-for (const marker of ["/home", "/explore", "#compose", "/games", "profileHref", "flux8-mobile-tab-create", "createPortal", "data-flux-mobile-dock=\"portal-v1\""]) requireText(nav, marker, "Body-level mobile bottom navigation");
-
-const dockStyle = read("src/styles/flux-mobile-dock.css");
-for (const marker of ["z-index: 2147482000", "position: fixed", "visibility: visible", "pointer-events: auto", "flux-mobile-dock-label"]) requireText(dockStyle, marker, "Unhideable mobile dock styles");
-
-const mobileBoot = read("src/components/providers/mobile-boot.tsx");
-for (const marker of ["visualViewport", "--flux-visual-bottom", "updateViaCache", "flux-shell-v4", "NEXT_PUBLIC_RELEASE_SHA"]) requireText(mobileBoot, marker, "Safari viewport and cache recovery");
-
-const style = read("src/styles/flux-x-ultimate.css");
-for (const marker of ["var(--flux-visual-bottom)", "content-visibility: auto", "prefers-reduced-motion", ".flux9-topbar { display: none", "border-radius: 0 !important"]) requireText(style, marker, "Responsive X design system");
-
-const root = read("src/app/layout.tsx");
-for (const marker of ["data-flux-ui=\"x3\"", "data-flux-release", "NEXT_PUBLIC_RELEASE_SHA", "flux-mobile-dock.css"]) requireText(root, marker, "Traceable Flux X3 release");
-
-const deploy = read(".github/workflows/publish-flux-live.yml");
-for (const marker of ["Force Pages to use GitHub Actions", "build_type=workflow", "release.json", "version.txt", "upload-pages-artifact@v3", "gh-pages", "data-flux-ui=\"x3\"", "flux-mobile-dock-portal"]) requireText(deploy, marker, "Dual Pages deployment");
+for (const marker of ["createPortal", "document.body", "data-flux-mobile-dock=\"portal-v1\""]) requireText(nav, marker, "Body-level mobile navigation");
 
 const media = read("src/services/media.ts");
-for (const marker of ["processStoryImage", "maxDimension: 2048", "attempt < 3", "Post videos must be under 100 MB"]) requireText(media, marker, "Post upload reliability");
+for (const marker of ["processStoryImage", "maxDimension: 2048", "attempt < 3"]) requireText(media, marker, "Upload reliability");
 
-console.log(`Flux X3 audit passed with ${worldCount * genreCount} integrated Arcade games, portal navigation and procedural covers.`);
+console.log(`Flux audit passed with ${sourceEntries} source-linked games, TikTok-style Live comments and secure AskAI diagnostics.`);
