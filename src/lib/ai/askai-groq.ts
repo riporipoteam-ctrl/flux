@@ -1,6 +1,7 @@
 import { auth } from "@/lib/firebase";
 
 export type AskAIGroqMode = "instant" | "pro";
+export type AskAIHealthState = "checking" | "connected" | "missing-secret" | "not-deployed" | "offline";
 
 export interface AskAIGroqMessage {
   role: "user" | "assistant";
@@ -21,10 +22,80 @@ export interface AskAIGroqResult {
   metrics: unknown;
 }
 
+export interface AskAIGroqHealth {
+  state: Exclude<AskAIHealthState, "checking">;
+  ok: boolean;
+  configured: boolean;
+  service: string;
+  version: string;
+  endpoint: string;
+  message: string;
+  models: { instant: string; pro: string };
+}
+
 const DEFAULT_ENDPOINT = "https://europe-west1-flux-544a6.cloudfunctions.net/askaiGroq";
 
 export function getAskAIGroqEndpoint(): string {
   return process.env.NEXT_PUBLIC_ASKAI_GROQ_ENDPOINT?.trim() || DEFAULT_ENDPOINT;
+}
+
+export async function checkAskAIGroqHealth(signal?: AbortSignal): Promise<AskAIGroqHealth> {
+  const endpoint = getAskAIGroqEndpoint();
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), 9_000);
+  const abort = () => controller.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+
+  try {
+    const response = await fetch(`${endpoint}${endpoint.includes("?") ? "&" : "?"}health=1&t=${Date.now()}`, {
+      method: "GET",
+      cache: "no-store",
+      headers: { "Accept": "application/json" },
+      signal: controller.signal,
+    });
+    const data = await response.json().catch(() => ({})) as {
+      ok?: boolean;
+      configured?: boolean;
+      service?: string;
+      version?: string;
+      error?: string | null;
+      models?: { instant?: string; pro?: string };
+    };
+
+    const configured = data.configured === true;
+    return {
+      state: response.ok && configured ? "connected" : response.status === 503 && !configured ? "missing-secret" : "offline",
+      ok: response.ok && configured,
+      configured,
+      service: String(data.service || "Flux AskAI Groq proxy"),
+      version: String(data.version || "unknown"),
+      endpoint,
+      message: response.ok && configured
+        ? "Groq is connected through the authenticated Firebase proxy."
+        : String(data.error || `AskAI health check returned ${response.status}.`),
+      models: {
+        instant: String(data.models?.instant || "openai/gpt-oss-20b"),
+        pro: String(data.models?.pro || "openai/gpt-oss-120b"),
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Network request failed";
+    return {
+      state: /404|not found/i.test(message) ? "not-deployed" : "offline",
+      ok: false,
+      configured: false,
+      service: "Flux AskAI Groq proxy",
+      version: "unreachable",
+      endpoint,
+      message: (error as DOMException)?.name === "AbortError"
+        ? "The Firebase AskAI function did not answer in time. It may not be deployed."
+        : "The Firebase AskAI function is unreachable. Deploy the function and check its CORS/region configuration.",
+      models: { instant: "openai/gpt-oss-20b", pro: "openai/gpt-oss-120b" },
+    };
+  } finally {
+    globalThis.clearTimeout(timeout);
+    signal?.removeEventListener("abort", abort);
+  }
 }
 
 export async function runAskAIGroq(input: {
@@ -59,9 +130,16 @@ export async function runAskAIGroq(input: {
         codeExecution: input.codeExecution === true,
       }),
     });
-    const data = await response.json().catch(() => ({})) as Partial<AskAIGroqResult> & { error?: string };
+    const data = await response.json().catch(() => ({})) as Partial<AskAIGroqResult> & { error?: string; code?: string };
     if (!response.ok) {
       if (response.status === 401) await user.getIdToken(true).catch(() => undefined);
+      if (data.code === "GROQ_SECRET_MISSING") {
+        throw new Error("AskAI is deployed, but its Groq secret is missing. Add GROQ_API_KEY in Firebase Secret Manager and redeploy the function.");
+      }
+      if (data.code === "GROQ_KEY_REJECTED") {
+        throw new Error("Groq rejected the backend key. Revoke the exposed key, create a fresh key, update the Firebase secret and redeploy AskAI.");
+      }
+      if (response.status === 404) throw new Error("The AskAI Firebase Function is not deployed at the configured endpoint.");
       throw new Error(data.error || `AskAI returned ${response.status}.`);
     }
     if (!data.answer?.trim()) throw new Error("AskAI returned an empty answer.");
@@ -76,6 +154,9 @@ export async function runAskAIGroq(input: {
   } catch (error) {
     if ((error as DOMException)?.name === "AbortError") {
       throw new Error(input.signal?.aborted ? "AskAI response stopped." : "AskAI took too long. Try again.");
+    }
+    if (error instanceof TypeError && /fetch/i.test(error.message)) {
+      throw new Error("AskAI could not reach its Firebase backend. The function may not be deployed yet.");
     }
     throw error;
   } finally {
