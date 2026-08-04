@@ -6,7 +6,18 @@ export type BrowserGameCategory =
   | "Action"
   | "Platformer"
   | "Arcade"
-  | "Puzzle";
+  | "Puzzle"
+  | "Simulator"
+  | "Tycoon"
+  | "Strategy"
+  | "Story"
+  | "Horror"
+  | "Sandbox"
+  | "Farming"
+  | "Quest"
+  | "Survival"
+  | "Board"
+  | "Music";
 
 export type BrowserGame = {
   slug: string;
