@@ -1,5 +1,5 @@
-import LiveStudioV2 from "@/components/live/live-studio-v2";
+import LiveStudioV4 from "@/components/live/live-studio-v4";
 
 export default function LiveCreatePage() {
-  return <LiveStudioV2 />;
+  return <LiveStudioV4 />;
 }
