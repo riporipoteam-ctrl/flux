@@ -54,8 +54,12 @@ export async function resetReliableLivePeer(
 export async function removeReliableLivePeer(
   streamId: string,
   viewerId: string,
-  attempt: number
+  attempt?: number
 ): Promise<void> {
+  // Cleanup from an older component version may not include its attempt. In
+  // that case we deliberately leave the document for the host connection-state
+  // handler rather than risk deleting a newer retry that is already starting.
+  if (!attempt) return;
   const ref = peerPath(streamId, viewerId);
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(ref);
