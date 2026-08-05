@@ -1,5 +1,5 @@
-import LiveViewer from "@/components/live/live-viewer";
+import LiveViewerV4 from "@/components/live/live-viewer-v4";
 
 export default function LiveViewerPage() {
-  return <LiveViewer />;
+  return <LiveViewerV4 />;
 }
