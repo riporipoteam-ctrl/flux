@@ -6,6 +6,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   type DocumentData,
@@ -32,9 +33,14 @@ function mapPeer(id: string, data: DocumentData): LivePeer {
   };
 }
 
-export async function resetReliableLivePeer(streamId: string, viewerId: string, attempt: number): Promise<void> {
-  await deleteDoc(peerPath(streamId, viewerId)).catch(() => undefined);
-  await setDoc(peerPath(streamId, viewerId), {
+export async function resetReliableLivePeer(
+  streamId: string,
+  viewerId: string,
+  attempt: number
+): Promise<void> {
+  const ref = peerPath(streamId, viewerId);
+  await deleteDoc(ref).catch(() => undefined);
+  await setDoc(ref, {
     viewerId,
     offer: null,
     answer: null,
@@ -45,11 +51,24 @@ export async function resetReliableLivePeer(streamId: string, viewerId: string, 
   });
 }
 
-export async function removeReliableLivePeer(streamId: string, viewerId: string): Promise<void> {
-  await deleteDoc(peerPath(streamId, viewerId)).catch(() => undefined);
+export async function removeReliableLivePeer(
+  streamId: string,
+  viewerId: string,
+  attempt: number
+): Promise<void> {
+  const ref = peerPath(streamId, viewerId);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists()) return;
+    if (Number(snapshot.data().attempt || 1) !== attempt) return;
+    transaction.delete(ref);
+  }).catch(() => undefined);
 }
 
-export function subscribeReliableLivePeers(streamId: string, callback: (peers: LivePeer[]) => void): Unsubscribe {
+export function subscribeReliableLivePeers(
+  streamId: string,
+  callback: (peers: LivePeer[]) => void
+): Unsubscribe {
   return onSnapshot(collection(db, "liveStreams", streamId, "peers"), (snapshot) => {
     callback(snapshot.docs.map((item) => mapPeer(item.id, item.data())));
   }, (error) => {
@@ -58,7 +77,12 @@ export function subscribeReliableLivePeers(streamId: string, callback: (peers: L
   });
 }
 
-export function subscribeReliableLivePeer(streamId: string, viewerId: string, attempt: number, callback: (peer: LivePeer | null) => void): Unsubscribe {
+export function subscribeReliableLivePeer(
+  streamId: string,
+  viewerId: string,
+  attempt: number,
+  callback: (peer: LivePeer | null) => void
+): Unsubscribe {
   return onSnapshot(peerPath(streamId, viewerId), (snapshot) => {
     if (!snapshot.exists()) return callback(null);
     const peer = mapPeer(snapshot.id, snapshot.data());
@@ -69,7 +93,12 @@ export function subscribeReliableLivePeer(streamId: string, viewerId: string, at
   });
 }
 
-export async function setReliableLiveOffer(streamId: string, viewerId: string, attempt: number, offer: RTCSessionDescriptionInit): Promise<void> {
+export async function setReliableLiveOffer(
+  streamId: string,
+  viewerId: string,
+  attempt: number,
+  offer: RTCSessionDescriptionInit
+): Promise<void> {
   await setDoc(peerPath(streamId, viewerId), {
     viewerId,
     attempt,
@@ -80,7 +109,12 @@ export async function setReliableLiveOffer(streamId: string, viewerId: string, a
   }, { merge: true });
 }
 
-export async function setReliableLiveAnswer(streamId: string, viewerId: string, attempt: number, answer: RTCSessionDescriptionInit): Promise<void> {
+export async function setReliableLiveAnswer(
+  streamId: string,
+  viewerId: string,
+  attempt: number,
+  answer: RTCSessionDescriptionInit
+): Promise<void> {
   await setDoc(peerPath(streamId, viewerId), {
     viewerId,
     attempt,
@@ -90,13 +124,22 @@ export async function setReliableLiveAnswer(streamId: string, viewerId: string, 
   }, { merge: true });
 }
 
-export async function setReliableLiveStatus(streamId: string, viewerId: string, attempt: number, status: LivePeer["status"]): Promise<void> {
-  await setDoc(peerPath(streamId, viewerId), {
-    viewerId,
-    attempt,
-    status,
-    updatedAt: serverTimestamp(),
-  }, { merge: true });
+export async function setReliableLiveStatus(
+  streamId: string,
+  viewerId: string,
+  attempt: number,
+  status: LivePeer["status"]
+): Promise<void> {
+  const ref = peerPath(streamId, viewerId);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists()) return;
+    if (Number(snapshot.data().attempt || 1) !== attempt) return;
+    transaction.set(ref, {
+      status,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  });
 }
 
 export async function addReliableLiveCandidate(
@@ -106,11 +149,14 @@ export async function addReliableLiveCandidate(
   attempt: number,
   candidate: RTCIceCandidateInit
 ): Promise<void> {
-  await addDoc(collection(db, "liveStreams", streamId, "peers", viewerId, `${side}Candidates`), {
-    attempt,
-    candidate,
-    createdAt: serverTimestamp(),
-  });
+  await addDoc(
+    collection(db, "liveStreams", streamId, "peers", viewerId, `${side}Candidates`),
+    {
+      attempt,
+      candidate,
+      createdAt: serverTimestamp(),
+    }
+  );
 }
 
 export function subscribeReliableLiveCandidates(
