@@ -9,7 +9,11 @@ export type BrowserGameCategory =
   | "Strategy"
   | "Story"
   | "Horror"
-  | "Tycoon";
+  | "Tycoon"
+  | "Quest"
+  | "Platformer"
+  | "Survival"
+  | "Farming";
 
 export type BrowserGame = {
   slug: string;
