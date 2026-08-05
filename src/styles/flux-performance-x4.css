@@ -1,0 +1,63 @@
+/* Flux X4 performance layer — loaded after all older themes. */
+
+.flux-route-frame {
+  min-height: 100dvh;
+}
+
+.flux-live-heart {
+  animation: flux-live-heart-rise 1.5s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes flux-live-heart-rise {
+  0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(.7); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(-18px, -180px, 0) scale(1.35) rotate(-8deg); }
+}
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .flux-route-frame {
+    transform: none !important;
+    filter: none !important;
+  }
+
+  .flux8-app-shell,
+  .flux8-main-column,
+  .flux8-feed,
+  .flux8-post-wrap,
+  .flux8-composer-card,
+  .flux8-story-card {
+    box-shadow: none !important;
+  }
+
+  .flux8-post-wrap,
+  .flux8-composer-card,
+  .flux8-story-card {
+    border-radius: 0 !important;
+  }
+
+  .flux8-mobile-header,
+  .flux-mobile-dock-portal {
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+  }
+
+  [class*="backdrop-blur-2xl"],
+  [class*="backdrop-blur-xl"] {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+  }
+
+  article,
+  section {
+    scroll-margin-top: 58px;
+  }
+
+  img[loading="lazy"] {
+    content-visibility: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flux-live-heart { animation-duration: .01ms !important; }
+}

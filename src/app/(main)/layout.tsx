@@ -16,6 +16,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const { user, profile, loading, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const isPublicLiveViewer = pathname?.startsWith("/live/view");
   const isAskAI = pathname?.startsWith("/ask-ai");
   const isMessages = pathname?.startsWith("/messages");
   const isCall = pathname?.startsWith("/messages/call");
@@ -23,16 +24,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isArcade = pathname?.startsWith("/games/arcade");
   const isLive = pathname?.startsWith("/live");
   const isStudio = pathname?.startsWith("/studio");
-  const isLiveRoom = pathname?.startsWith("/live/create") || pathname?.startsWith("/live/view");
+  const isLiveRoom = pathname?.startsWith("/live/create") || isPublicLiveViewer;
   const isImmersive = isAskAI || isCall || isLiveRoom || isArcade;
   const hideRail = isMessages || isGames || isLive;
   const needsOnboarding = Boolean(profile && !profile.onboardingComplete && !String(profile.username || "").trim());
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || isPublicLiveViewer) return;
     if (!user) router.replace("/login");
     else if (needsOnboarding) router.replace("/onboarding");
-  }, [user, needsOnboarding, loading, router]);
+  }, [user, needsOnboarding, loading, router, isPublicLiveViewer]);
+
+  // The viewer page must load before a full Flux profile exists. It creates a
+  // temporary anonymous Firebase identity for secure signaling when necessary.
+  if (isPublicLiveViewer) {
+    return <div className="h-[100dvh] w-full overflow-hidden bg-black">{children}</div>;
+  }
 
   if (loading) return <LoadingScreen label="Loading Flux" />;
   if (!user) return <LoadingScreen label="Opening sign in" />;

@@ -7,11 +7,9 @@ on:
       - "src/app/games/play/**"
       - "src/components/game/**"
       - "src/data/browser-games.ts"
-      - "src/data/flux-arcade-games.ts"
-      - "src/services/game-leaderboards.ts"
-      - "src/styles/flux-x-ultimate.css"
+      - "public/games-library/**"
+      - "src/styles/flux-performance-x4.css"
       - "src/app/layout.tsx"
-      - "src/app/(main)/home/page.tsx"
       - "scripts/flux-x-games-v3-audit.mjs"
       - ".github/workflows/flux-games-audit.yml"
   workflow_dispatch:
@@ -41,5 +39,10 @@ jobs:
         run: |
           test -f out/games/index.html
           test -f out/games/play/index.html
-          test -f out/games/arcade/index.html
-          test -f out/games/flux-farm/index.html
+          test -f out/games/licenses/index.html
+          test -f out/games-library/tux-racer/index.html
+          test -f out/games-library/anti-gravity-pool/index.html
+          test -f out/games-library/xquest/index.html
+          test -f out/games-library/progress-knight/index.html
+          test -f out/games-library/anxiety/index.html
+          test -f out/games-library/openpanzer/index.html

@@ -1,4 +1,4 @@
-name: Publish Flux Live X3
+name: Publish Flux Live X4
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: flux-live-x3
+  group: flux-live-x4
   cancel-in-progress: true
 
 jobs:
@@ -61,23 +61,30 @@ jobs:
           NEXT_PUBLIC_TURN_CREDENTIAL: ${{ secrets.NEXT_PUBLIC_TURN_CREDENTIAL }}
         run: npm run build
 
-      - name: Verify the X3 shell and body-level dock
+      - name: Verify X4, public Live and local open-source games
         run: |
           test -f out/index.html
           test -f out/home/index.html
           test -f out/games/index.html
-          grep -R -q 'data-flux-ui="x3"' out
+          test -f out/games/licenses/index.html
+          test -f out/live/view/index.html
+          test -f out/games-library/tux-racer/index.html
+          test -f out/games-library/xquest/index.html
+          test -f out/games-library/progress-knight/index.html
+          test -f out/games-library/anxiety/index.html
+          grep -R -q 'data-flux-ui="x4"' out
+          grep -R -q 'Guest viewing' out/_next/static
+          grep -R -q 'staticauth.openrelay.metered.ca' out/_next/static
+          grep -R -q 'Open source · hosted by Flux' out/_next/static
           grep -q 'createPortal' src/components/layout/mobile-nav.tsx
-          grep -R -q 'data-flux-mobile-dock' out/_next/static
           grep -R -q 'flux-mobile-dock-portal' out/_next/static
-          grep -R -q '2147482000' out/_next/static
 
       - name: Add release proof and no-cache fallbacks
         run: |
           touch out/.nojekyll
           cp out/index.html out/404.html
           printf '%s\n' '${{ github.sha }}' > out/version.txt
-          printf '{"release":"%s","ui":"x3","dock":"body-portal","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
+          printf '{"release":"%s","ui":"x4","live":"guest-turn-attempt-isolation","games":"self-hosted-open-source","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

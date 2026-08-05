@@ -10,67 +10,67 @@ const forbidText = (source, marker, label) => {
 
 const catalog = read("src/data/browser-games.ts");
 for (const marker of [
-  "FLUX_ORIGINALS",
-  "Flux Velocity",
-  "Flux Orbit",
-  "Flux Rooftop",
-  "Flux Hoops",
-  "Flux Defender",
-  "Flux Stack",
-  'author: "Ripo Team"',
+  "OPEN_SOURCE_GAMES",
+  "TuxRacer.js",
+  "Anti-Gravity Pool",
+  "XQuest JS",
+  "Progress Knight",
+  "Adventures With Anxiety",
+  "OpenPanzer",
   'origin: "bundled"',
   'dimension: "3D"',
   'dimension: "2D"',
-]) requireText(catalog, marker, "Flux Originals catalog");
+  "mobileReady: true",
+]) requireText(catalog, marker, "Self-hosted open-source catalog");
 for (const forbidden of [
   "fosiper.com",
   'origin: "original-host"',
-  "FLUX_ARCADE_GAMES.map",
+  "FLUX_ORIGINALS",
+  'author: "Ripo Team"',
   "Open original",
-]) forbidText(catalog, forbidden, "Remote or generated game catalog");
+]) forbidText(catalog, forbidden, "Rejected remote or fake-owned catalog");
 
 const gameFiles = [
-  ["public/games-library/flux-velocity/index.html", ["three.module.min.js", "pointerdown", "boost"]],
-  ["public/games-library/flux-orbit/index.html", ["three.module.min.js", "stick", "pulse"]],
-  ["public/games-library/flux-rooftop/index.html", ["jump", "pointerdown", "double jumps"]],
-  ["public/games-library/flux-hoops/index.html", ["HOLD TO CHARGE", "pointerdown", "release"]],
-  ["public/games-library/flux-defender/index.html", ["FIRE", "pointerdown", "touch-action:none"]],
-  ["public/games-library/flux-stack/index.html", ["DROP BLOCK", "pointerdown", "touch-action:none"]],
+  ["public/games-library/tux-racer/index.html", ["game-touch-stick-canvas", "game-canvas"]],
+  ["public/games-library/anti-gravity-pool/index.html", ["MobileJoystickControls.js", "startButton"]],
+  ["public/games-library/xquest/index.html", ["Touch", "inlineGame"]],
+  ["public/games-library/progress-knight/index.html", ["viewport", "Progress Knight"]],
+  ["public/games-library/anxiety/index.html", ["viewport", "Adventures With Anxiety"]],
+  ["public/games-library/openpanzer/index.html", ["apple-mobile-web-app-capable", "OpenPanzer"]],
 ];
 for (const [path, markers] of gameFiles) {
   const source = read(path);
   for (const marker of markers) requireText(source, marker, path);
-  forbidText(source, "https://fosiper.com", `${path} remote host`);
 }
 
 const hub = read("src/components/game/games-hub.tsx");
 for (const marker of [
   "Flux Games",
-  "Instant play · no redirects",
-  "Flux Originals",
-  "Touch ready",
-  "working games",
-  "GameVisual",
-]) requireText(hub, marker, "Flux Games UI");
-for (const forbidden of ["Source linked", "View source", "Open Games", "Daily challenge", "Arcade achievements"]) {
-  forbidText(hub, forbidden, "Rejected old Games UI");
+  "Self-hosted open-source games",
+  "Flux Open Games",
+  "Open source",
+  "Hosted by Flux",
+  "/games/licenses",
+]) requireText(hub, marker, "Open-source Games UI");
+for (const forbidden of ["FLUX ORIGINAL", "Flux Originals", "Instant play · no redirects", "working games"]) {
+  forbidText(hub, forbidden, "Rejected fake-owned Games UI");
 }
 
 const shell = read("src/components/game/browser-game-shell.tsx");
 for (const marker of [
-  "Flux Original",
-  "Mobile controls included",
+  "Open source · hosted by Flux",
   "requestFullscreen",
   "gameUrl",
   "Restart game",
+  "/games/licenses",
 ]) requireText(shell, marker, "Local fullscreen game shell");
-for (const forbidden of ["original host", "Open original", "showEmbedHelp", "sourceUrl"]) {
-  forbidText(shell, forbidden, "Remote iframe warning shell");
+for (const forbidden of ["original host", "Open original", "Flux Original", "sourceUrl"]) {
+  forbidText(shell, forbidden, "Remote or false-ownership game shell");
 }
 
-const licenses = read("public/games-library/FLUX-ORIGINALS-LICENSES.txt");
-for (const marker of ["original Ripo Team game implementations", "Three.js", "MIT License"]) {
-  requireText(licenses, marker, "Flux Originals license notice");
+const licensePage = read("src/app/(main)/games/licenses/page.tsx");
+for (const marker of ["Game credits and licenses", "sourceUrl", "license", "does not claim authorship"]) {
+  requireText(licensePage, marker, "Open-source license page");
 }
 
-console.log(`Flux Originals audit passed with ${gameFiles.length} self-hosted touch-ready games.`);
+console.log(`Open-source Games audit passed with ${gameFiles.length} bundled mobile-ready projects.`);
