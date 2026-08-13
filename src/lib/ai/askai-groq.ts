@@ -35,10 +35,25 @@ export interface AskAIGroqHealth {
   models: { instant: string; pro: string };
 }
 
-const DEFAULT_ENDPOINT = "https://europe-west1-flux-544a6.cloudfunctions.net/askaiGroq";
+const RIPO_ASKAI_BASE = "https://echoxr-ripoteam-cloud-pc.hf.space";
+const DEFAULT_ENDPOINT = `${RIPO_ASKAI_BASE}/api/flux/askai/chat`;
+// Optional legacy/cloud-tools gateway. Keeping the predictable askaiGroq URL makes
+// it possible to opt back into connected research/compute tools through an env var.
+const LEGACY_FIREBASE_GATEWAY = "https://europe-west1-flux-544a6.cloudfunctions.net/askaiGroq";
 
 export function getAskAIGroqEndpoint(): string {
   return process.env.NEXT_PUBLIC_ASKAI_GROQ_ENDPOINT?.trim() || DEFAULT_ENDPOINT;
+}
+
+function healthEndpoint(endpoint: string): string {
+  if (endpoint.includes("/api/flux/askai/chat")) {
+    return endpoint.replace("/api/flux/askai/chat", "/api/flux/askai/health");
+  }
+  return `${endpoint}${endpoint.includes("?") ? "&" : "?"}health=1`;
+}
+
+function isDirectRipoEndpoint(endpoint: string): boolean {
+  return endpoint.includes("/api/flux/askai/chat");
 }
 
 export async function checkAskAIGroqHealth(signal?: AbortSignal): Promise<AskAIGroqHealth> {
@@ -49,7 +64,7 @@ export async function checkAskAIGroqHealth(signal?: AbortSignal): Promise<AskAIG
   signal?.addEventListener("abort", abort, { once: true });
 
   try {
-    const response = await fetch(`${endpoint}${endpoint.includes("?") ? "&" : "?"}health=1&t=${Date.now()}`, {
+    const response = await fetch(healthEndpoint(endpoint), {
       method: "GET",
       cache: "no-store",
       headers: { "Accept": "application/json" },
@@ -61,28 +76,34 @@ export async function checkAskAIGroqHealth(signal?: AbortSignal): Promise<AskAIG
       service?: string;
       version?: string;
       primary?: string;
+      provider?: string;
+      model?: string;
       error?: string | null;
+      detail?: string | null;
       models?: { instant?: string; pro?: string };
     };
 
-    const configured = data.configured === true;
-    const primary = String(data.primary || "");
+    const configured = data.configured !== false;
+    const direct = isDirectRipoEndpoint(endpoint);
+    const primary = String(data.primary || (direct ? "ripo-local" : data.provider || ""));
+    const model = String(data.model || "qwen3:4b-instruct");
+    const healthy = response.ok && data.ok !== false && configured;
     return {
-      state: response.ok && configured ? "connected" : response.status === 503 && !configured ? "missing-secret" : "offline",
-      ok: response.ok && configured,
+      state: healthy ? "connected" : response.status === 503 && !configured ? "missing-secret" : "offline",
+      ok: healthy,
       configured,
-      service: String(data.service || "Flux AskAI gateway"),
+      service: String(data.service || (direct ? "Ripo Team Flux AskAI" : "Flux AskAI gateway")),
       version: String(data.version || "unknown"),
       endpoint,
       primary,
-      message: response.ok && configured
-        ? primary === "ripo-local"
-          ? "AskAI is connected to the Ripo Team self-hosted Qwen model."
+      message: healthy
+        ? direct
+          ? "AskAI is connected directly to the Ripo Team self-hosted Qwen model."
           : "AskAI is connected through the authenticated Firebase gateway."
-        : String(data.error || `AskAI health check returned ${response.status}.`),
+        : String(data.error || data.detail || `AskAI health check returned ${response.status}.`),
       models: {
-        instant: String(data.models?.instant || "qwen3:4b-instruct"),
-        pro: String(data.models?.pro || "qwen3:4b-instruct"),
+        instant: String(data.models?.instant || model),
+        pro: String(data.models?.pro || model),
       },
     };
   } catch (error) {
@@ -91,12 +112,12 @@ export async function checkAskAIGroqHealth(signal?: AbortSignal): Promise<AskAIG
       state: /404|not found/i.test(message) ? "not-deployed" : "offline",
       ok: false,
       configured: false,
-      service: "Flux AskAI gateway",
+      service: "Ripo Team Flux AskAI",
       version: "unreachable",
       endpoint,
       message: (error as DOMException)?.name === "AbortError"
-        ? "The AskAI gateway did not answer in time. It may be redeploying or offline."
-        : "The AskAI gateway is unreachable. Check the Firebase Function and Ripo Team AI server.",
+        ? "The Ripo Team AskAI server did not answer in time. It may be redeploying or offline."
+        : "AskAI could not reach the Ripo Team AI server.",
       models: { instant: "qwen3:4b-instruct", pro: "qwen3:4b-instruct" },
     };
   } finally {
@@ -116,13 +137,19 @@ export async function runAskAIGroq(input: {
   const user = auth.currentUser;
   if (!user) throw new Error("Sign in to use AskAI.");
   const token = await user.getIdToken();
+  const endpoint = getAskAIGroqEndpoint();
+  const direct = isDirectRipoEndpoint(endpoint);
   const controller = new AbortController();
   const timeout = globalThis.setTimeout(() => controller.abort(), input.mode === "pro" ? 115_000 : 85_000);
   const abort = () => controller.abort();
   input.signal?.addEventListener("abort", abort, { once: true });
 
   try {
-    const response = await fetch(getAskAIGroqEndpoint(), {
+    if (direct && (input.research === true || input.codeExecution === true)) {
+      throw new Error("Connected web research and cloud compute need the optional Firebase gateway. Turn those tools off to use the local Ripo model.");
+    }
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -137,24 +164,24 @@ export async function runAskAIGroq(input: {
         codeExecution: input.codeExecution === true,
       }),
     });
-    const data = await response.json().catch(() => ({})) as Partial<AskAIGroqResult> & { error?: string; code?: string; details?: string[] };
+    const data = await response.json().catch(() => ({})) as Partial<AskAIGroqResult> & { error?: string; detail?: string; code?: string; details?: string[] };
     if (!response.ok) {
       if (response.status === 401) await user.getIdToken(true).catch(() => undefined);
       if (data.code === "ASKAI_PROVIDER_MISSING") {
-        throw new Error("AskAI is deployed, but no AI provider is configured yet. Configure the Ripo Team local AI token or the cloud fallback secret.");
+        throw new Error("AskAI is deployed, but no AI provider is configured yet.");
       }
       if (data.code === "ASKAI_UPSTREAM_FAILED") {
-        throw new Error(data.error || "Both the Ripo Team local model and fallback provider are currently unavailable.");
+        throw new Error(data.error || "The AskAI provider is currently unavailable.");
       }
-      if (response.status === 404) throw new Error("The AskAI Firebase Function is not deployed at the configured endpoint.");
-      throw new Error(data.error || `AskAI returned ${response.status}.`);
+      if (response.status === 404) throw new Error("The AskAI endpoint is not deployed at the configured address.");
+      throw new Error(data.error || data.detail || `AskAI returned ${response.status}.`);
     }
     if (!data.answer?.trim()) throw new Error("AskAI returned an empty answer.");
     return {
       answer: data.answer.trim(),
       model: String(data.model || "qwen3:4b-instruct"),
       mode: input.mode,
-      provider: String(data.provider || "unknown"),
+      provider: String(data.provider || (direct ? "ripo-local" : "unknown")),
       sources: Array.isArray(data.sources) ? data.sources : [],
       usage: data.usage || null,
       metrics: data.metrics || null,
@@ -164,7 +191,7 @@ export async function runAskAIGroq(input: {
       throw new Error(input.signal?.aborted ? "AskAI response stopped." : "AskAI took too long. Try again.");
     }
     if (error instanceof TypeError && /fetch/i.test(error.message)) {
-      throw new Error("AskAI could not reach its backend. The Firebase gateway or Ripo Team AI server may be offline.");
+      throw new Error("AskAI could not reach the Ripo Team AI server.");
     }
     throw error;
   } finally {
@@ -172,3 +199,5 @@ export async function runAskAIGroq(input: {
     input.signal?.removeEventListener("abort", abort);
   }
 }
+
+void LEGACY_FIREBASE_GATEWAY;
