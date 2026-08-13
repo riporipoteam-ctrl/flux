@@ -23,19 +23,52 @@ export interface GameLeaderboardEntry {
 
 export type GameLeaderboardMetric = "score" | "plays";
 type StoredScore = { best?: number; plays?: number; updatedAt?: unknown };
-
-function cleanGameId(value: string): string {
-  return value.trim().replace(/[^a-z0-9-_]/gi, "").slice(0, 80);
-}
-
-export async function submitGameScore(input: {
+type PlayerIdentity = {
   gameId: string;
   uid: string;
   displayName?: string | null;
   username?: string | null;
   avatarUrl?: string | null;
-  score: number;
-}): Promise<{ personalBest: number; improved: boolean; plays: number }> {
+};
+
+function cleanGameId(value: string): string {
+  return value.trim().replace(/[^a-z0-9-_]/gi, "").slice(0, 80);
+}
+
+function identityPayload(input: PlayerIdentity) {
+  return {
+    uid: input.uid,
+    displayName: String(input.displayName || "Flux player").slice(0, 80),
+    username: String(input.username || "player").slice(0, 40),
+    avatarUrl: String(input.avatarUrl || "").slice(0, 2000),
+  };
+}
+
+export async function recordGamePlay(input: PlayerIdentity): Promise<{ plays: number }> {
+  const gameId = cleanGameId(input.gameId);
+  if (!gameId) throw new Error("Invalid game ID");
+  const ref = doc(db, "gameSessions", input.uid);
+
+  return runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const current = (snapshot.data()?.scores?.[gameId] || {}) as StoredScore;
+    const plays = Math.max(0, Number(current.plays || 0)) + 1;
+    transaction.set(ref, {
+      ...identityPayload(input),
+      scores: {
+        [gameId]: {
+          best: Math.max(0, Number(current.best || 0)),
+          plays,
+          updatedAt: serverTimestamp(),
+        },
+      },
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return { plays };
+  });
+}
+
+export async function submitGameScore(input: PlayerIdentity & { score: number }): Promise<{ personalBest: number; improved: boolean }> {
   const gameId = cleanGameId(input.gameId);
   if (!gameId) throw new Error("Invalid game ID");
   const cleanScore = Math.max(0, Math.min(1_000_000_000, Math.floor(Number(input.score) || 0)));
@@ -45,28 +78,20 @@ export async function submitGameScore(input: {
     const snapshot = await transaction.get(ref);
     const current = (snapshot.data()?.scores?.[gameId] || {}) as StoredScore;
     const previous = Math.max(0, Number(current.best || 0));
-    const plays = Math.max(0, Number(current.plays || 0)) + 1;
     const next = Math.max(previous, cleanScore);
     transaction.set(ref, {
-      uid: input.uid,
-      displayName: String(input.displayName || "Flux player").slice(0, 80),
-      username: String(input.username || "player").slice(0, 40),
-      avatarUrl: String(input.avatarUrl || "").slice(0, 2000),
+      ...identityPayload(input),
       scores: {
         [gameId]: {
           best: next,
-          plays,
+          plays: Math.max(0, Number(current.plays || 0)),
           updatedAt: serverTimestamp(),
         },
       },
       updatedAt: serverTimestamp(),
     }, { merge: true });
-    return { personalBest: next, improved: cleanScore > previous, plays };
+    return { personalBest: next, improved: cleanScore > previous };
   });
-}
-
-export async function recordGamePlay(input: Omit<Parameters<typeof submitGameScore>[0], "score">) {
-  return submitGameScore({ ...input, score: 0 });
 }
 
 export async function getGameLeaderboard(
