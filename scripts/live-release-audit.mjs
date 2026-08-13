@@ -38,6 +38,6 @@ const mainLayout = read("src/app/(main)/layout.tsx");
 for (const marker of ["isPublicLiveViewer", "temporary anonymous Firebase identity"]) requireText(mainLayout, marker, "Public Live route");
 
 const askai = read("src/lib/ai/askai-groq.ts");
-for (const marker of ["checkAskAIGroqHealth", "GROQ_SECRET_MISSING", "GROQ_KEY_REJECTED"]) requireText(askai, marker, "AskAI diagnostics");
+for (const marker of ["checkAskAIGroqHealth", "ASKAI_PROVIDER_MISSING", "ASKAI_UPSTREAM_FAILED", "Ripo Team AI server"]) requireText(askai, marker, "AskAI diagnostics");
 
-console.log("Flux X4 live release audit passed with public TURN-backed Live and bundled open-source games.");
+console.log("Flux X4 live release audit passed with public TURN-backed Live, hybrid AskAI, and bundled open-source games.");
