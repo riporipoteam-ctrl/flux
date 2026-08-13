@@ -7,10 +7,13 @@ import { onRequest } from "firebase-functions/v2/https";
 initializeApp();
 
 const groqApiKey = defineSecret("GROQ_API_KEY");
+const ripoAskAiToken = defineSecret("RIPO_ASKAI_TOKEN");
 const GROQ_RESPONSES_URL = "https://api.groq.com/openai/v1/responses";
+const RIPO_ASKAI_BASE_URL = "https://echoxr-ripoteam-cloud-pc.hf.space";
+const LOCAL_MODEL = "qwen3:4b-instruct";
 const INSTANT_MODEL = "openai/gpt-oss-20b";
 const PRO_MODEL = "openai/gpt-oss-120b";
-const FUNCTION_VERSION = "askai-groq-v2";
+const FUNCTION_VERSION = "askai-ripo-hybrid-v3";
 
 type Mode = "instant" | "pro";
 type ClientMessage = { role: "user" | "assistant"; content: string };
@@ -22,14 +25,33 @@ type RequestBody = {
   codeExecution?: boolean;
 };
 
+type AskAIResult = {
+  answer: string;
+  model: string;
+  mode: Mode;
+  provider?: string;
+  sources?: Array<{ title: string; url: string }>;
+  usage?: unknown;
+  metrics?: unknown;
+  version?: string;
+};
+
 function readBearer(value: string | undefined): string | null {
   if (!value?.startsWith("Bearer ")) return null;
   return value.slice(7).trim() || null;
 }
 
-function readGroqKey(): string {
-  try { return groqApiKey.value().trim(); }
+function readSecret(secret: { value(): string }): string {
+  try { return secret.value().trim(); }
   catch { return ""; }
+}
+
+function readGroqKey(): string {
+  return readSecret(groqApiKey);
+}
+
+function readRipoToken(): string {
+  return readSecret(ripoAskAiToken);
 }
 
 function cleanMessages(value: unknown): ClientMessage[] {
@@ -112,10 +134,109 @@ async function enforceRateLimit(uid: string, mode: Mode): Promise<void> {
   });
 }
 
+async function callRipoAskAI(body: RequestBody, mode: Mode, messages: ClientMessage[]): Promise<AskAIResult> {
+  const token = readRipoToken();
+  if (!token) throw new Error("RIPO_ASKAI_TOKEN_MISSING");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 108_000);
+  try {
+    const upstream = await fetch(`${RIPO_ASKAI_BASE_URL}/api/flux/askai/chat`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Flux-AskAI-Token": token,
+      },
+      body: JSON.stringify({
+        mode,
+        messages,
+        workspaceContext: String(body.workspaceContext || "").slice(0, 24_000),
+      }),
+    });
+    const raw = await upstream.text();
+    let data: Partial<AskAIResult> & { detail?: string; error?: string } = {};
+    try { data = JSON.parse(raw) as typeof data; } catch { /* normalized below */ }
+    if (!upstream.ok) {
+      throw new Error(String(data.detail || data.error || `Ripo AskAI returned ${upstream.status}.`).slice(0, 400));
+    }
+    if (!data.answer?.trim()) throw new Error("Ripo AskAI returned an empty answer.");
+    return {
+      answer: data.answer.trim(),
+      model: String(data.model || LOCAL_MODEL),
+      mode,
+      provider: String(data.provider || "ripo-local"),
+      sources: Array.isArray(data.sources) ? data.sources : [],
+      usage: data.usage || null,
+      metrics: data.metrics || null,
+      version: String(data.version || "ripo-local"),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function callGroq(body: RequestBody, mode: Mode, messages: ClientMessage[]): Promise<AskAIResult> {
+  const apiKey = readGroqKey();
+  if (!apiKey) throw new Error("GROQ_API_KEY_MISSING");
+  const model = mode === "pro" ? PRO_MODEL : INSTANT_MODEL;
+  const tools: Array<Record<string, unknown>> = [];
+  if (body.research === true) tools.push({ type: "browser_search" });
+  if (body.codeExecution === true) tools.push({ type: "code_interpreter", container: { type: "auto" } });
+
+  const instructions = [
+    `You are ${mode === "pro" ? "AskAI 1.0 Pro" : "AskAI 1.0 Instant"} inside Flux social network.`,
+    mode === "pro"
+      ? "Use high reasoning effort, be thorough, and clearly separate verified facts from uncertainty."
+      : "Respond quickly, naturally, and directly. Prefer concise useful answers.",
+    "Never claim an action, search, upload, or message happened unless tool output or supplied context proves it.",
+    "Do not reveal private hidden reasoning.",
+    String(body.workspaceContext || "").slice(0, 30_000),
+  ].filter(Boolean).join("\n\n");
+
+  const groqResponse = await fetch(GROQ_RESPONSES_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Groq-Beta": "inference-metrics",
+    },
+    body: JSON.stringify({
+      model,
+      instructions,
+      input: messages,
+      reasoning: { effort: mode === "pro" ? "high" : "low" },
+      max_output_tokens: mode === "pro" ? 8_192 : 4_096,
+      ...(tools.length ? { tools, tool_choice: "auto" } : {}),
+    }),
+  });
+
+  const raw = await groqResponse.text();
+  let data: Record<string, unknown> = {};
+  try { data = JSON.parse(raw) as Record<string, unknown>; } catch { /* normalized below */ }
+  if (!groqResponse.ok) {
+    const groqError = data.error && typeof data.error === "object"
+      ? String((data.error as Record<string, unknown>).message || "")
+      : "";
+    throw new Error(groqError.slice(0, 300) || `Groq returned ${groqResponse.status}.`);
+  }
+  const answer = extractAnswer(data);
+  if (!answer) throw new Error("Groq returned an empty answer.");
+  return {
+    answer,
+    model,
+    mode,
+    provider: "groq-fallback",
+    sources: extractSources(data),
+    usage: data.usage || null,
+    metrics: data.metadata || null,
+    version: FUNCTION_VERSION,
+  };
+}
+
 export const askaiGroq = onRequest({
   region: "europe-west1",
   cors: true,
-  secrets: [groqApiKey],
+  secrets: [groqApiKey, ripoAskAiToken],
   timeoutSeconds: 120,
   memory: "512MiB",
   maxInstances: 10,
@@ -123,16 +244,25 @@ export const askaiGroq = onRequest({
   response.set("Cache-Control", "no-store");
   response.set("X-AskAI-Version", FUNCTION_VERSION);
 
-  const configured = Boolean(readGroqKey());
+  const localConfigured = Boolean(readRipoToken());
+  const groqConfigured = Boolean(readGroqKey());
+  const configured = localConfigured || groqConfigured;
   if (request.method === "GET" || request.method === "HEAD") {
     response.status(configured ? 200 : 503).json({
       ok: configured,
       configured,
-      service: "Flux AskAI Groq proxy",
+      service: "Flux AskAI hybrid gateway",
       version: FUNCTION_VERSION,
-      models: { instant: INSTANT_MODEL, pro: PRO_MODEL },
-      tools: ["browser_search", "code_interpreter"],
-      error: configured ? null : "GROQ_API_KEY is not configured in Firebase Secret Manager.",
+      primary: localConfigured ? "ripo-local" : "groq",
+      providers: {
+        ripoLocal: { configured: localConfigured, model: LOCAL_MODEL, endpoint: RIPO_ASKAI_BASE_URL },
+        groq: { configured: groqConfigured, models: { instant: INSTANT_MODEL, pro: PRO_MODEL } },
+      },
+      models: localConfigured
+        ? { instant: LOCAL_MODEL, pro: LOCAL_MODEL }
+        : { instant: INSTANT_MODEL, pro: PRO_MODEL },
+      tools: groqConfigured ? ["browser_search", "code_interpreter"] : [],
+      error: configured ? null : "Configure RIPO_ASKAI_TOKEN (recommended) or GROQ_API_KEY in Firebase Secret Manager.",
     });
     return;
   }
@@ -142,11 +272,10 @@ export const askaiGroq = onRequest({
     return;
   }
 
-  const apiKey = readGroqKey();
-  if (!apiKey) {
+  if (!configured) {
     response.status(503).json({
-      error: "AskAI backend is deployed, but GROQ_API_KEY is missing from Firebase Secret Manager.",
-      code: "GROQ_SECRET_MISSING",
+      error: "AskAI has no configured provider. Add RIPO_ASKAI_TOKEN or GROQ_API_KEY in Firebase Secret Manager.",
+      code: "ASKAI_PROVIDER_MISSING",
     });
     return;
   }
@@ -184,73 +313,30 @@ export const askaiGroq = onRequest({
     return;
   }
 
-  const model = mode === "pro" ? PRO_MODEL : INSTANT_MODEL;
-  const tools: Array<Record<string, unknown>> = [];
-  if (body.research === true) tools.push({ type: "browser_search" });
-  if (body.codeExecution === true) tools.push({ type: "code_interpreter", container: { type: "auto" } });
-
-  const instructions = [
-    `You are ${mode === "pro" ? "AskAI 1.0 Pro" : "AskAI 1.0 Instant"} inside Flux social network.`,
-    mode === "pro"
-      ? "Use high reasoning effort, be thorough, and clearly separate verified facts from uncertainty."
-      : "Respond quickly, naturally, and directly. Prefer concise useful answers.",
-    "Never claim an action, search, upload, or message happened unless tool output or supplied context proves it.",
-    "Do not reveal private hidden reasoning.",
-    String(body.workspaceContext || "").slice(0, 30_000),
-  ].filter(Boolean).join("\n\n");
-
-  let groqResponse: globalThis.Response;
-  try {
-    groqResponse = await fetch(GROQ_RESPONSES_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "Groq-Beta": "inference-metrics",
-      },
-      body: JSON.stringify({
-        model,
-        instructions,
-        input: messages,
-        reasoning: { effort: mode === "pro" ? "high" : "low" },
-        max_output_tokens: mode === "pro" ? 8_192 : 4_096,
-        ...(tools.length ? { tools, tool_choice: "auto" } : {}),
-      }),
-    });
-  } catch (error) {
-    response.status(502).json({ error: error instanceof Error ? `Could not reach Groq: ${error.message}` : "Could not reach Groq." });
-    return;
+  const failures: string[] = [];
+  if (localConfigured) {
+    try {
+      const result = await callRipoAskAI(body, mode, messages);
+      response.json({ ...result, gatewayVersion: FUNCTION_VERSION });
+      return;
+    } catch (error) {
+      failures.push(`Ripo local: ${error instanceof Error ? error.message : "failed"}`);
+    }
   }
 
-  const raw = await groqResponse.text();
-  let data: Record<string, unknown> = {};
-  try { data = JSON.parse(raw) as Record<string, unknown>; }
-  catch { /* normalized below */ }
-
-  if (!groqResponse.ok) {
-    const groqError = data.error && typeof data.error === "object"
-      ? String((data.error as Record<string, unknown>).message || "")
-      : "";
-    response.status(groqResponse.status).json({
-      error: groqError.slice(0, 300) || `Groq returned ${groqResponse.status}.`,
-      code: groqResponse.status === 401 ? "GROQ_KEY_REJECTED" : "GROQ_REQUEST_FAILED",
-    });
-    return;
+  if (groqConfigured) {
+    try {
+      const result = await callGroq(body, mode, messages);
+      response.json({ ...result, gatewayVersion: FUNCTION_VERSION, fallbackReason: failures[0] || null });
+      return;
+    } catch (error) {
+      failures.push(`Groq: ${error instanceof Error ? error.message : "failed"}`);
+    }
   }
 
-  const answer = extractAnswer(data);
-  if (!answer) {
-    response.status(502).json({ error: "Groq returned an empty answer." });
-    return;
-  }
-
-  response.json({
-    answer,
-    model,
-    mode,
-    sources: extractSources(data),
-    usage: data.usage || null,
-    metrics: data.metadata || null,
-    version: FUNCTION_VERSION,
+  response.status(502).json({
+    error: "AskAI providers are currently unavailable.",
+    code: "ASKAI_UPSTREAM_FAILED",
+    details: failures.slice(0, 2),
   });
 });
