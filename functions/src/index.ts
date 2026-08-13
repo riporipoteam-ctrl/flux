@@ -7,13 +7,12 @@ import { onRequest } from "firebase-functions/v2/https";
 initializeApp();
 
 const groqApiKey = defineSecret("GROQ_API_KEY");
-const ripoAskAiToken = defineSecret("RIPO_ASKAI_TOKEN");
 const GROQ_RESPONSES_URL = "https://api.groq.com/openai/v1/responses";
 const RIPO_ASKAI_BASE_URL = "https://echoxr-ripoteam-cloud-pc.hf.space";
 const LOCAL_MODEL = "qwen3:4b-instruct";
 const INSTANT_MODEL = "openai/gpt-oss-20b";
 const PRO_MODEL = "openai/gpt-oss-120b";
-const FUNCTION_VERSION = "askai-ripo-hybrid-v4";
+const FUNCTION_VERSION = "askai-ripo-hybrid-v5";
 
 type Mode = "instant" | "pro";
 type ClientMessage = { role: "user" | "assistant"; content: string };
@@ -36,6 +35,15 @@ type AskAIResult = {
   version?: string;
 };
 
+type RipoHealth = {
+  ok: boolean;
+  configured?: boolean;
+  model?: string;
+  provider?: string;
+  version?: string;
+  auth?: string;
+};
+
 function readBearer(value: string | undefined): string | null {
   if (!value?.startsWith("Bearer ")) return null;
   return value.slice(7).trim() || null;
@@ -48,10 +56,6 @@ function readSecret(secret: { value(): string }): string {
 
 function readGroqKey(): string {
   return readSecret(groqApiKey);
-}
-
-function readRipoToken(): string {
-  return readSecret(ripoAskAiToken);
 }
 
 function cleanMessages(value: unknown): ClientMessage[] {
@@ -134,9 +138,37 @@ async function enforceRateLimit(uid: string, mode: Mode): Promise<void> {
   });
 }
 
-async function callRipoAskAI(body: RequestBody, mode: Mode, messages: ClientMessage[]): Promise<AskAIResult> {
-  const token = readRipoToken();
-  if (!token) throw new Error("RIPO_ASKAI_TOKEN_MISSING");
+async function probeRipoAskAI(): Promise<RipoHealth> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7_000);
+  try {
+    const response = await fetch(`${RIPO_ASKAI_BASE_URL}/api/flux/askai/health`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { "Accept": "application/json" },
+    });
+    const data = await response.json().catch(() => ({})) as Partial<RipoHealth>;
+    return {
+      ok: response.ok && data.ok === true,
+      configured: data.configured === true,
+      model: String(data.model || LOCAL_MODEL),
+      provider: String(data.provider || "ollama"),
+      version: String(data.version || "unknown"),
+      auth: String(data.auth || "firebase-id-token"),
+    };
+  } catch {
+    return { ok: false, configured: true, model: LOCAL_MODEL, provider: "ollama", auth: "firebase-id-token" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function callRipoAskAI(
+  body: RequestBody,
+  mode: Mode,
+  messages: ClientMessage[],
+  firebaseIdToken: string
+): Promise<AskAIResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 82_000);
   try {
@@ -144,8 +176,8 @@ async function callRipoAskAI(body: RequestBody, mode: Mode, messages: ClientMess
       method: "POST",
       signal: controller.signal,
       headers: {
+        "Authorization": `Bearer ${firebaseIdToken}`,
         "Content-Type": "application/json",
-        "X-Flux-AskAI-Token": token,
       },
       body: JSON.stringify({
         mode,
@@ -236,7 +268,7 @@ async function callGroq(body: RequestBody, mode: Mode, messages: ClientMessage[]
 export const askaiGroq = onRequest({
   region: "europe-west1",
   cors: true,
-  secrets: [groqApiKey, ripoAskAiToken],
+  secrets: [groqApiKey],
   timeoutSeconds: 120,
   memory: "512MiB",
   maxInstances: 10,
@@ -244,39 +276,37 @@ export const askaiGroq = onRequest({
   response.set("Cache-Control", "no-store");
   response.set("X-AskAI-Version", FUNCTION_VERSION);
 
-  const localConfigured = Boolean(readRipoToken());
   const groqConfigured = Boolean(readGroqKey());
-  const configured = localConfigured || groqConfigured;
   if (request.method === "GET" || request.method === "HEAD") {
+    const local = await probeRipoAskAI();
+    const configured = local.ok || groqConfigured;
     response.status(configured ? 200 : 503).json({
       ok: configured,
       configured,
       service: "Flux AskAI hybrid gateway",
       version: FUNCTION_VERSION,
-      primary: localConfigured ? "ripo-local" : "cloud-fallback",
+      primary: local.ok ? "ripo-local" : groqConfigured ? "cloud-fallback" : "ripo-local-offline",
       providers: {
-        ripoLocal: { configured: localConfigured, model: LOCAL_MODEL, endpoint: RIPO_ASKAI_BASE_URL },
+        ripoLocal: {
+          configured: true,
+          online: local.ok,
+          model: local.model || LOCAL_MODEL,
+          endpoint: RIPO_ASKAI_BASE_URL,
+          auth: local.auth || "firebase-id-token",
+        },
         connectedTools: { configured: groqConfigured, models: { instant: INSTANT_MODEL, pro: PRO_MODEL } },
       },
-      models: localConfigured
-        ? { instant: LOCAL_MODEL, pro: LOCAL_MODEL }
-        : { instant: INSTANT_MODEL, pro: PRO_MODEL },
+      models: local.ok
+        ? { instant: local.model || LOCAL_MODEL, pro: local.model || LOCAL_MODEL }
+        : { instant: groqConfigured ? INSTANT_MODEL : LOCAL_MODEL, pro: groqConfigured ? PRO_MODEL : LOCAL_MODEL },
       tools: groqConfigured ? ["browser_search", "code_interpreter"] : [],
-      error: configured ? null : "No AskAI provider is configured.",
+      error: configured ? null : "The Ripo Team AI server is offline and no cloud fallback is configured.",
     });
     return;
   }
 
   if (request.method !== "POST") {
     response.status(405).json({ error: "Method not allowed" });
-    return;
-  }
-
-  if (!configured) {
-    response.status(503).json({
-      error: "AskAI has no configured provider.",
-      code: "ASKAI_PROVIDER_MISSING",
-    });
     return;
   }
 
@@ -326,14 +356,12 @@ export const askaiGroq = onRequest({
     }
   }
 
-  if (localConfigured) {
-    try {
-      const result = await callRipoAskAI(body, mode, messages);
-      response.json({ ...result, gatewayVersion: FUNCTION_VERSION, fallbackReason: failures[0] || null });
-      return;
-    } catch (error) {
-      failures.push(`Ripo local: ${error instanceof Error ? error.message : "failed"}`);
-    }
+  try {
+    const result = await callRipoAskAI(body, mode, messages, token);
+    response.json({ ...result, gatewayVersion: FUNCTION_VERSION, fallbackReason: failures[0] || null });
+    return;
+  } catch (error) {
+    failures.push(`Ripo local: ${error instanceof Error ? error.message : "failed"}`);
   }
 
   if (groqConfigured) {
