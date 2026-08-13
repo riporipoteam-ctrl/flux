@@ -13,7 +13,7 @@ const RIPO_ASKAI_BASE_URL = "https://echoxr-ripoteam-cloud-pc.hf.space";
 const LOCAL_MODEL = "qwen3:4b-instruct";
 const INSTANT_MODEL = "openai/gpt-oss-20b";
 const PRO_MODEL = "openai/gpt-oss-120b";
-const FUNCTION_VERSION = "askai-ripo-hybrid-v3";
+const FUNCTION_VERSION = "askai-ripo-hybrid-v4";
 
 type Mode = "instant" | "pro";
 type ClientMessage = { role: "user" | "assistant"; content: string };
@@ -138,7 +138,7 @@ async function callRipoAskAI(body: RequestBody, mode: Mode, messages: ClientMess
   const token = readRipoToken();
   if (!token) throw new Error("RIPO_ASKAI_TOKEN_MISSING");
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 108_000);
+  const timeout = setTimeout(() => controller.abort(), 82_000);
   try {
     const upstream = await fetch(`${RIPO_ASKAI_BASE_URL}/api/flux/askai/chat`, {
       method: "POST",
@@ -184,7 +184,7 @@ async function callGroq(body: RequestBody, mode: Mode, messages: ClientMessage[]
   if (body.codeExecution === true) tools.push({ type: "code_interpreter", container: { type: "auto" } });
 
   const instructions = [
-    `You are ${mode === "pro" ? "AskAI 1.0 Pro" : "AskAI 1.0 Instant"} inside Flux social network.`,
+    `You are ${mode === "pro" ? "AskAI Pro" : "AskAI Instant"} inside Flux social network.`,
     mode === "pro"
       ? "Use high reasoning effort, be thorough, and clearly separate verified facts from uncertainty."
       : "Respond quickly, naturally, and directly. Prefer concise useful answers.",
@@ -217,15 +217,15 @@ async function callGroq(body: RequestBody, mode: Mode, messages: ClientMessage[]
     const groqError = data.error && typeof data.error === "object"
       ? String((data.error as Record<string, unknown>).message || "")
       : "";
-    throw new Error(groqError.slice(0, 300) || `Groq returned ${groqResponse.status}.`);
+    throw new Error(groqError.slice(0, 300) || `Connected provider returned ${groqResponse.status}.`);
   }
   const answer = extractAnswer(data);
-  if (!answer) throw new Error("Groq returned an empty answer.");
+  if (!answer) throw new Error("Connected provider returned an empty answer.");
   return {
     answer,
     model,
     mode,
-    provider: "groq-fallback",
+    provider: tools.length ? "connected-tools" : "cloud-fallback",
     sources: extractSources(data),
     usage: data.usage || null,
     metrics: data.metadata || null,
@@ -253,16 +253,16 @@ export const askaiGroq = onRequest({
       configured,
       service: "Flux AskAI hybrid gateway",
       version: FUNCTION_VERSION,
-      primary: localConfigured ? "ripo-local" : "groq",
+      primary: localConfigured ? "ripo-local" : "cloud-fallback",
       providers: {
         ripoLocal: { configured: localConfigured, model: LOCAL_MODEL, endpoint: RIPO_ASKAI_BASE_URL },
-        groq: { configured: groqConfigured, models: { instant: INSTANT_MODEL, pro: PRO_MODEL } },
+        connectedTools: { configured: groqConfigured, models: { instant: INSTANT_MODEL, pro: PRO_MODEL } },
       },
       models: localConfigured
         ? { instant: LOCAL_MODEL, pro: LOCAL_MODEL }
         : { instant: INSTANT_MODEL, pro: PRO_MODEL },
       tools: groqConfigured ? ["browser_search", "code_interpreter"] : [],
-      error: configured ? null : "Configure RIPO_ASKAI_TOKEN (recommended) or GROQ_API_KEY in Firebase Secret Manager.",
+      error: configured ? null : "No AskAI provider is configured.",
     });
     return;
   }
@@ -274,7 +274,7 @@ export const askaiGroq = onRequest({
 
   if (!configured) {
     response.status(503).json({
-      error: "AskAI has no configured provider. Add RIPO_ASKAI_TOKEN or GROQ_API_KEY in Firebase Secret Manager.",
+      error: "AskAI has no configured provider.",
       code: "ASKAI_PROVIDER_MISSING",
     });
     return;
@@ -314,10 +314,22 @@ export const askaiGroq = onRequest({
   }
 
   const failures: string[] = [];
+  const toolsRequested = mode === "pro" && (body.research === true || body.codeExecution === true);
+
+  if (toolsRequested && groqConfigured) {
+    try {
+      const result = await callGroq(body, mode, messages);
+      response.json({ ...result, gatewayVersion: FUNCTION_VERSION });
+      return;
+    } catch (error) {
+      failures.push(`Connected tools: ${error instanceof Error ? error.message : "failed"}`);
+    }
+  }
+
   if (localConfigured) {
     try {
       const result = await callRipoAskAI(body, mode, messages);
-      response.json({ ...result, gatewayVersion: FUNCTION_VERSION });
+      response.json({ ...result, gatewayVersion: FUNCTION_VERSION, fallbackReason: failures[0] || null });
       return;
     } catch (error) {
       failures.push(`Ripo local: ${error instanceof Error ? error.message : "failed"}`);
@@ -326,17 +338,17 @@ export const askaiGroq = onRequest({
 
   if (groqConfigured) {
     try {
-      const result = await callGroq(body, mode, messages);
+      const result = await callGroq({ ...body, research: false, codeExecution: false }, mode, messages);
       response.json({ ...result, gatewayVersion: FUNCTION_VERSION, fallbackReason: failures[0] || null });
       return;
     } catch (error) {
-      failures.push(`Groq: ${error instanceof Error ? error.message : "failed"}`);
+      failures.push(`Cloud fallback: ${error instanceof Error ? error.message : "failed"}`);
     }
   }
 
   response.status(502).json({
     error: "AskAI providers are currently unavailable.",
     code: "ASKAI_UPSTREAM_FAILED",
-    details: failures.slice(0, 2),
+    details: failures.slice(0, 3),
   });
 });
