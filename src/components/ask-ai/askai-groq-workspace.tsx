@@ -55,11 +55,13 @@ export default function AskAIGroqWorkspace() {
   const [threadSearch, setThreadSearch] = useState("");
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
-  const [research, setResearch] = useState(true);
+  const [research, setResearch] = useState(false);
   const [codeExecution, setCodeExecution] = useState(false);
   const [sources, setSources] = useState<AskAIGroqSource[]>([]);
   const [fluxResults, setFluxResults] = useState<FluxSearchResult[]>([]);
   const [files, setFiles] = useState<AttachedFile[]>([]);
+  const [lastModel, setLastModel] = useState("qwen3:4b-instruct");
+  const [lastProvider, setLastProvider] = useState("ripo-local");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -174,9 +176,12 @@ export default function AskAIGroqWorkspace() {
         const workspaceContext = files.length
           ? `Attached files:\n${files.map((file) => `--- ${file.name} ---\n${file.text}`).join("\n\n").slice(0, 30_000)}`
           : "";
-        setStatus(mode === "pro"
-          ? "AskAI 1.0 Pro is reasoning with Groq…"
-          : "AskAI 1.0 Instant is answering with Groq…");
+        const cloudToolsOn = mode === "pro" && (research || codeExecution);
+        setStatus(cloudToolsOn
+          ? "AskAI Pro is using its connected tools…"
+          : mode === "pro"
+            ? "AskAI Pro is reasoning on the Ripo Team AI server…"
+            : "AskAI Instant is answering on the Ripo Team AI server…");
         const result = await runAskAIGroq({
           mode,
           signal: controller.signal,
@@ -187,10 +192,13 @@ export default function AskAIGroqWorkspace() {
             .filter((message) => message.role === "user" || message.role === "assistant")
             .map((message) => ({ role: message.role as "user" | "assistant", content: message.content })),
         });
+        setLastModel(result.model);
+        setLastProvider(result.provider || "unknown");
         setSources(result.sources);
         await append(threadId, "assistant", result.answer, {
           mode,
           model: result.model,
+          provider: result.provider,
           sources: result.sources,
         });
       }
@@ -235,6 +243,8 @@ export default function AskAIGroqWorkspace() {
     [conversations, threadSearch]
   );
 
+  const cloudToolsOn = mode === "pro" && (research || codeExecution);
+
   return (
     <main className="askx-shell">
       <aside className={cn("askx-sidebar", leftOpen && "is-open")}>
@@ -256,18 +266,18 @@ export default function AskAIGroqWorkspace() {
       <section className="askx-chat">
         <header className="askx-chat-header">
           <button type="button" className="askx-mobile-menu" onClick={() => setLeftOpen(true)} aria-label="Open chats"><Menu className="h-5 w-5" /></button>
-          <div className="askx-chat-title"><Sparkles className="h-5 w-5" /><div><strong>AskAI</strong><span>{mode === "pro" ? "Groq GPT-OSS 120B" : "Groq GPT-OSS 20B"}</span></div></div>
-          <div className="askx-model-switch" aria-label="AskAI model">
-            <button type="button" className={mode === "instant" ? "is-active" : ""} onClick={() => changeMode("instant")}><Zap className="h-4 w-4" /><span>AskAI 1.0 Instant</span></button>
-            <button type="button" className={mode === "pro" ? "is-active" : ""} onClick={() => changeMode("pro")}><Sparkles className="h-4 w-4" /><span>AskAI 1.0 Pro</span></button>
+          <div className="askx-chat-title"><Sparkles className="h-5 w-5" /><div><strong>AskAI</strong><span>{cloudToolsOn ? "Connected tools" : "Ripo Local · Qwen3 4B"}</span></div></div>
+          <div className="askx-model-switch" aria-label="AskAI mode">
+            <button type="button" className={mode === "instant" ? "is-active" : ""} onClick={() => changeMode("instant")}><Zap className="h-4 w-4" /><span>Instant</span></button>
+            <button type="button" className={mode === "pro" ? "is-active" : ""} onClick={() => changeMode("pro")}><Sparkles className="h-4 w-4" /><span>Pro</span></button>
           </div>
           <button type="button" className="askx-context-button" onClick={() => setRightOpen((value) => !value)} aria-label="Open tools"><Globe2 className="h-5 w-5" /></button>
         </header>
 
-        <div className="askx-model-note"><Check className="h-4 w-4" /><span>{mode === "pro" ? "High reasoning through the secure Firebase Groq proxy." : "Low-latency Groq model. No browser model download."}</span></div>
+        <div className="askx-model-note"><Check className="h-4 w-4" /><span>{cloudToolsOn ? "Connected tools are enabled for this Pro request." : mode === "pro" ? "Self-hosted Qwen with a larger context budget for deeper answers." : "Self-hosted Qwen tuned for fast everyday answers."}</span></div>
 
         <div className="askx-scroll no-scrollbar">
-          {!messages.length && !loading ? <div className="askx-empty"><span><Sparkles className="h-8 w-8" /></span><h1>What can I help with?</h1><p>Chat, research, calculate, attach code or search public Flux content.</p><div className="askx-starters">{["Write a natural Flux post", "Research the latest AI news", "Explain this code", "Plan a browser game"].map((starter) => <button key={starter} type="button" onClick={() => setInput(starter)}>{starter}</button>)}</div></div> : <div className="askx-messages">{messages.map((message) => <MessageBubble key={message.id} message={message} />)}{status ? <div className="askx-status"><Loader2 className="h-4 w-4 animate-spin" />{status}</div> : null}{fluxResults.length ? <div className="askx-results">{fluxResults.map((result) => <Link key={`${result.kind}-${result.id}`} href={result.href}><span className="askx-result-image">{result.imageUrl ? <img src={result.imageUrl} alt="" /> : <Search className="h-5 w-5" />}</span><div><strong>{result.title}</strong><small>{result.subtitle} · {result.meta}</small><p>{result.description}</p></div></Link>)}</div> : null}<div ref={bottomRef} /></div>}
+          {!messages.length && !loading ? <div className="askx-empty"><span><Sparkles className="h-8 w-8" /></span><h1>What can I help with?</h1><p>Chat, analyze files, explain code or search public Flux content.</p><div className="askx-starters">{["Write a natural Flux post", "Explain this code", "Plan a browser game", "Search Flux for gaming posts"].map((starter) => <button key={starter} type="button" onClick={() => setInput(starter)}>{starter}</button>)}</div></div> : <div className="askx-messages">{messages.map((message) => <MessageBubble key={message.id} message={message} />)}{status ? <div className="askx-status"><Loader2 className="h-4 w-4 animate-spin" />{status}</div> : null}{fluxResults.length ? <div className="askx-results">{fluxResults.map((result) => <Link key={`${result.kind}-${result.id}`} href={result.href}><span className="askx-result-image">{result.imageUrl ? <img src={result.imageUrl} alt="" /> : <Search className="h-5 w-5" />}</span><div><strong>{result.title}</strong><small>{result.subtitle} · {result.meta}</small><p>{result.description}</p></div></Link>)}</div> : null}<div ref={bottomRef} /></div>}
         </div>
 
         <footer className="askx-composer-wrap">
@@ -275,18 +285,18 @@ export default function AskAIGroqWorkspace() {
           <form className="askx-composer" onSubmit={(event: FormEvent) => { event.preventDefault(); void send(); }}>
             <input ref={fileInputRef} type="file" multiple className="hidden" accept=".txt,.md,.json,.csv,.html,.css,.js,.ts,.tsx,.jsx" onChange={(event) => void attachFiles(event)} />
             <button type="button" onClick={() => fileInputRef.current?.click()} aria-label="Attach files"><Paperclip className="h-5 w-5" /></button>
-            <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }} placeholder={`Message AskAI 1.0 ${mode === "pro" ? "Pro" : "Instant"}…`} rows={1} />
+            <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }} placeholder={`Message AskAI ${mode === "pro" ? "Pro" : "Instant"}…`} rows={1} />
             <button type={loading ? "button" : "submit"} onClick={loading ? stop : undefined} disabled={!loading && !input.trim()} className="askx-send">{loading ? <Square className="h-4 w-4 fill-current" /> : <Send className="h-4 w-4" />}</button>
           </form>
-          <p>AskAI is powered through an authenticated Firebase Function. Verify important information.</p>
+          <p>Primary AI runs on Ripo Team infrastructure behind an authenticated Firebase gateway. Verify important information.</p>
         </footer>
       </section>
 
       <aside className={cn("askx-context", rightOpen && "is-open")}>
-        <header><strong>Tools</strong><button type="button" onClick={() => setRightOpen(false)} aria-label="Close panel"><X className="h-4 w-4" /></button></header>
-        <section><h2>Model</h2><div className="askx-context-card"><strong>{mode === "pro" ? "AskAI 1.0 Pro" : "AskAI 1.0 Instant"}</strong><p>{mode === "pro" ? "openai/gpt-oss-120b · high reasoning" : "openai/gpt-oss-20b · fast reasoning"}</p></div></section>
-        <section><h2>Pro tools</h2><label className="askx-context-card flex cursor-pointer items-center gap-3"><input type="checkbox" checked={research} onChange={(event) => setResearch(event.target.checked)} /><Globe2 className="h-4 w-4" /><div><strong>Browser research</strong><p>Retrieve live web information and citations.</p></div></label><label className="askx-context-card mt-2 flex cursor-pointer items-center gap-3"><input type="checkbox" checked={codeExecution} onChange={(event) => setCodeExecution(event.target.checked)} /><Code2 className="h-4 w-4" /><div><strong>Code execution</strong><p>Run Python calculations in Groq's sandbox.</p></div></label></section>
-        <section><h2>Sources</h2>{sources.length ? <div className="askx-source-list">{sources.map((source, index) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><span>{index + 1}</span><div><strong>{source.title}</strong><p>{source.url}</p></div></a>)}</div> : <p className="askx-context-empty">Research sources appear here.</p>}</section>
+        <header><strong>Tools & model</strong><button type="button" onClick={() => setRightOpen(false)} aria-label="Close panel"><X className="h-4 w-4" /></button></header>
+        <section><h2>Current engine</h2><div className="askx-context-card"><strong>{lastProvider === "ripo-local" ? "Ripo Local" : lastProvider}</strong><p>{lastModel} · {mode === "pro" ? "larger context" : "fast context"}</p></div></section>
+        <section><h2>Optional Pro tools</h2><label className="askx-context-card flex cursor-pointer items-center gap-3"><input type="checkbox" checked={research} disabled={mode !== "pro"} onChange={(event) => setResearch(event.target.checked)} /><Globe2 className="h-4 w-4" /><div><strong>Web research</strong><p>Use the connected research provider for live web information and citations.</p></div></label><label className="askx-context-card mt-2 flex cursor-pointer items-center gap-3"><input type="checkbox" checked={codeExecution} disabled={mode !== "pro"} onChange={(event) => setCodeExecution(event.target.checked)} /><Code2 className="h-4 w-4" /><div><strong>Cloud compute</strong><p>Use the connected compute provider for calculations when needed.</p></div></label></section>
+        <section><h2>Sources</h2>{sources.length ? <div className="askx-source-list">{sources.map((source, index) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer"><span>{index + 1}</span><div><strong>{source.title}</strong><p>{source.url}</p></div></a>)}</div> : <p className="askx-context-empty">Sources appear here when a connected research tool is used.</p>}</section>
       </aside>
     </main>
   );
