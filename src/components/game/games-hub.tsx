@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 const FAVORITES_KEY = "flux-games-favorites";
 const RECENT_KEY = "flux-games-recent";
+const PAGE_SIZE = 24;
 
 function gameHref(game: BrowserGame) {
   return `/games/play?game=${encodeURIComponent(game.slug)}`;
@@ -38,6 +39,7 @@ export default function GamesHub() {
   const [category, setCategory] = useState<GameCategoryFilter>("All");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const hero = FEATURED_GAMES[0] || BROWSER_GAMES[0];
 
   useEffect(() => {
@@ -55,12 +57,17 @@ export default function GamesHub() {
     return BROWSER_GAMES.filter((game) => {
       if (category !== "All" && !game.categories.includes(category as never)) return false;
       if (!needle) return true;
-      return [game.title, game.shortDescription, game.dimension, game.controls, ...game.categories]
+      return [game.title, game.author, game.shortDescription, game.dimension, game.controls, ...game.categories]
         .join(" ")
         .toLowerCase()
         .includes(needle);
     });
   }, [category, deferredQuery]);
+
+  useEffect(() => setVisibleCount(PAGE_SIZE), [category, deferredQuery]);
+
+  const visibleGames = filtered.slice(0, visibleCount);
+  const remaining = Math.max(0, filtered.length - visibleGames.length);
 
   const recentGames = recent
     .map((slug) => BROWSER_GAMES.find((game) => game.slug === slug))
@@ -86,7 +93,7 @@ export default function GamesHub() {
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="text-[15px] font-black tracking-[-.025em]">Flux Games</h1>
-            <p className="truncate text-[10px] font-semibold text-muted-foreground">Self-hosted open-source games · no blocked outside players</p>
+            <p className="truncate text-[10px] font-semibold text-muted-foreground">Self-hosted open-source games · mobile + PC ready</p>
           </div>
           <Link href="/games/licenses" className="grid h-9 w-9 place-items-center rounded-full border border-border hover:bg-muted" aria-label="Game licenses">
             <Info className="h-4 w-4" />
@@ -125,7 +132,7 @@ export default function GamesHub() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search games, controls or genres"
+              placeholder="Search games, creators, controls or genres"
               className="h-11 w-full rounded-full border border-border bg-muted/55 pl-11 pr-11 text-sm font-semibold outline-none focus:border-primary"
             />
             {query ? <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full hover:bg-muted" aria-label="Clear search"><X className="h-4 w-4" /></button> : null}
@@ -157,8 +164,15 @@ export default function GamesHub() {
             <p className="pb-1 text-xs font-bold text-muted-foreground">{filtered.length} of {OPEN_SOURCE_GAME_COUNT}</p>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((game) => <GameCard key={game.slug} game={game} favorite={favorites.includes(game.slug)} onFavorite={toggleFavorite} />)}
+            {visibleGames.map((game) => <GameCard key={game.slug} game={game} favorite={favorites.includes(game.slug)} onFavorite={toggleFavorite} />)}
           </div>
+          {remaining > 0 ? (
+            <div className="mt-5 flex justify-center">
+              <button type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="h-11 rounded-full border border-border bg-card px-6 text-sm font-black hover:bg-muted">
+                Show {Math.min(PAGE_SIZE, remaining)} more · {remaining} remaining
+              </button>
+            </div>
+          ) : null}
           {!filtered.length ? <div className="mt-5 grid min-h-44 place-items-center border-y border-dashed border-border text-center sm:rounded-[20px] sm:border"><div><Search className="mx-auto h-6 w-6 text-muted-foreground" /><p className="mt-3 font-black">No matching game</p><p className="mt-1 text-xs text-muted-foreground">Try another name or category.</p></div></div> : null}
         </section>
 
