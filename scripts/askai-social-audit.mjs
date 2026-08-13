@@ -14,21 +14,21 @@ function forbidText(source, text, label) {
 
 const route = read("src/app/(main)/ask-ai/page.tsx");
 requireText(route, "AskAIGroqWorkspace", "AskAI route");
-requireText(route, "AskAIConnectionStatus", "AskAI connection diagnostics");
 
 const workspace = read("src/components/ask-ai/askai-groq-workspace.tsx");
 for (const marker of [
-  "AskAI 1.0 Instant",
-  "AskAI 1.0 Pro",
+  "Ripo Local · Qwen3 4B",
+  "AskAI Pro",
+  "AskAI Instant",
   "runAskAIGroq",
-  "openai/gpt-oss-20b",
-  "openai/gpt-oss-120b",
-  "Browser research",
-  "Code execution",
+  "Web research",
+  "Cloud compute",
   "searchFlux",
-]) requireText(workspace, marker, "Groq AskAI workspace");
-for (const forbidden of ["streamLocalAskAI", "localAskAISupported", "Kimi K3", "runLocalAskAI"]) {
-  forbidText(workspace, forbidden, "Groq AskAI workspace");
+  "lastProvider",
+  "lastModel",
+]) requireText(workspace, marker, "Hybrid AskAI workspace");
+for (const forbidden of ["Kimi K3", "runLocalAskAI", "Groq GPT-OSS 120B", "Groq GPT-OSS 20B"]) {
+  forbidText(workspace, forbidden, "Hybrid AskAI workspace");
 }
 
 const client = read("src/lib/ai/askai-groq.ts");
@@ -38,28 +38,31 @@ for (const marker of [
   "Authorization",
   "NEXT_PUBLIC_ASKAI_GROQ_ENDPOINT",
   "checkAskAIGroqHealth",
-]) requireText(client, marker, "Groq Firebase client");
+  "provider?: string",
+  "ASKAI_PROVIDER_MISSING",
+  "ASKAI_UPSTREAM_FAILED",
+]) requireText(client, marker, "AskAI Firebase client");
 for (const forbidden of ["process.env.GROQ_API_KEY", "NEXT_PUBLIC_GROQ_API_KEY", "gsk_"]) {
-  forbidText(client, forbidden, "browser Groq client");
+  forbidText(client, forbidden, "browser AI client");
 }
-
-const status = read("src/components/ask-ai/askai-connection-status.tsx");
-for (const marker of ["missing-secret", "not-deployed", "Test again", "functions:secrets:set GROQ_API_KEY"]) requireText(status, marker, "AskAI diagnostic UI");
-forbidText(status, "gsk_", "AskAI diagnostic UI");
 
 const server = read("functions/src/index.ts");
 for (const marker of [
+  'defineSecret("RIPO_ASKAI_TOKEN")',
   'defineSecret("GROQ_API_KEY")',
   "verifyIdToken",
-  'openai/gpt-oss-20b',
-  'openai/gpt-oss-120b',
+  "RIPO_ASKAI_BASE_URL",
+  'qwen3:4b-instruct',
   'type: "browser_search"',
   'type: "code_interpreter"',
-  'effort: mode === "pro" ? "high" : "low"',
   "askaiRateLimits",
-  "GROQ_SECRET_MISSING",
-]) requireText(server, marker, "Firebase Groq proxy");
-forbidText(server, "gsk_", "Firebase Groq proxy");
+  "toolsRequested",
+  "callRipoAskAI",
+  "callGroq",
+]) requireText(server, marker, "Firebase hybrid AskAI gateway");
+for (const forbidden of ["gsk_", "NEXT_PUBLIC_RIPO_ASKAI_TOKEN"]) {
+  forbidText(server, forbidden, "Firebase hybrid AskAI gateway");
+}
 
 const mainLayout = read("src/app/(main)/layout.tsx");
 requireText(mainLayout, "if (isStudio)", "Immersive Studio shell");
@@ -79,4 +82,4 @@ for (const marker of [".askx-shell", ".askx-model-switch", ".askx-composer", ".a
   requireText(askStyles, marker, "AskAI workspace styles");
 }
 
-console.log("Secure Groq AskAI and Flux social audit passed.");
+console.log("Self-hosted Ripo AskAI and Flux social audit passed.");
