@@ -46,11 +46,18 @@ export const GAME_CATEGORIES = [
   "3D",
   "2D",
   "Action",
+  "Arcade",
   "Racing",
   "Puzzle",
   "Simulator",
+  "Tycoon",
   "Strategy",
   "Story",
+  "Horror",
+  "Quest",
+  "Platformer",
+  "Survival",
+  "Farming",
 ] as const;
 
 export type GameCategoryFilter = (typeof GAME_CATEGORIES)[number];
