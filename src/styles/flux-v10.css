@@ -1,0 +1,318 @@
+/* Flux v10 — visible social redesign layer.
+   This deliberately sits after the legacy X4 sheets so the release is visually unmistakable
+   without throwing away stable behavior from the existing components. */
+
+:root[data-flux-ui="v10"] {
+  --flux-v10-blue: #1d9bf0;
+  --flux-v10-blue-soft: rgba(29, 155, 240, .10);
+  --flux-v10-card: color-mix(in srgb, var(--background) 94%, var(--foreground) 6%);
+  --flux-v10-line: color-mix(in srgb, var(--foreground) 13%, transparent);
+  --flux-v10-muted: color-mix(in srgb, var(--foreground) 64%, transparent);
+  --flux-v10-shadow: 0 18px 50px rgba(0, 0, 0, .08);
+  --flux-v10-nav-width: 274px;
+  --flux-v10-rail-width: 350px;
+}
+
+:root.dark[data-flux-ui="v10"],
+:root.dim[data-flux-ui="v10"] {
+  --flux-v10-card: color-mix(in srgb, var(--background) 89%, white 11%);
+  --flux-v10-line: rgba(255,255,255,.11);
+  --flux-v10-muted: rgba(231,233,234,.67);
+  --flux-v10-shadow: 0 20px 60px rgba(0,0,0,.34);
+}
+
+html[data-flux-ui="v10"] { scroll-behavior: smooth; }
+html[data-flux-ui="v10"] body {
+  background:
+    radial-gradient(circle at 42% -12%, rgba(29,155,240,.075), transparent 30rem),
+    var(--background);
+  letter-spacing: -.006em;
+}
+
+/* Desktop shell */
+html[data-flux-ui="v10"] .flux8-app-shell {
+  width: min(1320px, 100%);
+  margin-inline: auto;
+  grid-template-columns: var(--flux-v10-nav-width) minmax(0, 610px) var(--flux-v10-rail-width);
+  column-gap: 24px;
+  padding-inline: 14px;
+}
+html[data-flux-ui="v10"] .flux8-app-shell[data-rail="off"] {
+  grid-template-columns: var(--flux-v10-nav-width) minmax(0, 960px);
+}
+html[data-flux-ui="v10"] .flux8-main-column {
+  border-left: 1px solid var(--flux-v10-line);
+  border-right: 1px solid var(--flux-v10-line);
+  min-height: 100dvh;
+  background: color-mix(in srgb, var(--background) 97%, transparent);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.015);
+}
+
+/* Left navigation */
+html[data-flux-ui="v10"] .flux8-sidebar {
+  width: var(--flux-v10-nav-width);
+  padding: 10px 14px 14px 8px;
+  border: 0;
+  background: transparent;
+  gap: 4px;
+}
+html[data-flux-ui="v10"] .flux8-sidebar-brand {
+  width: max-content;
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  transition: background-color .16s ease, transform .16s ease;
+}
+html[data-flux-ui="v10"] .flux8-sidebar-brand:hover { background: var(--flux-v10-blue-soft); transform: translateY(-1px); }
+html[data-flux-ui="v10"] .flux8-sidebar-nav { gap: 2px; padding-top: 2px; }
+html[data-flux-ui="v10"] .flux8-sidebar-link {
+  width: max-content;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 0 15px 0 11px;
+  gap: 16px;
+  border-radius: 999px;
+  font-size: 19px;
+  font-weight: 480;
+  color: var(--foreground);
+  transition: background-color .15s ease, transform .15s ease, color .15s ease;
+}
+html[data-flux-ui="v10"] .flux8-sidebar-link strong { font-weight: inherit; letter-spacing: -.025em; }
+html[data-flux-ui="v10"] .flux8-sidebar-link:hover { background: color-mix(in srgb, var(--foreground) 8%, transparent); transform: translateX(2px); }
+html[data-flux-ui="v10"] .flux8-sidebar-link.is-active { font-weight: 780; }
+html[data-flux-ui="v10"] .flux8-sidebar-link.is-active .flux8-sidebar-icon { color: var(--flux-v10-blue); }
+html[data-flux-ui="v10"] .flux8-sidebar-icon { width: 28px; height: 28px; }
+html[data-flux-ui="v10"] .flux8-sidebar-icon em {
+  border: 2px solid var(--background);
+  box-shadow: 0 0 0 1px rgba(29,155,240,.12);
+}
+html[data-flux-ui="v10"] .flux8-sidebar-create {
+  margin-top: 9px;
+  min-height: 52px;
+  width: calc(100% - 8px);
+  border-radius: 999px;
+  border: 0;
+  background: var(--flux-v10-blue);
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(29,155,240,.22);
+  transition: filter .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+html[data-flux-ui="v10"] .flux8-sidebar-create:hover { filter: brightness(.94); transform: translateY(-1px); box-shadow: 0 12px 30px rgba(29,155,240,.28); }
+html[data-flux-ui="v10"] .flux8-sidebar-profile {
+  margin-top: auto;
+  border-radius: 999px;
+  padding: 10px 11px;
+  transition: background-color .15s ease;
+}
+html[data-flux-ui="v10"] .flux8-sidebar-profile:hover { background: color-mix(in srgb, var(--foreground) 8%, transparent); }
+
+/* Timeline */
+html[data-flux-ui="v10"] .flux8-feed { width: 100%; max-width: none; }
+html[data-flux-ui="v10"] .flux8-timeline-header {
+  position: sticky;
+  top: 0;
+  z-index: 24;
+  min-height: 55px;
+  padding-inline: 18px;
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  border-bottom: 1px solid var(--flux-v10-line);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+html[data-flux-ui="v10"] .flux8-timeline-header strong { font-size: 20px; font-weight: 820; letter-spacing: -.04em; }
+html[data-flux-ui="v10"] .flux8-timeline-header button {
+  width: 36px; height: 36px; border-radius: 999px;
+  transition: background-color .15s ease, transform .15s ease;
+}
+html[data-flux-ui="v10"] .flux8-timeline-header button:hover { background: color-mix(in srgb, var(--foreground) 8%, transparent); transform: rotate(8deg); }
+html[data-flux-ui="v10"] .flux8-feed-tabs {
+  position: sticky;
+  top: 55px;
+  z-index: 23;
+  min-height: 52px;
+  border-bottom: 1px solid var(--flux-v10-line);
+  background: color-mix(in srgb, var(--background) 86%, transparent);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+html[data-flux-ui="v10"] .flux8-feed-tabs button { min-height: 52px; font-size: 14px; color: var(--flux-v10-muted); position: relative; }
+html[data-flux-ui="v10"] .flux8-feed-tabs button:hover { background: color-mix(in srgb, var(--foreground) 5%, transparent); }
+html[data-flux-ui="v10"] .flux8-feed-tabs button.is-active { color: var(--foreground); font-weight: 750; }
+html[data-flux-ui="v10"] .flux8-feed-tabs button.is-active::after {
+  content: "";
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 58px; height: 4px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--flux-v10-blue);
+}
+html[data-flux-ui="v10"] .flux8-composer-card {
+  padding: 13px 16px 10px;
+  border-bottom: 1px solid var(--flux-v10-line);
+  background: transparent;
+}
+html[data-flux-ui="v10"] .flux8-story-card {
+  border-bottom: 1px solid var(--flux-v10-line);
+  background: linear-gradient(180deg, rgba(29,155,240,.035), transparent);
+}
+html[data-flux-ui="v10"] .flux8-post-wrap {
+  border-bottom: 1px solid var(--flux-v10-line);
+  transition: background-color .15s ease;
+  content-visibility: auto;
+  contain-intrinsic-size: 260px;
+}
+html[data-flux-ui="v10"] .flux8-post-wrap:hover { background: color-mix(in srgb, var(--foreground) 2.8%, transparent); }
+html[data-flux-ui="v10"] .flux8-post-wrap article,
+html[data-flux-ui="v10"] .flux8-post-wrap [data-post-card] { border-radius: 0 !important; box-shadow: none !important; }
+html[data-flux-ui="v10"] .flux8-post-skeleton { border-bottom: 1px solid var(--flux-v10-line); padding: 18px 16px; }
+html[data-flux-ui="v10"] .flux8-loading-more { border-top: 0; color: var(--flux-v10-muted); }
+
+/* Generic page chrome that still uses the older social classes */
+html[data-flux-ui="v10"] .social-feed { width: 100%; max-width: none; }
+html[data-flux-ui="v10"] .social-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 24;
+  min-height: 58px;
+  padding: 9px 16px;
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  border-bottom: 1px solid var(--flux-v10-line);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+/* New v10 reusable visual primitives */
+.flux10-page { min-height: 100dvh; background: transparent; color: var(--foreground); }
+.flux10-page-head {
+  position: sticky; top: 0; z-index: 28;
+  display: flex; align-items: center; gap: 12px;
+  min-height: 64px; padding: 10px 18px;
+  border-bottom: 1px solid var(--flux-v10-line);
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+}
+.flux10-title { font-size: 20px; line-height: 1; font-weight: 850; letter-spacing: -.045em; }
+.flux10-kicker { font-size: 10px; line-height: 1; font-weight: 850; text-transform: uppercase; letter-spacing: .15em; color: var(--flux-v10-muted); }
+.flux10-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 42px; padding-inline: 18px; border-radius: 999px;
+  background: var(--flux-v10-blue); color: white; font-size: 13px; font-weight: 820;
+  box-shadow: 0 8px 22px rgba(29,155,240,.18);
+  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+}
+.flux10-primary:hover { transform: translateY(-1px); filter: brightness(.95); box-shadow: 0 12px 26px rgba(29,155,240,.24); }
+.flux10-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 40px; padding-inline: 15px; border: 1px solid var(--flux-v10-line);
+  border-radius: 999px; background: color-mix(in srgb, var(--background) 94%, transparent);
+  font-size: 12px; font-weight: 780; transition: background-color .15s ease, transform .15s ease;
+}
+.flux10-secondary:hover { background: color-mix(in srgb, var(--foreground) 7%, transparent); transform: translateY(-1px); }
+.flux10-hero {
+  position: relative; overflow: hidden;
+  border-bottom: 1px solid var(--flux-v10-line);
+  background:
+    radial-gradient(circle at 78% 20%, rgba(29,155,240,.24), transparent 32%),
+    linear-gradient(135deg, rgba(29,155,240,.11), transparent 54%);
+}
+.flux10-glow-orb { position: absolute; border-radius: 999px; filter: blur(46px); pointer-events: none; opacity: .45; }
+.flux10-panel {
+  border: 1px solid var(--flux-v10-line); border-radius: 22px;
+  background: color-mix(in srgb, var(--background) 96%, var(--foreground) 4%);
+  box-shadow: var(--flux-v10-shadow);
+}
+.flux10-chip {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding-inline: 12px;
+  border: 1px solid var(--flux-v10-line); border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 94%, transparent); color: var(--flux-v10-muted);
+  font-size: 11px; font-weight: 800; white-space: nowrap;
+}
+.flux10-chip.is-active { border-color: transparent; background: var(--foreground); color: var(--background); }
+.flux10-live-dot { width: 8px; height: 8px; border-radius: 999px; background: #f4212e; box-shadow: 0 0 0 4px rgba(244,33,46,.12); }
+
+/* Games */
+.flux10-games-hero { display: grid; min-height: 430px; border-bottom: 1px solid var(--flux-v10-line); }
+.flux10-games-hero-media { position: relative; min-height: 300px; overflow: hidden; background: #050505; }
+.flux10-games-hero-media img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.01); transition: transform .45s cubic-bezier(.2,.8,.2,1); }
+.flux10-games-hero:hover .flux10-games-hero-media img { transform: scale(1.035); }
+.flux10-games-hero-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 38%, rgba(0,0,0,.72)); }
+.flux10-games-hero-copy { display: flex; flex-direction: column; justify-content: center; padding: 28px; background: linear-gradient(155deg, rgba(29,155,240,.09), transparent 60%); }
+.flux10-game-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+.flux10-game-card {
+  overflow: hidden; border: 1px solid var(--flux-v10-line); border-radius: 22px;
+  background: color-mix(in srgb, var(--background) 97%, var(--foreground) 3%);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.flux10-game-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--flux-v10-blue) 48%, var(--flux-v10-line)); box-shadow: var(--flux-v10-shadow); }
+.flux10-game-card .flux10-game-media { aspect-ratio: 16/9; overflow: hidden; background: #070707; }
+.flux10-game-card .flux10-game-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .32s ease; }
+.flux10-game-card:hover .flux10-game-media img { transform: scale(1.045); }
+.flux10-search {
+  width: 100%; min-height: 46px; padding: 0 46px; border: 1px solid var(--flux-v10-line); border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 5%, transparent); font-size: 14px; font-weight: 600; outline: none;
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+.flux10-search:focus { border-color: var(--flux-v10-blue); background: var(--background); box-shadow: 0 0 0 3px rgba(29,155,240,.11); }
+
+/* Live */
+.flux10-live-hero { padding: 34px 22px 28px; }
+.flux10-live-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; padding: 18px; }
+.flux10-live-card { display: block; min-width: 0; }
+.flux10-live-preview {
+  position: relative; overflow: hidden; aspect-ratio: 16/9; border-radius: 18px;
+  background: radial-gradient(circle at 70% 20%, rgba(29,155,240,.28), transparent 34%), #08090a;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 12px 28px rgba(0,0,0,.14);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.flux10-live-card:hover .flux10-live-preview { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(0,0,0,.2); }
+.flux10-live-badge { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 5px 8px; background: #f4212e; color: white; font-size: 10px; font-weight: 900; letter-spacing: .08em; }
+.flux10-live-meta { padding: 12px 2px 2px; display: flex; gap: 10px; min-width: 0; }
+
+/* Right rail */
+html[data-flux-ui="v10"] .flux8-right-rail { padding-top: 12px; }
+html[data-flux-ui="v10"] .flux8-right-rail > * { border-color: var(--flux-v10-line) !important; border-radius: 20px !important; }
+
+/* Dialogs/menus */
+html[data-flux-ui="v10"] .flux8-dialog,
+html[data-flux-ui="v10"] .flux8-more-menu { border-color: var(--flux-v10-line); box-shadow: 0 18px 60px rgba(0,0,0,.18); }
+
+/* Mobile: deliberately feels like a native social app */
+@media (max-width: 1023px) {
+  html[data-flux-ui="v10"] .flux8-app-shell,
+  html[data-flux-ui="v10"] .flux8-app-shell[data-rail="off"] { display: block; width: 100%; padding: 0; }
+  html[data-flux-ui="v10"] .flux8-main-column { width: 100%; border: 0; min-height: 100dvh; }
+  html[data-flux-ui="v10"] .flux8-feed-tabs { top: var(--flux-mobile-header-h, 52px); }
+  html[data-flux-ui="v10"] .flux8-composer-card { padding-inline: 14px; }
+  .flux10-page-head { top: var(--flux-mobile-header-h, 0px); }
+  .flux10-game-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .flux10-live-grid { gap: 12px; padding: 12px; }
+}
+@media (max-width: 639px) {
+  html[data-flux-ui="v10"] body { background: var(--background); }
+  html[data-flux-ui="v10"] .flux8-feed-tabs { min-height: 48px; }
+  html[data-flux-ui="v10"] .flux8-feed-tabs button { min-height: 48px; }
+  html[data-flux-ui="v10"] .flux8-post-wrap:hover { background: transparent; }
+  .flux10-page-head { min-height: 56px; padding: 8px 13px; }
+  .flux10-title { font-size: 18px; }
+  .flux10-live-hero { padding: 24px 16px 20px; }
+  .flux10-live-grid { grid-template-columns: 1fr; }
+  .flux10-games-hero { min-height: 0; }
+  .flux10-games-hero-copy { padding: 22px 16px 26px; }
+  .flux10-game-grid { grid-template-columns: 1fr; }
+  .flux10-game-card { border-left: 0; border-right: 0; border-radius: 0; }
+  .flux10-panel { border-radius: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-flux-ui="v10"], html[data-flux-ui="v10"] * { scroll-behavior: auto !important; }
+  html[data-flux-ui="v10"] *, html[data-flux-ui="v10"] *::before, html[data-flux-ui="v10"] *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
