@@ -59,13 +59,16 @@ jobs:
           NEXT_PUBLIC_TURN_URL: ${{ vars.NEXT_PUBLIC_TURN_URL }}
           NEXT_PUBLIC_TURN_USERNAME: ${{ vars.NEXT_PUBLIC_TURN_USERNAME }}
           NEXT_PUBLIC_TURN_CREDENTIAL: ${{ secrets.NEXT_PUBLIC_TURN_CREDENTIAL }}
+          NEXT_PUBLIC_RECROOM_BROKER_URL: ${{ vars.NEXT_PUBLIC_RECROOM_BROKER_URL }}
         run: npm run build
 
-      - name: Verify X4, public Live and local open-source games
+      - name: Verify X4, public Live and game routes
         run: |
           test -f out/index.html
           test -f out/home/index.html
           test -f out/games/index.html
+          test -f out/games/recroom/index.html
+          test -f out/profile/games/index.html
           test -f out/games/licenses/index.html
           test -f out/live/view/index.html
           test -f out/games-library/tux-racer/index.html
@@ -76,6 +79,7 @@ jobs:
           grep -R -q 'Guest viewing' out/_next/static
           grep -R -q 'staticauth.openrelay.metered.ca' out/_next/static
           grep -R -q 'Open source · hosted by Flux' out/_next/static
+          grep -R -q 'echoxr-ripoteam-cloud-pc.hf.space' out/_next/static
           grep -q 'createPortal' src/components/layout/mobile-nav.tsx
           grep -R -q 'flux-mobile-dock-portal' out/_next/static
 
@@ -84,7 +88,7 @@ jobs:
           touch out/.nojekyll
           cp out/index.html out/404.html
           printf '%s\n' '${{ github.sha }}' > out/version.txt
-          printf '{"release":"%s","ui":"x4","live":"guest-turn-attempt-isolation","games":"self-hosted-open-source","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
+          printf '{"release":"%s","ui":"x4","live":"guest-turn-attempt-isolation","games":"self-hosted-open-source-plus-recroom-stream","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
