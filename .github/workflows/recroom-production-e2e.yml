@@ -1,0 +1,172 @@
+name: Rec Room Production E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/recroom-production-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Wait for this exact Flux Pages release
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 90); do
+            release="$(curl -fsS -H 'Cache-Control: no-cache' "https://riporipoteam-ctrl.github.io/flux/release.json?ts=$(date +%s)" || true)"
+            if [ -n "$release" ]; then
+              echo "$release"
+              current="$(printf '%s' "$release" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("release", ""))' 2>/dev/null || true)"
+              if [ "$current" = "$EXPECTED_SHA" ]; then
+                echo "Exact production release is live: $current"
+                exit 0
+              fi
+            fi
+            sleep 5
+          done
+          echo "Production Pages never exposed release $EXPECTED_SHA"
+          exit 1
+      - name: Click through the actual public Flux website
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p test-results/recroom-production
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+            const base = 'https://riporipoteam-ctrl.github.io/flux';
+            const runId = process.env.RUN_ID || String(Date.now());
+            const email = `recroom.prod.e2e.${runId}@example.com`;
+            const password = `FluxProd-${runId}!Aa9`;
+            const username = `rrprod${runId.slice(-10)}`;
+            const result = {
+              runId, email, username,
+              signup: false,
+              onboarding: false,
+              avatarSelected: false,
+              recroomPage: false,
+              playClicked: false,
+              streamStarted: false,
+              sessionError: '',
+              consoleErrors: [],
+              fatal: '',
+            };
+
+            page.on('console', msg => {
+              if (msg.type() === 'error') result.consoleErrors.push(msg.text().slice(0, 500));
+            });
+
+            try {
+              await page.goto(`${base}/signup/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#name').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#name').fill('Rec Room Production Player');
+              await page.locator('#email').fill(email);
+              await page.locator('#password').fill(password);
+              await page.getByRole('button', { name: 'Create account' }).click();
+              await page.waitForFunction(() => !window.location.pathname.includes('/signup'), null, { timeout: 30000 });
+              result.signup = true;
+              await page.screenshot({ path: 'test-results/recroom-production/01-signup.png', fullPage: true });
+
+              await page.goto(`${base}/onboarding/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#username').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#username').fill(username);
+              await page.getByText('Available', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.locator('#displayName').waitFor({ state: 'visible', timeout: 15000 });
+              await page.locator('#displayName').fill('Rec Room Production Player');
+              await page.locator('#bio').fill('Production browser test for the Flux May 2022 Rec Room integration.');
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              const avatar = page.locator('img[alt="Friendly Bot"]');
+              await avatar.waitFor({ state: 'visible', timeout: 15000 });
+              await avatar.click();
+              result.avatarSelected = true;
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.getByText('Pick a header banner', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByRole('button', { name: 'Gaming', exact: true }).click();
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByRole('button', { name: 'Enter Flux' }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Enter Flux' }).click();
+              await page.waitForFunction(() => window.location.pathname.includes('/home'), null, { timeout: 30000 });
+              result.onboarding = true;
+              await page.screenshot({ path: 'test-results/recroom-production/02-onboarding.png', fullPage: true });
+
+              await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.getByText('Rec Room · May 2022').first().waitFor({ state: 'visible', timeout: 30000 });
+              result.recroomPage = true;
+              await page.getByText('Compatibility service', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.waitForTimeout(2500);
+              await page.screenshot({ path: 'test-results/recroom-production/03-recroom.png', fullPage: true });
+
+              const play = page.getByRole('button', { name: 'Play Rec Room', exact: true });
+              await play.waitFor({ state: 'visible', timeout: 15000 });
+              if (!(await play.isEnabled())) throw new Error('Play Rec Room is disabled on production.');
+              await play.click();
+              result.playClicked = true;
+
+              for (let i = 0; i < 40; i += 1) {
+                await page.waitForTimeout(1000);
+                const body = await page.locator('body').innerText();
+                if (body.includes('Rec Room session did not start')) {
+                  result.sessionError = body.match(/Rec Room session did not start[\s\S]{0,600}/)?.[0] || 'Session failed';
+                  break;
+                }
+                if (!body.includes('Play inside Flux.') && body.includes('May 19, 2022')) {
+                  result.streamStarted = true;
+                  break;
+                }
+              }
+              await page.screenshot({ path: 'test-results/recroom-production/04-after-play.png', fullPage: true });
+
+              if (!result.streamStarted && !result.sessionError) {
+                throw new Error('Production Play click reached neither a stream nor a visible session result.');
+              }
+            } catch (error) {
+              result.fatal = String(error && error.stack || error);
+              await page.screenshot({ path: 'test-results/recroom-production/failure.png', fullPage: true }).catch(() => {});
+            } finally {
+              fs.writeFileSync('test-results/recroom-production/result.json', JSON.stringify(result, null, 2));
+              console.log(JSON.stringify(result, null, 2));
+              await browser.close();
+            }
+
+            const required = result.signup && result.onboarding && result.avatarSelected && result.recroomPage && result.playClicked;
+            const reachedNativeBoundary = result.streamStarted || Boolean(result.sessionError);
+            if (!required || !reachedNativeBoundary || result.fatal) process.exit(1);
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+      - name: Upload production browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recroom-production-e2e-${{ github.run_id }}
+          path: test-results/recroom-production
+          if-no-files-found: warn
