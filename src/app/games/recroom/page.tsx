@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { RecRoomCloudPlayer } from "@/components/game/recroom-cloud-player";
+import { RecRoomHostSetup } from "@/components/game/recroom-host-setup";
 
 export const metadata: Metadata = {
   title: "Rec Room · Flux Games",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function RecRoomPage() {
-  return <RecRoomCloudPlayer />;
+  return (
+    <>
+      <RecRoomCloudPlayer />
+      <RecRoomHostSetup />
+    </>
+  );
 }
