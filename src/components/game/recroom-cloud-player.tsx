@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -20,39 +20,18 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { StreamPlayer } from "@/components/game/stream-player";
 import { createPost } from "@/services/posts";
-
-interface PlayResponse {
-  ok?: boolean;
-  mode?: string;
-  state?: string;
-  error?: string;
-  sessionId?: string;
-  sessionAccessToken?: string;
-  streamUrl?: string;
-  publicUrl?: string;
-  localUrl?: string;
-  expiresAtMs?: number;
-  hostId?: string;
-  steps?: string[];
-}
-
-interface GatewayStatus {
-  running?: boolean;
-  mode?: string;
-  url?: string;
-  remote?: boolean;
-}
-
-interface CaptureResponse {
-  ok?: boolean;
-  captureId?: string;
-  sessionId?: string;
-  state?: string;
-  ready?: boolean;
-  contentType?: string | null;
-  error?: string | null;
-  detail?: string;
-}
+import { tagGamePost } from "@/services/game-posts";
+import {
+  createRecRoomSession,
+  downloadRecRoomCapture,
+  getRecRoomBrokerStatus,
+  getRecRoomCapture,
+  getRecRoomSession,
+  releaseRecRoomSession,
+  requestRecRoomCapture,
+  type RecRoomBrokerStatus,
+  type RecRoomPlayResponse,
+} from "@/services/recroom-browser";
 
 type CapturedImage = {
   captureId: string;
@@ -60,27 +39,20 @@ type CapturedImage = {
   file: File;
 };
 
-function responseError(payload: CaptureResponse, fallback: string) {
-  return payload.error || payload.detail || fallback;
-}
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function RecRoomCloudPlayer() {
-  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const [starting, setStarting] = useState(false);
-  const [play, setPlay] = useState<PlayResponse | null>(null);
-  const [gateway, setGateway] = useState<GatewayStatus | null>(null);
+  const [play, setPlay] = useState<RecRoomPlayResponse | null>(null);
+  const [gateway, setGateway] = useState<RecRoomBrokerStatus | null>(null);
   const [gatewayLoading, setGatewayLoading] = useState(true);
   const [capturing, setCapturing] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [capture, setCapture] = useState<CapturedImage | null>(null);
   const [shareText, setShareText] = useState("Captured in Rec Room 🎮 #RecRoom #FluxGames");
 
-  const streamUrl = useMemo(
-    () => play?.streamUrl || play?.publicUrl || play?.localUrl || "",
-    [play],
-  );
+  const streamUrl = play?.streamUrl || "";
 
   const clearCapture = () => {
     setCapture((current) => {
@@ -96,10 +68,13 @@ export function RecRoomCloudPlayer() {
   const refreshGateway = async () => {
     setGatewayLoading(true);
     try {
-      const response = await fetch("/api/game/recnet", { cache: "no-store" });
-      setGateway((await response.json()) as GatewayStatus);
-    } catch {
-      setGateway({ running: false });
+      setGateway(await getRecRoomBrokerStatus());
+    } catch (error) {
+      setGateway({
+        ok: false,
+        configured: false,
+        error: error instanceof Error ? error.message : "Rec Room service is unavailable.",
+      });
     } finally {
       setGatewayLoading(false);
     }
@@ -109,9 +84,9 @@ export function RecRoomCloudPlayer() {
     void refreshGateway();
   }, []);
 
-  // Remote Windows hosts can need several seconds to launch Unity + streamer.
-  // The broker returns a private session token immediately, then this page polls
-  // the server-side proxy until the host reports its HTTPS stream URL.
+  // A Windows host can need several seconds to launch Unity + the streamer.
+  // The browser receives only a private per-session access token and polls the
+  // authenticated control plane until that host reports its HTTPS stream URL.
   useEffect(() => {
     const sessionId = play?.sessionId;
     const accessToken = play?.sessionAccessToken;
@@ -131,11 +106,7 @@ export function RecRoomCloudPlayer() {
     const poll = async () => {
       if (cancelled || !sessionId || !accessToken) return;
       try {
-        const response = await fetch(
-          `/api/game/session/${encodeURIComponent(sessionId)}?accessToken=${encodeURIComponent(accessToken)}`,
-          { cache: "no-store" },
-        );
-        const next = (await response.json()) as PlayResponse;
+        const next = await getRecRoomSession(sessionId, accessToken);
         if (cancelled) return;
         setPlay((current) => ({
           ...current,
@@ -178,15 +149,13 @@ export function RecRoomCloudPlayer() {
     clearCapture();
     if (sessionId && accessToken) {
       try {
-        await fetch(
-          `/api/game/session/${encodeURIComponent(sessionId)}?accessToken=${encodeURIComponent(accessToken)}`,
-          { method: "DELETE", keepalive: true },
-        );
+        await releaseRecRoomSession(sessionId, accessToken);
       } catch {
-        /* the broker will also expire abandoned sessions */
+        // The broker also expires abandoned sessions automatically.
       }
     }
     setPlay(null);
+    void refreshGateway();
   };
 
   const startGame = async () => {
@@ -195,20 +164,10 @@ export function RecRoomCloudPlayer() {
     setPlay(null);
     clearCapture();
     try {
-      const firebaseIdToken = await user.getIdToken();
-      const response = await fetch("/api/game/instant-play", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          firebaseIdToken,
-          username: profile?.username || undefined,
-          displayName: profile?.displayName || user.displayName || undefined,
-          launchGame: true,
-          publicTunnel: true,
-        }),
-      });
-      const payload = (await response.json()) as PlayResponse;
+      const firebaseIdToken = await user.getIdToken(true);
+      const payload = await createRecRoomSession(firebaseIdToken);
       setPlay(payload);
+      void refreshGateway();
     } catch (error) {
       setPlay({
         ok: false,
@@ -226,29 +185,19 @@ export function RecRoomCloudPlayer() {
 
     setCapturing(true);
     try {
-      const base = `/api/game/session/${encodeURIComponent(sessionId)}/capture?accessToken=${encodeURIComponent(accessToken)}`;
-      const beginResponse = await fetch(base, { method: "POST", cache: "no-store" });
-      const begin = (await beginResponse.json()) as CaptureResponse;
-      if (!beginResponse.ok || !begin.captureId) {
-        throw new Error(responseError(begin, "Could not request a Rec Room screenshot."));
-      }
+      const begin = await requestRecRoomCapture(sessionId, accessToken);
+      if (!begin.captureId) throw new Error(begin.error || begin.detail || "Could not request a Rec Room screenshot.");
 
       const captureId = begin.captureId;
       let ready = false;
-      let latest: CaptureResponse = begin;
+      let contentType = begin.contentType || "image/png";
       for (let attempt = 0; attempt < 30; attempt += 1) {
         await sleep(650);
-        const statusResponse = await fetch(
-          `${base}&captureId=${encodeURIComponent(captureId)}`,
-          { cache: "no-store" },
-        );
-        latest = (await statusResponse.json()) as CaptureResponse;
-        if (!statusResponse.ok) {
-          throw new Error(responseError(latest, "Could not check screenshot status."));
-        }
+        const latest = await getRecRoomCapture(sessionId, accessToken, captureId);
         if (latest.state === "failed" || latest.ok === false) {
-          throw new Error(responseError(latest, "The Windows game host could not capture Rec Room."));
+          throw new Error(latest.error || latest.detail || "The Windows game host could not capture Rec Room.");
         }
+        contentType = latest.contentType || contentType;
         if (latest.ready || latest.state === "ready") {
           ready = true;
           break;
@@ -256,17 +205,8 @@ export function RecRoomCloudPlayer() {
       }
       if (!ready) throw new Error("The screenshot worker did not return an image in time.");
 
-      const imageResponse = await fetch(
-        `${base}&captureId=${encodeURIComponent(captureId)}&image=1`,
-        { cache: "no-store" },
-      );
-      if (!imageResponse.ok) {
-        const failure = (await imageResponse.json().catch(() => ({}))) as CaptureResponse;
-        throw new Error(responseError(failure, "Could not download the captured frame."));
-      }
-
-      const blob = await imageResponse.blob();
-      const contentType = blob.type || latest.contentType || "image/png";
+      const blob = await downloadRecRoomCapture(sessionId, accessToken, captureId);
+      contentType = blob.type || contentType || "image/png";
       const extension = contentType === "image/jpeg" ? "jpg" : "png";
       const file = new File([blob], `recroom-${Date.now()}.${extension}`, { type: contentType });
       const objectUrl = URL.createObjectURL(blob);
@@ -286,11 +226,17 @@ export function RecRoomCloudPlayer() {
     if (!user || !capture || sharing) return;
     setSharing(true);
     try {
-      await createPost({
+      const postId = await createPost({
         authorId: user.uid,
         text: shareText.trim() || "Captured in Rec Room 🎮 #RecRoom #FluxGames",
         files: [capture.file],
         type: "post",
+      });
+      await tagGamePost(postId, user.uid, {
+        gameId: "recroom",
+        gameName: "Rec Room",
+        buildId: "recroom-2022-05-19",
+        captureId: capture.captureId,
       });
       await refreshProfile();
       toast.success("Screenshot posted to Flux");
@@ -377,11 +323,12 @@ export function RecRoomCloudPlayer() {
     );
   }
 
+  const gatewayOnline = Boolean(gateway?.ok && gateway?.configured);
   const hostState = play?.state === "starting"
     ? "Starting game…"
     : play?.hostId
       ? "Assigned"
-      : "On demand";
+      : `${gateway?.onlineHosts ?? 0} online`;
 
   return (
     <main className="min-h-dvh bg-[#05080d] text-white">
@@ -442,17 +389,17 @@ export function RecRoomCloudPlayer() {
             <div className="grid gap-2 sm:grid-cols-2">
               <StatusCard
                 icon={Server}
-                title="Compatibility gateway"
-                value={gatewayLoading ? "Checking…" : gateway?.running ? "Online" : "Unavailable"}
-                detail={gateway?.url || "Waiting for backend configuration"}
-                good={Boolean(gateway?.running)}
+                title="Compatibility service"
+                value={gatewayLoading ? "Checking…" : gatewayOnline ? "Online" : "Unavailable"}
+                detail={gateway?.error || `${gateway?.onlineHosts ?? 0} Windows host(s) online`}
+                good={gatewayOnline}
               />
               <StatusCard
                 icon={Radio}
                 title="Game host"
                 value={hostState}
                 detail={play?.hostId ? `Host ${play.hostId}` : "A Windows host is allocated when you press Play."}
-                good={Boolean(play?.hostId)}
+                good={Boolean(play?.hostId) || Boolean(gateway?.onlineHosts)}
               />
             </div>
 
@@ -475,12 +422,12 @@ export function RecRoomCloudPlayer() {
               ) : (
                 <button
                   type="button"
-                  disabled={starting}
+                  disabled={starting || !gatewayOnline}
                   onClick={() => void startGame()}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black transition enabled:hover:scale-[1.02] disabled:cursor-wait disabled:opacity-60"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black transition enabled:hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gamepad2 className="h-4 w-4" />}
-                  {starting ? "Requesting host…" : "Play Rec Room"}
+                  {starting ? "Requesting host…" : gatewayOnline ? "Play Rec Room" : "Service unavailable"}
                 </button>
               )}
             </div>
