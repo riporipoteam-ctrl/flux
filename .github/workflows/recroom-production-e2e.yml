@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/recroom-production-e2e.yml"
+      - "src/app/games/recroom/**"
+      - "src/components/game/recroom-*.tsx"
+      - "src/services/recroom-browser.ts"
   workflow_dispatch:
 
 permissions:
@@ -67,6 +70,8 @@ jobs:
               onboarding: false,
               avatarSelected: false,
               recroomPage: false,
+              hostSetupButton: false,
+              pairingRejectedForNonAdmin: false,
               playClicked: false,
               streamStarted: false,
               sessionError: '',
@@ -123,6 +128,17 @@ jobs:
               await page.waitForTimeout(2500);
               await page.screenshot({ path: 'test-results/recroom-production/03-recroom.png', fullPage: true });
 
+              const setup = page.getByRole('button', { name: 'Windows host setup', exact: true });
+              await setup.waitFor({ state: 'visible', timeout: 15000 });
+              result.hostSetupButton = true;
+              await setup.click();
+              await page.getByText('Pair a Windows game host', { exact: true }).waitFor({ state: 'visible', timeout: 10000 });
+              await page.getByRole('button', { name: 'Generate one-time pairing code', exact: true }).click();
+              await page.getByText('Flux administrator access is required to pair a Windows host.', { exact: false }).waitFor({ state: 'visible', timeout: 15000 });
+              result.pairingRejectedForNonAdmin = true;
+              await page.screenshot({ path: 'test-results/recroom-production/04-host-pairing-guard.png', fullPage: true });
+              await page.getByRole('button', { name: 'Close Windows host setup', exact: true }).click();
+
               const play = page.getByRole('button', { name: 'Play Rec Room', exact: true });
               await play.waitFor({ state: 'visible', timeout: 15000 });
               if (!(await play.isEnabled())) throw new Error('Play Rec Room is disabled on production.');
@@ -141,7 +157,7 @@ jobs:
                   break;
                 }
               }
-              await page.screenshot({ path: 'test-results/recroom-production/04-after-play.png', fullPage: true });
+              await page.screenshot({ path: 'test-results/recroom-production/05-after-play.png', fullPage: true });
 
               if (!result.streamStarted && !result.sessionError) {
                 throw new Error('Production Play click reached neither a stream nor a visible session result.');
@@ -155,7 +171,7 @@ jobs:
               await browser.close();
             }
 
-            const required = result.signup && result.onboarding && result.avatarSelected && result.recroomPage && result.playClicked;
+            const required = result.signup && result.onboarding && result.avatarSelected && result.recroomPage && result.hostSetupButton && result.pairingRejectedForNonAdmin && result.playClicked;
             const reachedNativeBoundary = result.streamStarted || Boolean(result.sessionError);
             if (!required || !reachedNativeBoundary || result.fatal) process.exit(1);
           })().catch(error => {
