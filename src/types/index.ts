@@ -176,7 +176,7 @@ export interface Post {
   groupId: string | null;
   eventId: string | null;
   /** Present only when a post was explicitly shared from a Flux game experience. */
-  gameSource: GamePostSource | null;
+  gameSource?: GamePostSource | null;
   visibility: Visibility;
   likesCount: number;
   repliesCount: number;
