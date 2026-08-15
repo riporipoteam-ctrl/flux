@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
-import { AlertCircle, Newspaper, RefreshCw, Users } from "lucide-react";
+import { AlertCircle, Gamepad2, Newspaper, Radio, RefreshCw, Sparkles, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { ComposeBox } from "@/components/posts/compose-box";
 import { PostCard } from "@/components/posts/post-card";
@@ -128,7 +129,7 @@ export default function HomePage() {
   return (
     <main className="flux8-feed">
       <header className="flux8-timeline-header hidden lg:flex">
-        <strong>Home</strong>
+        <div className="flex min-w-0 flex-col"><strong>Home</strong><span className="text-[9px] font-black uppercase tracking-[.12em] text-muted-foreground">Your Flux timeline</span></div>
         <button type="button" onClick={() => void load(true)} aria-label="Refresh feed"><RefreshCw className={refreshing ? "h-[18px] w-[18px] animate-spin" : "h-[18px] w-[18px]"} /></button>
       </header>
 
@@ -136,6 +137,12 @@ export default function HomePage() {
         <FeedTabButton active={tab === "foryou"} onClick={() => setTab("foryou")}>For you</FeedTabButton>
         <FeedTabButton active={tab === "following"} onClick={() => setTab("following")}>Following</FeedTabButton>
       </div>
+
+      <nav className="grid grid-cols-3 border-b border-border bg-[linear-gradient(180deg,rgba(29,155,240,.045),transparent)] p-2.5 sm:p-3" aria-label="Flux quick actions">
+        <QuickLaunch href="/ask-ai" icon={Sparkles} title="AskAI" subtitle="Ripo local AI" />
+        <QuickLaunch href="/live" icon={Radio} title="Live" subtitle="Watch now" />
+        <QuickLaunch href="/games" icon={Gamepad2} title="Games" subtitle="Play instantly" />
+      </nav>
 
       {error ? <div className="flex items-center gap-3 border-b border-border bg-amber-500/8 px-4 py-3 text-sm"><AlertCircle className="h-4 w-4 text-amber-600" /><span className="min-w-0 flex-1">{error}. {posts.length ? "Showing your saved timeline." : "Try again."}</span><button type="button" onClick={() => void load(true)} className="font-bold text-primary">Retry</button></div> : null}
 
@@ -159,6 +166,10 @@ export default function HomePage() {
       {loadingMore ? <div className="flux8-loading-more">Loading more posts…</div> : null}
     </main>
   );
+}
+
+function QuickLaunch({ href, icon: Icon, title, subtitle }: { href: string; icon: typeof Sparkles; title: string; subtitle: string }) {
+  return <Link href={href} className="group flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2 transition hover:bg-foreground/[.05] sm:px-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition group-hover:scale-105"><Icon className="h-4 w-4" /></span><span className="min-w-0"><strong className="block truncate text-xs font-black">{title}</strong><small className="mt-0.5 block truncate text-[9px] font-semibold text-muted-foreground">{subtitle}</small></span></Link>;
 }
 
 function FeedTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
