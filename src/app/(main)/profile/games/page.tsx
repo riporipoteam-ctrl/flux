@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Gamepad2, Images, Loader2, LockKeyhole, Play } from "lucide-react";
+import { ArrowLeft, Gamepad2, Images, LockKeyhole, Play } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { getUserByUsername } from "@/services/users";
 import { isFollowing } from "@/services/follows";
@@ -51,8 +51,9 @@ export default function ProfileGameCapturesPage() {
       setProfile(target);
 
       const isOwn = user?.uid === target.uid;
-      // Match the existing profile's approved-private visibility behavior.
-      const approved = isOwn || !target.isPrivate || (user ? await isFollowing(target.uid, user.uid) : false);
+      // Match the existing profile's approved-private visibility behavior: the
+      // current viewer must follow the target account, not the other way round.
+      const approved = isOwn || !target.isPrivate || (user ? await isFollowing(user.uid, target.uid) : false);
       setPrivateLocked(!approved);
       if (!approved) {
         setPosts([]);
