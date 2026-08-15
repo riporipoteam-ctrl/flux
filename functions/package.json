@@ -1,14 +1,14 @@
 {
   "name": "flux-functions",
   "private": true,
-  "main": "lib/index.js",
+  "main": "lib/entry.js",
   "engines": {
     "node": "20"
   },
   "scripts": {
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
-    "deploy": "firebase deploy --only functions:askaiGroq"
+    "deploy": "firebase deploy --only functions:askaiGroq,functions:recroomGateway"
   },
   "dependencies": {
     "firebase-admin": "^13.4.0",
