@@ -21,11 +21,13 @@ export function StreamPlayer({
   title = "Flux Watch",
   onClose,
   toolbarActions,
+  overlay,
 }: {
   url: string;
   title?: string;
   onClose?: () => void;
   toolbarActions?: ReactNode;
+  overlay?: ReactNode;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [src, setSrc] = useState(url);
@@ -212,6 +214,8 @@ export function StreamPlayer({
           Flux remote game stream · audio, keyboard and gamepad depend on the assigned host streamer. Move the pointer to show controls.
         </p>
       </div>
+
+      {overlay ? <div className="absolute inset-0 z-50">{overlay}</div> : null}
     </div>
   );
 }
