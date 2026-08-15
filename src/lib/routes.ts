@@ -11,6 +11,12 @@ export function profilePath(username?: string | null): string {
   return clean ? queryPath("/profile", "username", clean) : "/settings/profile";
 }
 
+/** Static-export-safe profile game-capture gallery route. */
+export function profileGamesPath(username?: string | null): string {
+  const clean = username?.trim();
+  return clean ? queryPath("/profile/games", "username", clean) : "/profile/games";
+}
+
 /** Static-export-safe post detail route. */
 export function postPath(postId: string): string {
   return queryPath("/post", "postId", postId);
