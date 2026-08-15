@@ -11,6 +11,14 @@ export interface RecRoomBrokerStatus {
   detail?: string;
 }
 
+export interface RecRoomHostPairingResponse {
+  ok?: boolean;
+  pairingCode?: string;
+  expiresAtMs?: number;
+  error?: string;
+  detail?: string;
+}
+
 export interface RecRoomPlayResponse {
   ok?: boolean;
   mode?: string;
@@ -64,6 +72,19 @@ export async function getRecRoomBrokerStatus(): Promise<RecRoomBrokerStatus> {
     cache: "no-store",
   });
   return parseJson<RecRoomBrokerStatus>(response);
+}
+
+export async function createRecRoomHostPairing(firebaseIdToken: string): Promise<RecRoomHostPairingResponse> {
+  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/host-pairing`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      authorization: `Bearer ${firebaseIdToken}`,
+      "content-type": "application/json",
+    },
+    body: "{}",
+  });
+  return parseJson<RecRoomHostPairingResponse>(response);
 }
 
 export async function createRecRoomSession(firebaseIdToken: string): Promise<RecRoomPlayResponse> {
