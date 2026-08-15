@@ -50,19 +50,23 @@ export async function getUserGamePosts(
   currentUid?: string | null,
 ): Promise<PostWithAuthor[]> {
   const mediaPosts = await getUserPosts(authorId, "media", currentUid);
-  const enriched = await Promise.all(
-    mediaPosts.map(async (post) => {
+  const enriched: Array<PostWithAuthor | null> = await Promise.all(
+    mediaPosts.map(async (post): Promise<PostWithAuthor | null> => {
       try {
         const snap = await getDoc(doc(db, "posts", post.id));
         const source = snap.exists() ? (snap.data().gameSource as GamePostSource | undefined) : undefined;
         const resolved = source?.gameId ? source : legacyRecRoomSource(post);
-        return resolved ? { ...post, gameSource: resolved } : null;
+        if (!resolved) return null;
+        const gamePost: PostWithAuthor = { ...post, gameSource: resolved };
+        return gamePost;
       } catch {
         const legacy = legacyRecRoomSource(post);
-        return legacy ? { ...post, gameSource: legacy } : null;
+        if (!legacy) return null;
+        const gamePost: PostWithAuthor = { ...post, gameSource: legacy };
+        return gamePost;
       }
     }),
   );
 
-  return enriched.filter((post): post is PostWithAuthor => Boolean(post));
+  return enriched.filter((post): post is PostWithAuthor => post !== null);
 }
