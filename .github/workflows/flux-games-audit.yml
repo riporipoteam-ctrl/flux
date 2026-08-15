@@ -4,8 +4,12 @@ on:
   pull_request:
     paths:
       - "src/app/(main)/games/**"
+      - "src/app/(main)/profile/games/**"
       - "src/app/games/play/**"
+      - "src/app/games/recroom/**"
       - "src/components/game/**"
+      - "src/services/recroom-browser.ts"
+      - "src/services/game-posts.ts"
       - "src/data/browser-games.ts"
       - "public/games-library/**"
       - "src/styles/flux-performance-x4.css"
@@ -39,6 +43,8 @@ jobs:
         run: |
           test -f out/games/index.html
           test -f out/games/play/index.html
+          test -f out/games/recroom/index.html
+          test -f out/profile/games/index.html
           test -f out/games/licenses/index.html
           test -f out/games-library/tux-racer/index.html
           test -f out/games-library/anti-gravity-pool/index.html
@@ -46,3 +52,4 @@ jobs:
           test -f out/games-library/progress-knight/index.html
           test -f out/games-library/anxiety/index.html
           test -f out/games-library/openpanzer/index.html
+          grep -R -q "echoxr-ripoteam-cloud-pc.hf.space" out/_next/static

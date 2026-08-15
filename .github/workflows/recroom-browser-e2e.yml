@@ -1,0 +1,191 @@
+name: Rec Room Browser E2E
+
+on:
+  push:
+    branches:
+      - feat/recroom-2022-stream
+    paths:
+      - ".github/workflows/recroom-browser-e2e.yml"
+      - "src/app/games/recroom/**"
+      - "src/components/game/recroom-cloud-player.tsx"
+      - "src/services/recroom-browser.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GITHUB_PAGES: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the exact static Flux branch
+        run: |
+          mv src/app/api .pages-api
+          npm run build
+      - name: Install Chromium test driver
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Serve GitHub-Pages-shaped export
+        run: |
+          mkdir -p /tmp/flux-e2e-site
+          ln -s "$PWD/out" /tmp/flux-e2e-site/flux
+          python3 -m http.server 3000 --directory /tmp/flux-e2e-site >/tmp/flux-e2e-http.log 2>&1 &
+          echo $! >/tmp/flux-e2e-http.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/flux/signup/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/flux-e2e-http.log
+          exit 1
+      - name: Click signup, onboarding, avatar and Rec Room Play
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p test-results/recroom-e2e
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+            const base = 'http://127.0.0.1:3000/flux';
+            const runId = process.env.RUN_ID || String(Date.now());
+            const email = `recroom.e2e.${runId}@example.com`;
+            const password = `FluxRecRoom-${runId}!Aa9`;
+            const username = `rre2e${runId.slice(-10)}`;
+            const result = {
+              runId,
+              email,
+              username,
+              signup: false,
+              onboarding: false,
+              avatarSelected: false,
+              recroomPage: false,
+              serviceText: '',
+              hostText: '',
+              playClicked: false,
+              streamStarted: false,
+              sessionError: '',
+              consoleErrors: [],
+              fatal: '',
+            };
+
+            page.on('console', msg => {
+              if (msg.type() === 'error') result.consoleErrors.push(msg.text().slice(0, 500));
+            });
+
+            try {
+              // Real Firebase account creation through the public Flux UI.
+              await page.goto(`${base}/signup/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#name').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#name').fill('Rec Room E2E Player');
+              await page.locator('#email').fill(email);
+              await page.locator('#password').fill(password);
+              await page.getByRole('button', { name: 'Create account' }).click();
+              await page.waitForFunction(() => !window.location.pathname.includes('/signup'), null, { timeout: 30000 });
+              result.signup = true;
+              await page.screenshot({ path: 'test-results/recroom-e2e/01-after-signup.png', fullPage: true });
+
+              // Complete the same six-step profile flow a new player sees.
+              await page.goto(`${base}/onboarding/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#username').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#username').fill(username);
+              await page.getByText('Available', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.locator('#displayName').waitFor({ state: 'visible', timeout: 15000 });
+              await page.locator('#displayName').fill('Rec Room E2E Player');
+              await page.locator('#bio').fill('Automated Flux player testing the May 2022 Rec Room integration.');
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              const friendlyBot = page.locator('img[alt="Friendly Bot"]');
+              await friendlyBot.waitFor({ state: 'visible', timeout: 15000 });
+              await friendlyBot.click();
+              result.avatarSelected = true;
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              // Banner is optional.
+              await page.getByText('Pick a header banner', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.getByRole('button', { name: 'Gaming', exact: true }).click();
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.getByRole('button', { name: 'Enter Flux' }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Enter Flux' }).click();
+              await page.waitForFunction(() => window.location.pathname.includes('/home'), null, { timeout: 30000 });
+              result.onboarding = true;
+              await page.screenshot({ path: 'test-results/recroom-e2e/02-profile-complete.png', fullPage: true });
+
+              // Now use the real Rec Room page and production RipoTeam backend.
+              await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.getByText('Rec Room · May 2022').first().waitFor({ state: 'visible', timeout: 30000 });
+              result.recroomPage = true;
+              await page.getByText('Compatibility service', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.waitForTimeout(3000);
+
+              const bodyBeforePlay = await page.locator('body').innerText();
+              result.serviceText = bodyBeforePlay.match(/Compatibility service[\s\S]{0,160}/)?.[0] || '';
+              result.hostText = bodyBeforePlay.match(/Game host[\s\S]{0,160}/)?.[0] || '';
+              await page.screenshot({ path: 'test-results/recroom-e2e/03-recroom-ready.png', fullPage: true });
+
+              const play = page.getByRole('button', { name: 'Play Rec Room', exact: true });
+              await play.waitFor({ state: 'visible', timeout: 15000 });
+              if (!(await play.isEnabled())) {
+                throw new Error(`Play Rec Room is disabled. Status: ${result.serviceText} / ${result.hostText}`);
+              }
+              await play.click();
+              result.playClicked = true;
+
+              for (let i = 0; i < 36; i += 1) {
+                await page.waitForTimeout(1000);
+                const body = await page.locator('body').innerText();
+                if (body.includes('Rec Room session did not start')) {
+                  result.sessionError = body.match(/Rec Room session did not start[\s\S]{0,550}/)?.[0] || 'Session failed';
+                  break;
+                }
+                if (!body.includes('Play inside Flux.') && body.includes('May 19, 2022')) {
+                  result.streamStarted = true;
+                  break;
+                }
+              }
+              await page.screenshot({ path: 'test-results/recroom-e2e/04-after-play.png', fullPage: true });
+
+              if (!result.streamStarted && !result.sessionError) {
+                throw new Error('Play was clicked, but neither a stream nor a visible session error appeared.');
+              }
+            } catch (error) {
+              result.fatal = String(error && error.stack || error);
+              await page.screenshot({ path: 'test-results/recroom-e2e/failure.png', fullPage: true }).catch(() => {});
+            } finally {
+              fs.writeFileSync('test-results/recroom-e2e/result.json', JSON.stringify(result, null, 2));
+              console.log(JSON.stringify(result, null, 2));
+              await browser.close();
+            }
+
+            const required = result.signup && result.onboarding && result.avatarSelected && result.recroomPage && result.playClicked;
+            const reachedNativeBoundary = result.streamStarted || Boolean(result.sessionError);
+            if (!required || !reachedNativeBoundary || result.fatal) process.exit(1);
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recroom-browser-e2e-${{ github.run_id }}
+          path: test-results/recroom-e2e
+          if-no-files-found: warn

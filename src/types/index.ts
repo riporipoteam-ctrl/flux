@@ -149,6 +149,15 @@ export interface Poll {
   endsAt: Timestamp | null;
 }
 
+export interface GamePostSource {
+  gameId: string;
+  gameName: string;
+  /** Flux-controlled build identifier, not a client download URL. */
+  buildId?: string | null;
+  /** Optional temporary capture provenance; never an auth/session token. */
+  captureId?: string | null;
+}
+
 export interface Post {
   id: string;
   authorId: string;
@@ -166,6 +175,8 @@ export interface Post {
   mentions: string[];
   groupId: string | null;
   eventId: string | null;
+  /** Present only when a post was explicitly shared from a Flux game experience. */
+  gameSource?: GamePostSource | null;
   visibility: Visibility;
   likesCount: number;
   repliesCount: number;
