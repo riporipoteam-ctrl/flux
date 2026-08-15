@@ -4,17 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Camera,
   Cloud,
   Gamepad2,
   Loader2,
   Radio,
   RefreshCw,
+  Send,
   Server,
   ShieldCheck,
   TriangleAlert,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { StreamPlayer } from "@/components/game/stream-player";
+import { createPost } from "@/services/posts";
 
 interface PlayResponse {
   ok?: boolean;
@@ -38,17 +43,55 @@ interface GatewayStatus {
   remote?: boolean;
 }
 
+interface CaptureResponse {
+  ok?: boolean;
+  captureId?: string;
+  sessionId?: string;
+  state?: string;
+  ready?: boolean;
+  contentType?: string | null;
+  error?: string | null;
+  detail?: string;
+}
+
+type CapturedImage = {
+  captureId: string;
+  url: string;
+  file: File;
+};
+
+function responseError(payload: CaptureResponse, fallback: string) {
+  return payload.error || payload.detail || fallback;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export function RecRoomCloudPlayer() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const [starting, setStarting] = useState(false);
   const [play, setPlay] = useState<PlayResponse | null>(null);
   const [gateway, setGateway] = useState<GatewayStatus | null>(null);
   const [gatewayLoading, setGatewayLoading] = useState(true);
+  const [capturing, setCapturing] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [capture, setCapture] = useState<CapturedImage | null>(null);
+  const [shareText, setShareText] = useState("Captured in Rec Room 🎮 #RecRoom #FluxGames");
 
   const streamUrl = useMemo(
     () => play?.streamUrl || play?.publicUrl || play?.localUrl || "",
     [play],
   );
+
+  const clearCapture = () => {
+    setCapture((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url);
+      return null;
+    });
+  };
+
+  useEffect(() => () => {
+    if (capture?.url) URL.revokeObjectURL(capture.url);
+  }, [capture?.url]);
 
   const refreshGateway = async () => {
     setGatewayLoading(true);
@@ -132,6 +175,7 @@ export function RecRoomCloudPlayer() {
   const releaseSession = async () => {
     const sessionId = play?.sessionId;
     const accessToken = play?.sessionAccessToken;
+    clearCapture();
     if (sessionId && accessToken) {
       try {
         await fetch(
@@ -149,6 +193,7 @@ export function RecRoomCloudPlayer() {
     if (!user) return;
     setStarting(true);
     setPlay(null);
+    clearCapture();
     try {
       const firebaseIdToken = await user.getIdToken();
       const response = await fetch("/api/game/instant-play", {
@@ -174,12 +219,160 @@ export function RecRoomCloudPlayer() {
     }
   };
 
+  const captureScreenshot = async () => {
+    const sessionId = play?.sessionId;
+    const accessToken = play?.sessionAccessToken;
+    if (!sessionId || !accessToken || capturing) return;
+
+    setCapturing(true);
+    try {
+      const base = `/api/game/session/${encodeURIComponent(sessionId)}/capture?accessToken=${encodeURIComponent(accessToken)}`;
+      const beginResponse = await fetch(base, { method: "POST", cache: "no-store" });
+      const begin = (await beginResponse.json()) as CaptureResponse;
+      if (!beginResponse.ok || !begin.captureId) {
+        throw new Error(responseError(begin, "Could not request a Rec Room screenshot."));
+      }
+
+      const captureId = begin.captureId;
+      let ready = false;
+      let latest: CaptureResponse = begin;
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        await sleep(650);
+        const statusResponse = await fetch(
+          `${base}&captureId=${encodeURIComponent(captureId)}`,
+          { cache: "no-store" },
+        );
+        latest = (await statusResponse.json()) as CaptureResponse;
+        if (!statusResponse.ok) {
+          throw new Error(responseError(latest, "Could not check screenshot status."));
+        }
+        if (latest.state === "failed" || latest.ok === false) {
+          throw new Error(responseError(latest, "The Windows game host could not capture Rec Room."));
+        }
+        if (latest.ready || latest.state === "ready") {
+          ready = true;
+          break;
+        }
+      }
+      if (!ready) throw new Error("The screenshot worker did not return an image in time.");
+
+      const imageResponse = await fetch(
+        `${base}&captureId=${encodeURIComponent(captureId)}&image=1`,
+        { cache: "no-store" },
+      );
+      if (!imageResponse.ok) {
+        const failure = (await imageResponse.json().catch(() => ({}))) as CaptureResponse;
+        throw new Error(responseError(failure, "Could not download the captured frame."));
+      }
+
+      const blob = await imageResponse.blob();
+      const contentType = blob.type || latest.contentType || "image/png";
+      const extension = contentType === "image/jpeg" ? "jpg" : "png";
+      const file = new File([blob], `recroom-${Date.now()}.${extension}`, { type: contentType });
+      const objectUrl = URL.createObjectURL(blob);
+      setCapture((current) => {
+        if (current?.url) URL.revokeObjectURL(current.url);
+        return { captureId, url: objectUrl, file };
+      });
+      toast.success("Rec Room screenshot captured");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not capture Rec Room.");
+    } finally {
+      setCapturing(false);
+    }
+  };
+
+  const shareCapture = async () => {
+    if (!user || !capture || sharing) return;
+    setSharing(true);
+    try {
+      await createPost({
+        authorId: user.uid,
+        text: shareText.trim() || "Captured in Rec Room 🎮 #RecRoom #FluxGames",
+        files: [capture.file],
+        type: "post",
+      });
+      await refreshProfile();
+      toast.success("Screenshot posted to Flux");
+      clearCapture();
+      setShareText("Captured in Rec Room 🎮 #RecRoom #FluxGames");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Could not post the screenshot to Flux.");
+    } finally {
+      setSharing(false);
+    }
+  };
+
   if (streamUrl && play?.ok !== false) {
     return (
       <StreamPlayer
         url={streamUrl}
         title="Rec Room · May 19, 2022"
         onClose={() => void releaseSession()}
+        toolbarActions={
+          <button
+            type="button"
+            disabled={capturing}
+            onClick={() => void captureScreenshot()}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-bold text-white/85 transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-55"
+            title="Capture the Rec Room game window"
+          >
+            {capturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            <span className="hidden sm:inline">{capturing ? "Capturing…" : "Capture"}</span>
+          </button>
+        }
+        overlay={capture ? (
+          <div className="flex h-full w-full items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-3xl overflow-hidden rounded-[26px] border border-white/12 bg-[#0b1018] shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-5">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/35">Rec Room capture</p>
+                  <h2 className="text-base font-black text-white">Share this moment to Flux?</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearCapture}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-white/7 text-white/70 hover:bg-white/12 hover:text-white"
+                  aria-label="Close screenshot preview"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid max-h-[calc(100dvh-120px)] overflow-auto lg:grid-cols-[1.35fr_.65fr]">
+                <div className="bg-black p-2 sm:p-3">
+                  <img src={capture.url} alt="Captured Rec Room game window" className="max-h-[68dvh] w-full rounded-xl object-contain" />
+                </div>
+                <div className="flex flex-col gap-4 p-4 sm:p-5">
+                  <div>
+                    <label htmlFor="recroom-share-caption" className="text-xs font-black text-white/70">Caption</label>
+                    <textarea
+                      id="recroom-share-caption"
+                      value={shareText}
+                      onChange={(event) => setShareText(event.target.value.slice(0, 500))}
+                      rows={6}
+                      className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 p-3 text-sm leading-6 text-white outline-none placeholder:text-white/25 focus:border-white/25"
+                      placeholder="Say something about this Rec Room moment…"
+                    />
+                  </div>
+                  <p className="text-[11px] leading-5 text-white/38">
+                    Posting is optional. The screenshot is only uploaded to Firebase Storage after you press Post to Flux.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={sharing}
+                    onClick={() => void shareCapture()}
+                    className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-black transition enabled:hover:scale-[1.01] disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {sharing ? "Posting…" : "Post to Flux"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       />
     );
   }
