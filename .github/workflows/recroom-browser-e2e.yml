@@ -81,18 +81,20 @@ jobs:
             });
 
             try {
-              await page.goto(`${base}/signup/`, { waitUntil: 'networkidle', timeout: 60000 });
+              await page.goto(`${base}/signup/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#name').waitFor({ state: 'visible', timeout: 30000 });
               await page.locator('#name').fill('Rec Room E2E Player');
               await page.locator('#email').fill(email);
               await page.locator('#password').fill(password);
               await page.getByRole('button', { name: 'Create account' }).click();
-              await page.waitForTimeout(3500);
-              result.signup = !page.url().includes('/signup');
+              await page.waitForFunction(() => !window.location.pathname.includes('/signup'), null, { timeout: 30000 });
+              result.signup = true;
               await page.screenshot({ path: 'test-results/recroom-e2e/01-after-signup.png', fullPage: true });
 
-              await page.goto(`${base}/games/recroom/`, { waitUntil: 'networkidle', timeout: 60000 });
-              await page.getByText('Rec Room · May 2022').first().waitFor({ timeout: 30000 });
+              await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.getByText('Rec Room · May 2022').first().waitFor({ state: 'visible', timeout: 30000 });
               result.recroomPage = true;
+              await page.getByText('Compatibility service').waitFor({ state: 'visible', timeout: 30000 });
               await page.waitForTimeout(2500);
               result.serviceText = await page.locator('body').innerText().then(t => t.match(/Compatibility service[\s\S]{0,140}/)?.[0] || '');
               result.hostText = await page.locator('body').innerText().then(t => t.match(/Game host[\s\S]{0,140}/)?.[0] || '');
@@ -103,7 +105,7 @@ jobs:
                 if (await play.isEnabled()) {
                   await play.click();
                   result.playClicked = true;
-                  await page.waitForTimeout(5000);
+                  await page.waitForTimeout(3000);
                   for (let i = 0; i < 24; i += 1) {
                     const body = await page.locator('body').innerText();
                     if (body.includes('Rec Room session did not start')) {
