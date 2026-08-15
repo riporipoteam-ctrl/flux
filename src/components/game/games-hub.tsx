@@ -15,7 +15,6 @@ import {
   Smartphone,
   Sparkles,
   Trophy,
-  Users,
   X,
 } from "lucide-react";
 import {
@@ -106,7 +105,7 @@ export default function GamesHub() {
           <Gamepad2 className="h-[19px] w-[19px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="flux10-kicker">Play instantly</p>
+          <p className="flux10-kicker">Self-hosted open-source games</p>
           <h1 className="flux10-title mt-1">Flux Games</h1>
         </div>
         <span className="flux10-chip hidden sm:inline-flex"><BadgeCheck className="h-3.5 w-3.5 text-primary" /> {OPEN_SOURCE_GAME_COUNT} open games</span>
@@ -128,6 +127,8 @@ export default function GamesHub() {
               <span className="flux10-chip"><Sparkles className="h-3.5 w-3.5 text-primary" /> Featured</span>
               <span className="flux10-chip"><Smartphone className="h-3.5 w-3.5" /> Touch</span>
               <span className="flux10-chip"><MonitorPlay className="h-3.5 w-3.5" /> PC</span>
+              <span className="flux10-chip"><BadgeCheck className="h-3.5 w-3.5 text-primary" /> Open source</span>
+              <span className="flux10-chip">Hosted by Flux</span>
             </div>
             <h2 className="mt-5 text-[clamp(2.5rem,7vw,5.3rem)] font-black leading-[.88] tracking-[-.075em]">{hero.title}</h2>
             <p className="mt-5 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">{hero.description}</p>
