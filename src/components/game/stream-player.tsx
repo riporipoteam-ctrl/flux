@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   X,
   Maximize2,
@@ -20,10 +20,12 @@ export function StreamPlayer({
   url,
   title = "Flux Watch",
   onClose,
+  toolbarActions,
 }: {
   url: string;
   title?: string;
   onClose?: () => void;
+  toolbarActions?: ReactNode;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [src, setSrc] = useState(url);
@@ -132,6 +134,7 @@ export function StreamPlayer({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
+          {toolbarActions}
           <Button
             size="sm"
             variant="ghost"
