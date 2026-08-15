@@ -1,17 +1,20 @@
 /**
- * Process helpers for Flux RecNet.
- * Script names are built at runtime so Next/webpack does NOT try to bundle server.mjs.
+ * Process helpers for Flux RecNet / Rec Room compatibility gateway.
+ *
+ * May-2022 uses the standalone `recroomfluxgame` gateway by default when
+ * FLUX_RECNET_URL is configured. The old local game/flux-recnet process remains
+ * available as a fallback for the 2019 development build.
  */
 import { spawn, execSync, type ChildProcess } from "child_process";
 import fs from "fs";
 import path from "path";
 import http from "http";
+import https from "https";
 
 function recnetDir() {
   return path.join(process.cwd(), "game", "flux-recnet");
 }
 
-/** Avoid static "server.mjs" / "patch-client.mjs" so bundler won't resolve them */
 function scriptName(base: "server" | "patch-client") {
   return `${base}.${"mjs"}`;
 }
@@ -20,13 +23,34 @@ export function getRecnetDir() {
   return recnetDir();
 }
 
+export function getRecnetBaseUrl() {
+  return (process.env.FLUX_RECNET_URL || process.env.FLUX_RECNET || "http://127.0.0.1:2059").replace(/\/+$/, "");
+}
+
 export function recnetHealthUrl() {
-  return "http://127.0.0.1:2059/flux/health";
+  return `${getRecnetBaseUrl()}/flux/health`;
+}
+
+export function isLocalRecnetTarget() {
+  try {
+    const target = new URL(getRecnetBaseUrl());
+    return target.hostname === "127.0.0.1" || target.hostname === "localhost" || target.hostname === "::1";
+  } catch {
+    return false;
+  }
 }
 
 export function isRecnetUp(): Promise<boolean> {
   return new Promise((resolve) => {
-    const req = http.get(recnetHealthUrl(), { timeout: 1500 }, (res) => {
+    let target: URL;
+    try {
+      target = new URL(recnetHealthUrl());
+    } catch {
+      resolve(false);
+      return;
+    }
+    const transport = target.protocol === "https:" ? https : http;
+    const req = transport.get(target, { timeout: 2500 }, (res) => {
       res.resume();
       resolve(res.statusCode === 200);
     });
@@ -39,6 +63,9 @@ export function isRecnetUp(): Promise<boolean> {
 }
 
 export function patchClientIfNeeded() {
+  // Client patching belongs to the Windows game host. Keep this legacy helper
+  // only for a localhost development install that contains patch-client.mjs.
+  if (!isLocalRecnetTarget()) return;
   const dir = recnetDir();
   const patch = path.join(dir, scriptName("patch-client"));
   if (!fs.existsSync(patch)) return;
@@ -58,6 +85,9 @@ export function syncRecnetProfile(body: {
   username?: string;
   displayName?: string;
 }) {
+  // The 2022 gateway stores profile/save state in Firebase. profile.json is
+  // only retained for the old local 2019 compatibility server.
+  if (!isLocalRecnetTarget()) return;
   try {
     const dir = recnetDir();
     const profPath = path.join(dir, "data", "profile.json");
@@ -65,8 +95,7 @@ export function syncRecnetProfile(body: {
       ? JSON.parse(fs.readFileSync(profPath, "utf8"))
       : {};
     if (body.username) prof.username = String(body.username).slice(0, 32);
-    if (body.displayName)
-      prof.displayName = String(body.displayName).slice(0, 32);
+    if (body.displayName) prof.displayName = String(body.displayName).slice(0, 32);
     if (body.uid) {
       let h = 0;
       for (let i = 0; i < String(body.uid).length; i++)
@@ -74,8 +103,6 @@ export function syncRecnetProfile(body: {
       prof.playerId = 100000 + (h % 900000);
     }
     if (!prof.token) prof.token = "flux-local-token-recroom-2019";
-    // Every Flux website account starts with the normal level-one outfit and
-    // economy; never seed a level-50 / rich-looking profile on first launch.
     if (prof.level == null) prof.level = 1;
     if (prof.xp == null) prof.xp = 0;
     if (prof.tokens == null) prof.tokens = 500;
@@ -87,26 +114,24 @@ export function syncRecnetProfile(body: {
 }
 
 export function startRecnetProcess(): void {
+  if (!isLocalRecnetTarget()) {
+    throw new Error(`Flux Rec Room gateway is remote (${getRecnetBaseUrl()}); it must be started by its deployment/host.`);
+  }
+
   const dir = recnetDir();
   const serverScript = scriptName("server");
   const full = path.join(dir, serverScript);
   if (!fs.existsSync(full)) {
-    throw new Error(`Flux RecNet missing: ${full}`);
+    throw new Error(`Local Flux RecNet missing: ${full}. Configure FLUX_RECNET_URL for the 2022 gateway.`);
   }
 
   if (process.platform === "win32") {
-    // Durable independent window with auto-restart (cmd /k + loop).
-    // Avoid static "server.mjs" string so webpack does not try to bundle it.
     const keepAlive = path.join(dir, "keep-alive.bat");
     if (fs.existsSync(keepAlive)) {
       spawn(
         "cmd.exe",
         ["/c", "start", "FluxRecNet-SERVER", "/MIN", "cmd", "/k", `cd /d "${dir}" && keep-alive.bat`],
-        {
-          detached: true,
-          stdio: "ignore",
-          windowsHide: true,
-        }
+        { detached: true, stdio: "ignore", windowsHide: true },
       ).unref();
     } else {
       const cmdLine = `cd /d "${dir}" && title FluxRecNet SERVER && node ${serverScript}`;
@@ -129,12 +154,15 @@ export async function ensureRecnetRunning(body?: {
   uid?: string;
   username?: string;
   displayName?: string;
-}): Promise<{ ok: boolean; already?: boolean }> {
-  if (await isRecnetUp()) return { ok: true, already: true };
+}): Promise<{ ok: boolean; already?: boolean; remote?: boolean }> {
+  if (await isRecnetUp()) return { ok: true, already: true, remote: !isLocalRecnetTarget() };
+
+  // A website/serverless Flux deployment must never try to spawn a remote game
+  // gateway. Its health status is simply reported to the caller.
+  if (!isLocalRecnetTarget()) return { ok: false, remote: true };
 
   patchClientIfNeeded();
   if (body) syncRecnetProfile(body);
-
   startRecnetProcess();
 
   for (let i = 0; i < 30; i++) {
@@ -145,17 +173,16 @@ export async function ensureRecnetRunning(body?: {
 }
 
 export function stopRecnetProcess() {
+  if (!isLocalRecnetTarget()) return;
+
   const pidPath = path.join(recnetDir(), "data", "server.pid");
   try {
     if (fs.existsSync(pidPath)) {
       const pid = Number(fs.readFileSync(pidPath, "utf8").trim());
       if (pid) {
         try {
-          if (process.platform === "win32") {
-            execSync(`taskkill /PID ${pid} /F`, { windowsHide: true });
-          } else {
-            process.kill(pid, "SIGTERM");
-          }
+          if (process.platform === "win32") execSync(`taskkill /PID ${pid} /F`, { windowsHide: true });
+          else process.kill(pid, "SIGTERM");
         } catch {
           /* ignore */
         }
@@ -172,10 +199,9 @@ export function stopRecnetProcess() {
 
   if (process.platform === "win32") {
     try {
-      // Kill node processes that hold 2059 via PowerShell (more reliable than for /f)
       execSync(
         `powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 2059 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"`,
-        { windowsHide: true, stdio: "ignore" }
+        { windowsHide: true, stdio: "ignore" },
       );
     } catch {
       /* ignore */
@@ -183,19 +209,18 @@ export function stopRecnetProcess() {
   }
 }
 
-/** Fix Unity player prefs that cause tiny/broken UI after Back */
+/** Fix Unity player prefs that cause tiny/broken UI after navigation/restart. */
 function fixRecRoomDisplayPrefs() {
   if (process.platform !== "win32") return;
   const scriptPath = path.join(recnetDir(), "fix-display.ps1");
   try {
-    // Write helper once (idempotent)
     if (!fs.existsSync(scriptPath)) {
+      fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
       fs.writeFileSync(
         scriptPath,
         `
 $p = 'HKCU:\\Software\\Against Gravity\\Rec Room'
 if (-not (Test-Path $p)) { New-Item -Path $p -Force | Out-Null }
-# Unity: 0 Exclusive, 1 FS Window, 2 Maximized, 3 Windowed
 $props = (Get-Item $p).Property
 foreach ($name in $props) {
   if ($name -like 'Screenmanager Fullscreen mode*') { Set-ItemProperty $p -Name $name -Value 3 -Type DWord }
@@ -206,13 +231,13 @@ foreach ($name in $props) {
   if ($name -like 'Screenmanager Window Position X*') { Set-ItemProperty $p -Name $name -Value 80 -Type DWord }
   if ($name -like 'Screenmanager Window Position Y*') { Set-ItemProperty $p -Name $name -Value 40 -Type DWord }
 }
-`
+`,
       );
     }
-    execSync(
-      `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`,
-      { windowsHide: true, stdio: "ignore" }
-    );
+    execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`, {
+      windowsHide: true,
+      stdio: "ignore",
+    });
   } catch (e) {
     console.warn("[FluxRecNet] display prefs", e);
   }
@@ -221,13 +246,10 @@ foreach ($name in $props) {
 export function launchRecroomExe(
   exe: string,
   cwd: string,
-  opts: { fullscreen?: boolean; uid?: string; username?: string }
+  opts: { fullscreen?: boolean; uid?: string; username?: string },
 ): ChildProcess {
-  // Always normalize display prefs first — fixes "UI becomes a tiny black dot"
   fixRecRoomDisplayPrefs();
 
-  // Do NOT use -popupwindow (borderless) — it + FullscreenWindow mode collapses UI scale.
-  // True windowed: fullscreen 0, fixed size. Watcher re-applies prefs as game overwrites them.
   const args = [
     "-screen-fullscreen",
     "0",
@@ -239,15 +261,14 @@ export function launchRecroomExe(
   ];
   void opts.fullscreen;
 
-  // Background: keep forcing windowed for ~20s while game boots / login UI loads
   try {
     const watch = path.join(recnetDir(), "watch-display.ps1");
     if (fs.existsSync(watch)) {
-      spawn(
-        "powershell",
-        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", watch],
-        { detached: true, stdio: "ignore", windowsHide: true }
-      ).unref();
+      spawn("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", watch], {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      }).unref();
     }
   } catch {
     /* ignore */
@@ -262,7 +283,9 @@ export function launchRecroomExe(
       ...process.env,
       FLUX_PLAYER_UID: opts.uid || "",
       FLUX_PLAYER_USERNAME: opts.username || "",
-      FLUX_RECNET: "http://127.0.0.1:2059",
+      FLUX_RECNET: getRecnetBaseUrl(),
+      FLUX_RECNET_URL: getRecnetBaseUrl(),
+      FLUX_RECROOM_BUILD: process.env.FLUX_RECROOM_BUILD || "recroom-2022-05-19",
     },
   });
   child.unref();
