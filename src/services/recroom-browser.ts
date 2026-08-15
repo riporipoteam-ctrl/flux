@@ -88,11 +88,14 @@ export async function getRecRoomSession(
 }
 
 export async function releaseRecRoomSession(sessionId: string, accessToken: string): Promise<void> {
-  const response = await fetch(sessionPath(sessionId, accessToken), {
-    method: "DELETE",
-    cache: "no-store",
-    keepalive: true,
-  });
+  const response = await fetch(
+    `${sessionPath(sessionId)}/release?accessToken=${encodeURIComponent(accessToken)}`,
+    {
+      method: "POST",
+      cache: "no-store",
+      keepalive: true,
+    },
+  );
   if (!response.ok && response.status !== 404) {
     await parseJson(response);
   }
