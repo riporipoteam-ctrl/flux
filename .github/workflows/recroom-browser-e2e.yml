@@ -47,7 +47,7 @@ jobs:
           done
           cat /tmp/flux-e2e-http.log
           exit 1
-      - name: Click through signup and Rec Room
+      - name: Click signup, onboarding, avatar and Rec Room Play
         env:
           RUN_ID: ${{ github.run_id }}
         run: |
@@ -63,10 +63,14 @@ jobs:
             const runId = process.env.RUN_ID || String(Date.now());
             const email = `recroom.e2e.${runId}@example.com`;
             const password = `FluxRecRoom-${runId}!Aa9`;
+            const username = `rre2e${runId.slice(-10)}`;
             const result = {
               runId,
               email,
+              username,
               signup: false,
+              onboarding: false,
+              avatarSelected: false,
               recroomPage: false,
               serviceText: '',
               hostText: '',
@@ -74,6 +78,7 @@ jobs:
               streamStarted: false,
               sessionError: '',
               consoleErrors: [],
+              fatal: '',
             };
 
             page.on('console', msg => {
@@ -81,6 +86,7 @@ jobs:
             });
 
             try {
+              // Real Firebase account creation through the public Flux UI.
               await page.goto(`${base}/signup/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
               await page.locator('#name').waitFor({ state: 'visible', timeout: 30000 });
               await page.locator('#name').fill('Rec Room E2E Player');
@@ -91,36 +97,74 @@ jobs:
               result.signup = true;
               await page.screenshot({ path: 'test-results/recroom-e2e/01-after-signup.png', fullPage: true });
 
+              // Complete the same six-step profile flow a new player sees.
+              await page.goto(`${base}/onboarding/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#username').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#username').fill(username);
+              await page.getByText('Available', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.locator('#displayName').waitFor({ state: 'visible', timeout: 15000 });
+              await page.locator('#displayName').fill('Rec Room E2E Player');
+              await page.locator('#bio').fill('Automated Flux player testing the May 2022 Rec Room integration.');
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              const friendlyBot = page.locator('img[alt="Friendly Bot"]');
+              await friendlyBot.waitFor({ state: 'visible', timeout: 15000 });
+              await friendlyBot.click();
+              result.avatarSelected = true;
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              // Banner is optional.
+              await page.getByText('Pick a header banner', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.getByRole('button', { name: 'Gaming', exact: true }).click();
+              await page.getByRole('button', { name: 'Continue' }).click();
+
+              await page.getByRole('button', { name: 'Enter Flux' }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Enter Flux' }).click();
+              await page.waitForFunction(() => window.location.pathname.includes('/home'), null, { timeout: 30000 });
+              result.onboarding = true;
+              await page.screenshot({ path: 'test-results/recroom-e2e/02-profile-complete.png', fullPage: true });
+
+              // Now use the real Rec Room page and production RipoTeam backend.
               await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
               await page.getByText('Rec Room · May 2022').first().waitFor({ state: 'visible', timeout: 30000 });
               result.recroomPage = true;
-              await page.getByText('Compatibility service').waitFor({ state: 'visible', timeout: 30000 });
-              await page.waitForTimeout(2500);
-              result.serviceText = await page.locator('body').innerText().then(t => t.match(/Compatibility service[\s\S]{0,140}/)?.[0] || '');
-              result.hostText = await page.locator('body').innerText().then(t => t.match(/Game host[\s\S]{0,140}/)?.[0] || '');
-              await page.screenshot({ path: 'test-results/recroom-e2e/02-recroom-ready.png', fullPage: true });
+              await page.getByText('Compatibility service', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.waitForTimeout(3000);
 
-              const play = page.getByRole('button', { name: /Play Rec Room|Requesting host|Starting Windows host/ }).first();
-              if (await play.count()) {
-                if (await play.isEnabled()) {
-                  await play.click();
-                  result.playClicked = true;
-                  await page.waitForTimeout(3000);
-                  for (let i = 0; i < 24; i += 1) {
-                    const body = await page.locator('body').innerText();
-                    if (body.includes('Rec Room session did not start')) {
-                      result.sessionError = body.match(/Rec Room session did not start[\s\S]{0,500}/)?.[0] || 'Session failed';
-                      break;
-                    }
-                    if (body.includes('May 19, 2022') && !body.includes('Play inside Flux.')) {
-                      result.streamStarted = true;
-                      break;
-                    }
-                    await page.waitForTimeout(2500);
-                  }
+              const bodyBeforePlay = await page.locator('body').innerText();
+              result.serviceText = bodyBeforePlay.match(/Compatibility service[\s\S]{0,160}/)?.[0] || '';
+              result.hostText = bodyBeforePlay.match(/Game host[\s\S]{0,160}/)?.[0] || '';
+              await page.screenshot({ path: 'test-results/recroom-e2e/03-recroom-ready.png', fullPage: true });
+
+              const play = page.getByRole('button', { name: 'Play Rec Room', exact: true });
+              await play.waitFor({ state: 'visible', timeout: 15000 });
+              if (!(await play.isEnabled())) {
+                throw new Error(`Play Rec Room is disabled. Status: ${result.serviceText} / ${result.hostText}`);
+              }
+              await play.click();
+              result.playClicked = true;
+
+              for (let i = 0; i < 36; i += 1) {
+                await page.waitForTimeout(1000);
+                const body = await page.locator('body').innerText();
+                if (body.includes('Rec Room session did not start')) {
+                  result.sessionError = body.match(/Rec Room session did not start[\s\S]{0,550}/)?.[0] || 'Session failed';
+                  break;
+                }
+                if (!body.includes('Play inside Flux.') && body.includes('May 19, 2022')) {
+                  result.streamStarted = true;
+                  break;
                 }
               }
-              await page.screenshot({ path: 'test-results/recroom-e2e/03-after-play.png', fullPage: true });
+              await page.screenshot({ path: 'test-results/recroom-e2e/04-after-play.png', fullPage: true });
+
+              if (!result.streamStarted && !result.sessionError) {
+                throw new Error('Play was clicked, but neither a stream nor a visible session error appeared.');
+              }
             } catch (error) {
               result.fatal = String(error && error.stack || error);
               await page.screenshot({ path: 'test-results/recroom-e2e/failure.png', fullPage: true }).catch(() => {});
@@ -130,7 +174,9 @@ jobs:
               await browser.close();
             }
 
-            if (!result.signup || !result.recroomPage) process.exit(1);
+            const required = result.signup && result.onboarding && result.avatarSelected && result.recroomPage && result.playClicked;
+            const reachedNativeBoundary = result.streamStarted || Boolean(result.sessionError);
+            if (!required || !reachedNativeBoundary || result.fatal) process.exit(1);
           })().catch(error => {
             console.error(error);
             process.exit(1);
