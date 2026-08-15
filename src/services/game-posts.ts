@@ -28,10 +28,22 @@ export async function tagGamePost(
   await updateDoc(ref, { gameSource: safeSource });
 }
 
+function legacyRecRoomSource(post: PostWithAuthor): GamePostSource | null {
+  const tags = new Set((post.hashtags || []).map((tag) => tag.toLowerCase()));
+  if (!post.media?.length || !tags.has("recroom") || !tags.has("fluxgames")) return null;
+  return {
+    gameId: "recroom",
+    gameName: "Rec Room",
+    buildId: "recroom-2022-05-19",
+    captureId: null,
+  };
+}
+
 /**
- * Returns only real game-share posts. This intentionally does not use hashtags
- * as the source of truth, so ordinary posts mentioning #RecRoom don't appear in
- * a player's game gallery.
+ * Returns game-share media for a user's profile. New posts can carry the
+ * explicit `gameSource` field. Existing Rec Room captures created by the first
+ * Flux integration are recognized only when they have media plus both canonical
+ * #RecRoom and #FluxGames tags.
  */
 export async function getUserGamePosts(
   authorId: string,
@@ -43,9 +55,11 @@ export async function getUserGamePosts(
       try {
         const snap = await getDoc(doc(db, "posts", post.id));
         const source = snap.exists() ? (snap.data().gameSource as GamePostSource | undefined) : undefined;
-        return source?.gameId ? { ...post, gameSource: source } : null;
+        const resolved = source?.gameId ? source : legacyRecRoomSource(post);
+        return resolved ? { ...post, gameSource: resolved } : null;
       } catch {
-        return null;
+        const legacy = legacyRecRoomSource(post);
+        return legacy ? { ...post, gameSource: legacy } : null;
       }
     }),
   );
