@@ -19,8 +19,10 @@ import { StreamPlayer } from "@/components/game/stream-player";
 interface PlayResponse {
   ok?: boolean;
   mode?: string;
+  state?: string;
   error?: string;
   sessionId?: string;
+  sessionAccessToken?: string;
   streamUrl?: string;
   publicUrl?: string;
   localUrl?: string;
@@ -64,6 +66,85 @@ export function RecRoomCloudPlayer() {
     void refreshGateway();
   }, []);
 
+  // Remote Windows hosts can need several seconds to launch Unity + streamer.
+  // The broker returns a private session token immediately, then this page polls
+  // the server-side proxy until the host reports its HTTPS stream URL.
+  useEffect(() => {
+    const sessionId = play?.sessionId;
+    const accessToken = play?.sessionAccessToken;
+    const pending = Boolean(
+      sessionId &&
+      accessToken &&
+      !streamUrl &&
+      play?.ok !== false &&
+      play?.state !== "failed",
+    );
+    if (!pending) return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
+
+    const poll = async () => {
+      if (cancelled || !sessionId || !accessToken) return;
+      try {
+        const response = await fetch(
+          `/api/game/session/${encodeURIComponent(sessionId)}?accessToken=${encodeURIComponent(accessToken)}`,
+          { cache: "no-store" },
+        );
+        const next = (await response.json()) as PlayResponse;
+        if (cancelled) return;
+        setPlay((current) => ({
+          ...current,
+          ...next,
+          sessionAccessToken: current?.sessionAccessToken || accessToken,
+        }));
+        if (next.streamUrl || next.state === "failed" || next.ok === false) return;
+      } catch (error) {
+        if (!cancelled && Date.now() - startedAt > 45_000) {
+          setPlay((current) => ({
+            ...current,
+            ok: false,
+            error: error instanceof Error ? error.message : "Game host status check failed.",
+          }));
+          return;
+        }
+      }
+
+      if (!cancelled && Date.now() - startedAt < 120_000) {
+        timer = setTimeout(() => void poll(), 1500);
+      } else if (!cancelled) {
+        setPlay((current) => ({
+          ...current,
+          ok: false,
+          error: "The Windows game host did not become ready within two minutes.",
+        }));
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, streamUrl]);
+
+  const releaseSession = async () => {
+    const sessionId = play?.sessionId;
+    const accessToken = play?.sessionAccessToken;
+    if (sessionId && accessToken) {
+      try {
+        await fetch(
+          `/api/game/session/${encodeURIComponent(sessionId)}?accessToken=${encodeURIComponent(accessToken)}`,
+          { method: "DELETE", keepalive: true },
+        );
+      } catch {
+        /* the broker will also expire abandoned sessions */
+      }
+    }
+    setPlay(null);
+  };
+
   const startGame = async () => {
     if (!user) return;
     setStarting(true);
@@ -98,10 +179,16 @@ export function RecRoomCloudPlayer() {
       <StreamPlayer
         url={streamUrl}
         title="Rec Room · May 19, 2022"
-        onClose={() => setPlay(null)}
+        onClose={() => void releaseSession()}
       />
     );
   }
+
+  const hostState = play?.state === "starting"
+    ? "Starting game…"
+    : play?.hostId
+      ? "Assigned"
+      : "On demand";
 
   return (
     <main className="min-h-dvh bg-[#05080d] text-white">
@@ -170,8 +257,8 @@ export function RecRoomCloudPlayer() {
               <StatusCard
                 icon={Radio}
                 title="Game host"
-                value={play?.hostId ? "Assigned" : "On demand"}
-                detail="A Windows host is allocated when you press Play."
+                value={hostState}
+                detail={play?.hostId ? `Host ${play.hostId}` : "A Windows host is allocated when you press Play."}
                 good={Boolean(play?.hostId)}
               />
             </div>
@@ -188,6 +275,10 @@ export function RecRoomCloudPlayer() {
                 >
                   Sign in to play
                 </Link>
+              ) : play?.state === "starting" && play.ok !== false ? (
+                <button disabled className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white/10 px-6 text-sm font-black text-white/70">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Starting Windows host…
+                </button>
               ) : (
                 <button
                   type="button"
