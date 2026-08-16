@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, ShieldCheck, Square, Steam, TriangleAlert } from "lucide-react";
+import { ArrowLeft, CheckCircle2, KeyRound, Loader2, RefreshCw, ShieldCheck, Square, TriangleAlert } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import {
   cancelRecRoomSteamRecovery,
@@ -116,7 +116,7 @@ export default function RecRoomRecoveryPage() {
             </div>
 
             <div className="mt-6 flex items-start gap-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/8"><Steam className="h-6 w-6" /></div>
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/8"><KeyRound className="h-6 w-6" /></div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl font-black">Official Steam account recovery</h2>
                 <p className="mt-2 text-sm leading-6 text-white/55">RipoTeamServer runs the official DepotDownloader flow on the server. Flux never asks for your Steam password. When Steam shows a QR code below, scan it with the Steam Mobile App and approve the sign-in. The recovered game stays on RipoTeamServer; Flux players still download nothing.</p>
@@ -151,7 +151,7 @@ export default function RecRoomRecoveryPage() {
 
             <div className="mt-6 flex flex-col gap-2 sm:flex-row">
               {!ready && !running ? (
-                <button type="button" disabled={busy} onClick={() => void start()} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black disabled:opacity-50">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Steam className="h-4 w-4" />} Recover May 2022 from Steam</button>
+                <button type="button" disabled={busy} onClick={() => void start()} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black disabled:opacity-50">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />} Recover May 2022 from Steam</button>
               ) : null}
               {running ? (
                 <button type="button" disabled={busy} onClick={() => void cancel()} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/5 px-6 text-sm font-black disabled:opacity-50">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />} Cancel recovery</button>
