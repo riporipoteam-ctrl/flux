@@ -50,6 +50,7 @@ jobs:
       - name: Click through the actual public Flux website
         env:
           RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           mkdir -p test-results/recroom-production
           node <<'NODE'
@@ -61,11 +62,17 @@ jobs:
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
             const base = 'https://riporipoteam-ctrl.github.io/flux';
             const runId = process.env.RUN_ID || String(Date.now());
-            const email = `recroom.prod.e2e.${runId}@example.com`;
-            const password = `FluxProd-${runId}!Aa9`;
-            const username = `rrprod${runId.slice(-10)}`;
+            const runAttempt = process.env.RUN_ATTEMPT || '1';
+            const now = String(Date.now());
+            // Rerunning a GitHub Actions run keeps github.run_id. Include the
+            // attempt and a timestamp so Firebase test identities never collide
+            // with an account created by an earlier attempt.
+            const nonce = `${runId}-${runAttempt}-${now}`;
+            const email = `recroom.prod.e2e.${nonce}@example.com`;
+            const password = `FluxProd-${runId}-${runAttempt}!Aa9`;
+            const username = `rrprod${runId.slice(-6)}a${runAttempt}${now.slice(-5)}`;
             const result = {
-              runId, email, username,
+              runId, runAttempt, email, username,
               signup: false,
               onboarding: false,
               avatarSelected: false,
@@ -183,6 +190,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: recroom-production-e2e-${{ github.run_id }}
+          name: recroom-production-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/recroom-production
           if-no-files-found: warn
