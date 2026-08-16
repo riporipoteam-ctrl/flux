@@ -118,23 +118,32 @@ export async function ensureUserDocument(
   const ref = doc(db, "users", uid);
   const owner = isOwnerEmail(email || "");
 
-  let existing = await getDoc(ref);
-  if (!existing.exists()) {
-    // `getDoc` answers from the local cache when the SDK has not connected
-    // yet, and Safari evicts that cache after a week of not visiting — so a
-    // reload right after a deploy can report "no such user" for an account
-    // that plainly exists. Creating on that answer used to reset the profile
-    // and bounce the person back through onboarding, so never create without
-    // asking the server first.
-    try {
-      existing = await getDocFromServer(ref);
-    } catch {
+  // Authenticated profile state controls routing, so it must be verified from
+  // Firestore's server before Flux decides that onboarding is required. A
+  // local Firestore cache can legitimately contain the pre-onboarding version
+  // of a document for a while after the server document has been completed.
+  let existing;
+  let serverVerified = true;
+  try {
+    existing = await getDocFromServer(ref);
+  } catch {
+    serverVerified = false;
+    existing = await getDoc(ref);
+    if (!existing.exists()) {
       throw new Error("Flux could not reach your profile. Check your connection and try again.");
     }
   }
 
   if (existing.exists()) {
     const data = existing.data() || {};
+
+    // Never let an unverified, locally cached pre-onboarding document become
+    // navigation truth. Showing a retry screen is safer than resetting an
+    // existing account's setup state when Firestore is temporarily offline.
+    if (!serverVerified && data.onboardingComplete !== true && !Boolean(String(data.username || "").trim())) {
+      throw new Error("Flux could not verify your profile with the server. Your account is safe; retry the connection.");
+    }
+
     const repair: Record<string, unknown> = {};
     if (owner) {
       if (!data.isAdmin || !data.isOwner) {
@@ -165,6 +174,8 @@ export async function ensureUserDocument(
     return mapUser(existing.id, { ...data, ...repair, isAdmin: owner, isOwner: owner });
   }
 
+  // A definitive server response that the document does not exist means this
+  // really is a new Firebase account and it is safe to create onboarding state.
   const payload = stripUndefined({
     uid,
     email: email || "",
