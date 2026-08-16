@@ -19,6 +19,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
+import { markStickyOnboardingComplete } from "@/lib/onboarding-state";
 import { ensureUserDocument, touchUserPresence } from "@/services/users";
 import type { UserProfile } from "@/types";
 
@@ -63,6 +64,9 @@ function writeCachedProfile(profile: UserProfile | null): void {
   } catch {
     // Private browsing and full storage should not break authentication.
   }
+  // Completion is monotonic. Once Flux has ever observed this UID as fully
+  // onboarded, no stale Firebase/local cache may downgrade it back to setup.
+  if (isCompletedProfile(profile)) markStickyOnboardingComplete(profile.uid);
 }
 
 async function withTimeout<T>(promise: Promise<T>, milliseconds: number, message: string): Promise<T> {
@@ -118,9 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Do not use a timer that marks auth/profile loading as finished. On a slow
-    // reload that used to expose an old unfinished cache entry to the route
-    // guards, which could bounce an already-onboarded account back to setup.
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (!u) {
@@ -134,9 +135,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (cached) {
         applyProfile(cached);
-        // A completed cached profile is safe to render immediately. An
-        // unfinished cache entry is never trusted for navigation until the
-        // server confirms it, because it may simply be stale from onboarding.
         if (cachedCompleted) setLoading(false);
       } else {
         setProfile(null);
@@ -147,8 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         applyProfile(ensured);
       } catch (error) {
         console.error("Failed to load profile", error);
-        // Keep a last-known-good completed profile during transient Firestore
-        // failures. Never surface a stale incomplete profile after loading ends.
         if (cachedCompleted && cached) applyProfile(cached);
         else setProfile(null);
       } finally {
@@ -156,8 +152,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, (error) => {
       console.error("Firebase auth state failed", error);
-      // An auth-state failure is not evidence that onboarding is required.
-      // Show the sign-in path only after Firebase itself reports no user.
       setLoading(false);
     });
 
@@ -198,6 +192,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (user && typeof window !== "undefined") localStorage.removeItem(cacheKey(user.uid));
+    // Deliberately keep the UID-specific completion marker. Signing out does not
+    // turn an existing account into a new account on the next sign-in.
     if (!isFirebaseConfigured) {
       setProfile(null);
       setUser(null);
