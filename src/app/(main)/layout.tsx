@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { hasStickyOnboardingComplete, markStickyOnboardingComplete } from "@/lib/onboarding-state";
 import { LoadingScreen } from "@/components/shared/loading-screen";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -16,6 +17,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const { user, profile, loading, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [stickyResolved, setStickyResolved] = useState(false);
+  const [stickyComplete, setStickyComplete] = useState(false);
   const isPublicLiveViewer = pathname?.startsWith("/live/view");
   const isAskAI = pathname?.startsWith("/ask-ai");
   const isMessages = pathname?.startsWith("/messages");
@@ -27,13 +30,32 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isLiveRoom = pathname?.startsWith("/live/create") || isPublicLiveViewer;
   const isImmersive = isAskAI || isCall || isLiveRoom || isArcade;
   const hideRail = isMessages || isGames || isLive;
-  const needsOnboarding = Boolean(profile && !profile.onboardingComplete && !String(profile.username || "").trim());
+  const profileCompleted = Boolean(profile && (profile.onboardingComplete || String(profile.username || "").trim()));
 
   useEffect(() => {
-    if (loading || isPublicLiveViewer) return;
+    if (!user) {
+      setStickyComplete(false);
+      setStickyResolved(true);
+      return;
+    }
+    if (profileCompleted) markStickyOnboardingComplete(user.uid);
+    setStickyComplete(profileCompleted || hasStickyOnboardingComplete(user.uid));
+    setStickyResolved(true);
+  }, [user, profileCompleted]);
+
+  const needsOnboarding = Boolean(
+    stickyResolved &&
+    profile &&
+    !stickyComplete &&
+    !profile.onboardingComplete &&
+    !String(profile.username || "").trim()
+  );
+
+  useEffect(() => {
+    if (loading || !stickyResolved || isPublicLiveViewer) return;
     if (!user) router.replace("/login");
     else if (needsOnboarding) router.replace("/onboarding");
-  }, [user, needsOnboarding, loading, router, isPublicLiveViewer]);
+  }, [user, needsOnboarding, loading, stickyResolved, router, isPublicLiveViewer]);
 
   // The viewer page must load before a full Flux profile exists. It creates a
   // temporary anonymous Firebase identity for secure signaling when necessary.
@@ -41,7 +63,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return <div className="h-[100dvh] w-full overflow-hidden bg-black">{children}</div>;
   }
 
-  if (loading) return <LoadingScreen label="Loading Flux" />;
+  if (loading || !stickyResolved) return <LoadingScreen label="Loading Flux" />;
   if (!user) return <LoadingScreen label="Opening sign in" />;
 
   if (!profile) {
