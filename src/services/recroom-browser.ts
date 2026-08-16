@@ -9,7 +9,13 @@ export interface RecRoomVmRuntimeStatus {
   warning?: string | null;
   runningVms?: number;
   maxVms?: number;
+  runningSandboxes?: number;
+  maxSandboxes?: number;
   baseImage?: string;
+  clientDir?: string;
+  targetBuild?: string;
+  targetManifest?: string;
+  graphics?: string;
   checks?: Record<string, boolean | string>;
 }
 
@@ -21,7 +27,11 @@ export interface RecRoomBrokerStatus {
   sessions?: number;
   mode?: string;
   vmReadyForGame?: boolean;
+  runtimeReadyForGame?: boolean;
   vmRuntime?: RecRoomVmRuntimeStatus;
+  serverRuntime?: RecRoomVmRuntimeStatus;
+  wineRuntime?: RecRoomVmRuntimeStatus;
+  kvmRuntime?: RecRoomVmRuntimeStatus;
   error?: string;
   detail?: string;
 }
@@ -140,7 +150,7 @@ export async function releaseRecRoomSession(sessionId: string, accessToken: stri
   }
 }
 
-/** Best-effort VM teardown for page close / navigation. */
+/** Best-effort disposable runtime teardown for page close / navigation. */
 export function releaseRecRoomSessionOnPageExit(sessionId: string, accessToken: string) {
   const url = `${sessionPath(sessionId)}/release?accessToken=${encodeURIComponent(accessToken)}`;
   try {
