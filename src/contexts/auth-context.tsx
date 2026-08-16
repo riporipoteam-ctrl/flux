@@ -42,6 +42,10 @@ function cacheKey(uid: string): string {
   return `${PROFILE_CACHE_PREFIX}${uid}`;
 }
 
+function isCompletedProfile(profile: UserProfile | null): boolean {
+  return Boolean(profile && (profile.onboardingComplete || String(profile.username || "").trim()));
+}
+
 function readCachedProfile(uid: string): UserProfile | null {
   if (typeof window === "undefined") return null;
   try {
@@ -86,19 +90,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadProfile = useCallback(async (u: User) => {
-    const cached = readCachedProfile(u.uid);
-    if (cached) {
-      applyProfile(cached);
-      setLoading(false);
-    }
-
-    const ensured = await withTimeout(
+    return await withTimeout(
       ensureUserDocument(u.uid, u.email || "", u.displayName, u.photoURL),
       8_000,
       "Profile loading timed out"
     );
-    applyProfile(ensured);
-  }, [applyProfile]);
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     if (!user) return;
@@ -121,35 +118,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const fallbackTimer = window.setTimeout(() => setLoading(false), 7_000);
+    // Do not use a timer that marks auth/profile loading as finished. On a slow
+    // reload that used to expose an old unfinished cache entry to the route
+    // guards, which could bounce an already-onboarded account back to setup.
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      if (u) {
-        const cached = readCachedProfile(u.uid);
-        if (cached) {
-          applyProfile(cached);
-          setLoading(false);
-        }
-        try {
-          await loadProfile(u);
-        } catch (error) {
-          console.error("Failed to load profile", error);
-          if (!cached) setProfile(null);
-        }
+      if (!u) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      const cached = readCachedProfile(u.uid);
+      const cachedCompleted = isCompletedProfile(cached);
+
+      if (cached) {
+        applyProfile(cached);
+        // A completed cached profile is safe to render immediately. An
+        // unfinished cache entry is never trusted for navigation until the
+        // server confirms it, because it may simply be stale from onboarding.
+        if (cachedCompleted) setLoading(false);
       } else {
         setProfile(null);
       }
-      setLoading(false);
+
+      try {
+        const ensured = await loadProfile(u);
+        applyProfile(ensured);
+      } catch (error) {
+        console.error("Failed to load profile", error);
+        // Keep a last-known-good completed profile during transient Firestore
+        // failures. Never surface a stale incomplete profile after loading ends.
+        if (cachedCompleted && cached) applyProfile(cached);
+        else setProfile(null);
+      } finally {
+        setLoading(false);
+      }
     }, (error) => {
       console.error("Firebase auth state failed", error);
-      setUser(null);
-      setProfile(null);
+      // An auth-state failure is not evidence that onboarding is required.
+      // Show the sign-in path only after Firebase itself reports no user.
       setLoading(false);
     });
-    return () => {
-      window.clearTimeout(fallbackTimer);
-      unsub();
-    };
+
+    return () => unsub();
   }, [applyProfile, loadProfile]);
 
   useEffect(() => {
