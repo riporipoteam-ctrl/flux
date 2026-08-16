@@ -1,0 +1,182 @@
+name: Flux Auth Session Production E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/contexts/auth-context.tsx"
+      - "src/components/providers/mobile-boot.tsx"
+      - "public/sw.js"
+      - "src/app/(main)/layout.tsx"
+      - "src/app/(onboarding)/onboarding/page.tsx"
+      - ".github/workflows/auth-session-production-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth-session-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Wait for this exact Flux Pages release
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 120); do
+            release="$(curl -fsS -H 'Cache-Control: no-cache' "https://riporipoteam-ctrl.github.io/flux/release.json?ts=$(date +%s)" || true)"
+            if [ -n "$release" ]; then
+              current="$(printf '%s' "$release" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("release", ""))' 2>/dev/null || true)"
+              echo "production=$current expected=$EXPECTED_SHA"
+              if [ "$current" = "$EXPECTED_SHA" ]; then exit 0; fi
+            fi
+            sleep 5
+          done
+          echo "Production Pages never exposed release $EXPECTED_SHA" >&2
+          exit 1
+      - name: Prove completed accounts survive reloads and worker updates
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p test-results/auth-session
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+            const page = await context.newPage();
+            const base = 'https://riporipoteam-ctrl.github.io/flux';
+            const nonce = `${process.env.RUN_ID || Date.now()}-${Date.now()}`;
+            const email = `flux.reload.${nonce}@example.com`;
+            const password = `FluxReload-${nonce}!Aa9`;
+            const username = `reload${String(Date.now()).slice(-9)}`.slice(0, 20);
+            const result = {
+              signup: false,
+              onboarding: false,
+              staleCacheInjected: false,
+              hardReloadStayedHome: false,
+              secondReloadStayedHome: false,
+              workerUpdateStayedLive: false,
+              finalPath: '',
+              fatal: '',
+            };
+
+            try {
+              await page.goto(`${base}/signup/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#name').fill('Flux Reload Regression');
+              await page.locator('#email').fill(email);
+              await page.locator('#password').fill(password);
+              await page.getByRole('button', { name: 'Create account' }).click();
+              await page.waitForFunction(() => !location.pathname.includes('/signup'), null, { timeout: 30000 });
+              result.signup = true;
+
+              await page.goto(`${base}/onboarding/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#username').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#username').fill(username);
+              await page.getByText('Available', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.locator('#displayName').fill('Flux Reload Regression');
+              await page.locator('#bio').fill('Production reload regression account.');
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.locator('img[alt="Friendly Bot"]').click();
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByText('Pick a header banner', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByRole('button', { name: 'Gaming', exact: true }).click();
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByRole('button', { name: 'Enter Flux' }).click();
+              await page.waitForFunction(() => location.pathname.includes('/home'), null, { timeout: 30000 });
+              result.onboarding = true;
+
+              result.staleCacheInjected = await page.evaluate(() => {
+                const key = Object.keys(localStorage).find((item) => item.startsWith('flux-profile-cache-v1-'));
+                if (!key) return false;
+                const cached = JSON.parse(localStorage.getItem(key) || '{}');
+                cached.username = '';
+                cached.onboardingComplete = false;
+                localStorage.setItem(key, JSON.stringify(cached));
+                return true;
+              });
+              if (!result.staleCacheInjected) throw new Error('Could not locate Flux profile cache to reproduce the stale onboarding bug.');
+
+              await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.waitForFunction(() => location.pathname.includes('/home'), null, { timeout: 30000 });
+              await page.waitForTimeout(2500);
+              if (page.url().includes('/onboarding')) throw new Error('Hard reload redirected completed account back to onboarding.');
+              result.hardReloadStayedHome = true;
+
+              await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.waitForFunction(() => location.pathname.includes('/home'), null, { timeout: 30000 });
+              await page.waitForTimeout(1500);
+              if (page.url().includes('/onboarding')) throw new Error('Second reload redirected completed account back to onboarding.');
+              result.secondReloadStayedHome = true;
+
+              const workerProof = await page.evaluate(async () => {
+                window.__fluxSessionProof = `alive-${Date.now()}`;
+                const proof = window.__fluxSessionProof;
+                if (!('serviceWorker' in navigator)) return { supported: false, path: location.pathname, proof };
+                const script = `${location.origin}${location.pathname.startsWith('/flux') ? '/flux' : ''}/sw.js?release=e2e-${Date.now()}`;
+                const registration = await navigator.serviceWorker.register(script, { updateViaCache: 'none' });
+                const candidate = registration.installing || registration.waiting;
+                if (candidate && candidate.state !== 'installed') {
+                  await Promise.race([
+                    new Promise((resolve) => candidate.addEventListener('statechange', () => {
+                      if (candidate.state === 'installed' || candidate.state === 'activated') resolve();
+                    })),
+                    new Promise((resolve) => setTimeout(resolve, 5000)),
+                  ]);
+                } else {
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                }
+                return {
+                  supported: true,
+                  path: location.pathname,
+                  proofStillAlive: window.__fluxSessionProof === proof,
+                  waiting: Boolean(registration.waiting),
+                };
+              });
+              if (!workerProof.proofStillAlive || !String(workerProof.path || '').includes('/home')) {
+                throw new Error(`Service-worker update disrupted the active page: ${JSON.stringify(workerProof)}`);
+              }
+              result.workerUpdateStayedLive = true;
+              result.finalPath = new URL(page.url()).pathname;
+              await page.screenshot({ path: 'test-results/auth-session/home-after-reloads.png', fullPage: true });
+            } catch (error) {
+              result.fatal = String(error && error.stack || error);
+              result.finalPath = new URL(page.url()).pathname;
+              await page.screenshot({ path: 'test-results/auth-session/failure.png', fullPage: true }).catch(() => {});
+            } finally {
+              fs.writeFileSync('test-results/auth-session/result.json', JSON.stringify(result, null, 2));
+              console.log(JSON.stringify(result, null, 2));
+              await browser.close();
+            }
+
+            if (!result.signup || !result.onboarding || !result.staleCacheInjected || !result.hardReloadStayedHome || !result.secondReloadStayedHome || !result.workerUpdateStayedLive || result.fatal) {
+              process.exit(1);
+            }
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+      - name: Upload regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flux-auth-session-e2e-${{ github.run_id }}
+          path: test-results/auth-session
+          if-no-files-found: warn
