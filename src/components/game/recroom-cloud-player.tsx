@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -45,13 +45,19 @@ type CapturedImage = {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const PHASES = [
-  { key: "requesting", label: "Requesting private VM" },
-  { key: "creating-overlay", label: "Creating Windows session" },
+  { key: "requesting", label: "Requesting private game session" },
+  { key: "creating-sandbox", label: "Creating private sandbox" },
+  { key: "creating-overlay", label: "Creating private game disk" },
+  { key: "preparing-audio", label: "Starting game audio" },
+  { key: "preparing-windows-runtime", label: "Preparing Windows compatibility" },
   { key: "creating-session-media", label: "Loading your Flux identity" },
-  { key: "booting-windows", label: "Booting Windows" },
-  { key: "waiting-for-windows-agent", label: "Connecting VM agent" },
+  { key: "linking-game-image", label: "Mounting Rec Room" },
+  { key: "connecting-flux-account", label: "Signing in with Flux" },
+  { key: "booting-windows", label: "Starting Windows runtime" },
+  { key: "waiting-for-windows-agent", label: "Connecting game runtime" },
+  { key: "starting-browser-stream", label: "Starting browser stream" },
   { key: "launching-game", label: "Launching Rec Room" },
-  { key: "ready", label: "Connecting video, audio & controls" },
+  { key: "ready", label: "Connecting video, sound & controls" },
 ] as const;
 
 function phaseIndex(phase: string) {
@@ -107,10 +113,9 @@ export function RecRoomCloudPlayer() {
     void refreshGateway();
   }, []);
 
-  // A clean Windows VM is created on demand. Poll the control plane while the
-  // qcow2 overlay is created, Windows boots, the guest agent starts Rec Room and
-  // the authenticated game stream becomes ready. Five minutes intentionally
-  // allows a cold Windows boot instead of failing after the old two-minute host limit.
+  // RipoTeamServer can use either a real KVM guest on capable infrastructure or
+  // an isolated Wine sandbox on managed Linux. Flux polls one provider-neutral
+  // session contract until the authenticated video/audio/control stream is ready.
   useEffect(() => {
     const sessionId = play?.sessionId;
     const accessToken = play?.sessionAccessToken;
@@ -143,7 +148,7 @@ export function RecRoomCloudPlayer() {
           setPlay((current) => ({
             ...current,
             ok: false,
-            error: error instanceof Error ? error.message : "RipoTeamServer VM status check failed.",
+            error: error instanceof Error ? error.message : "RipoTeamServer game status check failed.",
           }));
           return;
         }
@@ -155,7 +160,7 @@ export function RecRoomCloudPlayer() {
         setPlay((current) => ({
           ...current,
           ok: false,
-          error: "The disposable Windows VM did not become game-ready within five minutes.",
+          error: "The server-side Rec Room session did not become game-ready within five minutes.",
         }));
       }
     };
@@ -167,8 +172,8 @@ export function RecRoomCloudPlayer() {
     };
   }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, streamUrl]);
 
-  // Closing/navigating away from Flux is the VM lifetime boundary. The backend
-  // also expires abandoned sessions, but pagehide gives normal exits immediate cleanup.
+  // The browser page is the lifetime boundary for the disposable runtime. A
+  // backend idle reaper is the final safety net if pagehide never reaches us.
   useEffect(() => {
     const sessionId = play?.sessionId;
     const accessToken = play?.sessionAccessToken;
@@ -187,7 +192,7 @@ export function RecRoomCloudPlayer() {
       try {
         await releaseRecRoomSession(sessionId, accessToken);
       } catch {
-        // Expiration remains the safety net if the teardown request is interrupted.
+        // Expiration remains the safety net if teardown is interrupted.
       }
     }
     setStarting(false);
@@ -208,7 +213,7 @@ export function RecRoomCloudPlayer() {
     } catch (error) {
       setPlay({
         ok: false,
-        error: error instanceof Error ? error.message : "Could not create your RipoTeamServer Windows VM.",
+        error: error instanceof Error ? error.message : "Could not create your RipoTeamServer game session.",
       });
     } finally {
       setStarting(false);
@@ -232,7 +237,7 @@ export function RecRoomCloudPlayer() {
         await sleep(650);
         const latest = await getRecRoomCapture(sessionId, accessToken, captureId);
         if (latest.state === "failed" || latest.ok === false) {
-          throw new Error(latest.error || latest.detail || "The Windows VM could not capture Rec Room.");
+          throw new Error(latest.error || latest.detail || "The server runtime could not capture Rec Room.");
         }
         contentType = latest.contentType || contentType;
         if (latest.ready || latest.state === "ready") {
@@ -291,7 +296,7 @@ export function RecRoomCloudPlayer() {
     return (
       <StreamPlayer
         url={streamUrl}
-        title="Rec Room · RipoTeamServer VM"
+        title="Rec Room · RipoTeamServer"
         onClose={() => void releaseSession()}
         toolbarActions={
           <button
@@ -341,18 +346,19 @@ export function RecRoomCloudPlayer() {
   }
 
   if (provisioning) {
-    return <VmProvisioningScreen play={play} onCancel={() => void releaseSession()} />;
+    return <GameProvisioningScreen play={play} onCancel={() => void releaseSession()} />;
   }
 
   const serviceOnline = Boolean(gateway?.ok);
-  const vmRuntime = gateway?.vmRuntime;
-  const vmSupported = Boolean(vmRuntime?.supported);
-  const vmGameReady = Boolean(vmRuntime?.readyForGame);
-  const runningVms = Number(vmRuntime?.runningVms || gateway?.sessions || 0);
-  const maxVms = Number(vmRuntime?.maxVms || 0);
+  const runtime = gateway?.serverRuntime || gateway?.vmRuntime;
+  const runtimeSupported = Boolean(runtime?.supported);
+  const runtimeGameReady = Boolean(runtime?.readyForGame || gateway?.runtimeReadyForGame);
+  const runningSessions = Number(runtime?.runningSandboxes || runtime?.runningVms || gateway?.sessions || 0);
+  const maxSessions = Number(runtime?.maxSandboxes || runtime?.maxVms || 0);
+  const providerLabel = runtime?.provider === "wine" ? "Wine sandbox" : runtime?.provider === "kvm" ? "Windows VM" : "Server runtime";
   const runtimeDetail = gatewayLoading
-    ? "Checking the Linux virtualization host…"
-    : vmRuntime?.reason || vmRuntime?.warning || "RipoTeamServer KVM pool is available.";
+    ? "Checking RipoTeamServer…"
+    : runtime?.reason || runtime?.warning || "RipoTeamServer browser runtime is available.";
 
   return (
     <main className="min-h-dvh bg-[#05080d] text-white">
@@ -375,14 +381,14 @@ export function RecRoomCloudPlayer() {
             <div className="relative z-10 max-w-3xl">
               <div className="flex flex-wrap gap-2">
                 <Badge icon={Gamepad2}>Build 8751857</Badge>
-                <Badge icon={Cpu}>Disposable Windows VM</Badge>
-                <Badge icon={HardDrive}>Copy-on-write disk</Badge>
-                <Badge icon={Volume2}>Audio + controls</Badge>
+                <Badge icon={Cloud}>Browser only · no download</Badge>
+                <Badge icon={HardDrive}>Disposable sandbox</Badge>
+                <Badge icon={Volume2}>Sound + controls</Badge>
                 <Badge icon={ShieldCheck}>Flux identity</Badge>
               </div>
-              <h2 className="mt-7 text-[clamp(3rem,9vw,6.5rem)] font-black leading-[.82] tracking-[-.075em]">Press Play. Flux builds the PC.</h2>
+              <h2 className="mt-7 text-[clamp(3rem,9vw,6.5rem)] font-black leading-[.82] tracking-[-.075em]">Press Play. Flux starts the game.</h2>
               <p className="mt-6 max-w-2xl text-sm leading-6 text-white/58 sm:text-base">
-                RipoTeamServer creates a private Windows VM only for your session, boots the May 19, 2022 client, signs it into your Flux-backed Rec Room identity, then replaces the loading screen with the live game. When you exit, the temporary VM disk is deleted while your supported account and save state stay in Flux.
+                RipoTeamServer creates a private server-side game session, launches the May 19, 2022 Windows client through the best runtime available on the server, signs it into your Flux-backed Rec Room identity, then replaces the loading screen with the live game. Players install nothing. When you exit, the temporary sandbox is deleted while supported account and save state stay in Flux.
               </p>
             </div>
           </div>
@@ -390,7 +396,7 @@ export function RecRoomCloudPlayer() {
           <div className="grid gap-4 border-t border-white/8 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="grid gap-2 sm:grid-cols-2">
               <StatusCard icon={Server} title="Compatibility service" value={gatewayLoading ? "Checking…" : serviceOnline ? "Online" : "Unavailable"} detail={gateway?.error || "Flux identity + May 2022 compatibility API"} good={serviceOnline} />
-              <StatusCard icon={Cpu} title="RipoTeamServer VM pool" value={gatewayLoading ? "Checking…" : vmGameReady ? "Game-ready" : vmSupported ? "VM-ready · GPU pending" : "Unavailable"} detail={runtimeDetail} good={vmGameReady} />
+              <StatusCard icon={Cpu} title="RipoTeamServer game runtime" value={gatewayLoading ? "Checking…" : runtimeGameReady ? `${providerLabel} ready` : runtimeSupported ? "Runtime preparing" : "Unavailable"} detail={runtimeDetail} good={runtimeGameReady} />
             </div>
 
             <div className="min-w-[230px]">
@@ -401,19 +407,19 @@ export function RecRoomCloudPlayer() {
               ) : (
                 <button type="button" disabled={starting || !serviceOnline} onClick={() => void startGame()} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black transition enabled:hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-45">
                   {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gamepad2 className="h-4 w-4" />}
-                  {starting ? "Creating VM…" : "Play Rec Room"}
+                  {starting ? "Starting game…" : "Play Rec Room"}
                 </button>
               )}
-              <p className="mt-2 text-center text-[10px] text-white/32">{maxVms ? `${runningVms}/${maxVms} VM slots active` : `${runningVms} active VM session(s)`}</p>
+              <p className="mt-2 text-center text-[10px] text-white/32">{maxSessions ? `${runningSessions}/${maxSessions} server slots active` : `${runningSessions} active game session(s)`}</p>
             </div>
           </div>
         </section>
 
-        {!gatewayLoading && serviceOnline && !vmGameReady ? (
+        {!gatewayLoading && serviceOnline && !runtimeGameReady ? (
           <section className="mt-4 flex gap-3 rounded-[22px] border border-amber-300/15 bg-amber-300/8 p-4 text-amber-50">
             <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
             <div>
-              <p className="text-sm font-black">Windows VM runtime is not game-ready on this server</p>
+              <p className="text-sm font-black">RipoTeamServer game runtime is still preparing</p>
               <p className="mt-1 text-xs leading-5 text-amber-50/65">{runtimeDetail}</p>
             </div>
           </section>
@@ -423,7 +429,7 @@ export function RecRoomCloudPlayer() {
           <section className="mt-4 flex gap-3 rounded-[22px] border border-amber-300/15 bg-amber-300/8 p-4 text-amber-50">
             <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
             <div>
-              <p className="text-sm font-black">RipoTeamServer could not start the game VM</p>
+              <p className="text-sm font-black">RipoTeamServer could not start Rec Room</p>
               <p className="mt-1 text-xs leading-5 text-amber-50/65">{play.error}</p>
             </div>
           </section>
@@ -431,19 +437,20 @@ export function RecRoomCloudPlayer() {
 
         <section className="mt-6 grid gap-3 md:grid-cols-3">
           <InfoCard title="Instant account" text="Your signed-in Flux Firebase identity is exchanged automatically. No separate Rec Room login screen is required by the compatibility backend." />
-          <InfoCard title="Persistent saves" text="Supported profile, inventory, avatar and game state live outside the disposable VM and are restored from the Flux-backed compatibility service." />
-          <InfoCard title="Disposable machine" text="One shared golden Windows image plus a temporary per-player overlay avoids duplicating the full Windows/Rec Room disk for every session." />
+          <InfoCard title="Persistent saves" text="Supported profile, inventory, avatar and game state live outside the disposable sandbox and are restored from the Flux-backed compatibility service." />
+          <InfoCard title="Disposable session" text="The server shares one base game image and creates a lightweight isolated runtime per player. Leaving destroys temporary runtime state instead of making players download the game." />
         </section>
       </div>
     </main>
   );
 }
 
-function VmProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse | null; onCancel: () => void }) {
-  const phase = play?.phase || (play?.sessionId ? "creating-overlay" : "requesting");
+function GameProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse | null; onCancel: () => void }) {
+  const phase = play?.phase || (play?.sessionId ? "creating-sandbox" : "requesting");
   const current = phaseIndex(phase);
-  const progress = Math.max(4, Math.min(99, Number(play?.progress || (current + 1) * 12)));
+  const progress = Math.max(4, Math.min(99, Number(play?.progress || (current + 1) * 8)));
   const headline = PHASES[current]?.label || "Preparing Rec Room";
+  const provider = play?.provider?.includes("wine") ? "Wine sandbox" : play?.provider?.includes("kvm") ? "Windows VM" : "server game session";
 
   return (
     <main className="fixed inset-0 z-[280] overflow-hidden bg-[#04070c] text-white">
@@ -455,9 +462,9 @@ function VmProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse | 
           <Loader2 className="absolute -bottom-2 -right-2 h-8 w-8 animate-spin rounded-full bg-[#0b1420] p-1.5 text-emerald-300" />
         </div>
 
-        <p className="mt-8 text-[10px] font-black uppercase tracking-[.2em] text-white/35">RipoTeamServer · private Windows session</p>
+        <p className="mt-8 text-[10px] font-black uppercase tracking-[.2em] text-white/35">RipoTeamServer · private {provider}</p>
         <h1 className="mt-2 text-3xl font-black tracking-[-.05em] sm:text-5xl">{headline}</h1>
-        <p className="mt-4 max-w-xl text-sm leading-6 text-white/48">Keep this page open. Your temporary machine exists only for this play session; your Flux account and supported saves live separately and survive when this VM is destroyed.</p>
+        <p className="mt-4 max-w-xl text-sm leading-6 text-white/48">Keep this page open. The server is launching Rec Room for you; nothing is downloaded to your device. Your Flux account and supported saves live separately and survive when this disposable session is destroyed.</p>
 
         <div className="mt-8 w-full max-w-xl">
           <div className="h-2 overflow-hidden rounded-full bg-white/8">
@@ -467,12 +474,13 @@ function VmProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse | 
         </div>
 
         <div className="mt-8 grid w-full max-w-xl gap-2 text-left sm:grid-cols-2">
-          {PHASES.slice(0, -1).map((item, index) => {
+          {PHASES.filter((item) => ["requesting", "creating-sandbox", "preparing-audio", "preparing-windows-runtime", "linking-game-image", "connecting-flux-account", "starting-browser-stream", "launching-game"].includes(item.key)).map((item) => {
+            const index = phaseIndex(item.key);
             const done = index < current;
-            const active = index === current;
+            const active = item.key === phase;
             return (
               <div key={item.key} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${active ? "border-white/18 bg-white/8" : "border-white/7 bg-white/[.025]"}`}>
-                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-black ${done ? "bg-emerald-400 text-black" : active ? "bg-white text-black" : "bg-white/7 text-white/25"}`}>{done ? "✓" : index + 1}</span>
+                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-black ${done ? "bg-emerald-400 text-black" : active ? "bg-white text-black" : "bg-white/7 text-white/25"}`}>{done ? "✓" : "·"}</span>
                 <span className={`text-xs font-bold ${done || active ? "text-white/80" : "text-white/30"}`}>{item.label}</span>
               </div>
             );
@@ -480,7 +488,7 @@ function VmProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse | 
         </div>
 
         {play?.sessionId ? <p className="mt-5 font-mono text-[9px] text-white/20">Session {play.sessionId}</p> : null}
-        <button type="button" onClick={onCancel} className="mt-7 h-10 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-black text-white/55 hover:bg-white/10 hover:text-white">Cancel & destroy VM</button>
+        <button type="button" onClick={onCancel} className="mt-7 h-10 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-black text-white/55 hover:bg-white/10 hover:text-white">Cancel & destroy session</button>
       </div>
     </main>
   );
