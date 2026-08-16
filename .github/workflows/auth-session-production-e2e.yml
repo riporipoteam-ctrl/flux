@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "src/contexts/auth-context.tsx"
+      - "src/services/users.ts"
+      - "src/lib/onboarding-state.ts"
       - "src/components/providers/mobile-boot.tsx"
       - "public/sw.js"
       - "src/app/(main)/layout.tsx"
@@ -128,7 +130,7 @@ jobs:
               const workerProof = await page.evaluate(async () => {
                 window.__fluxSessionProof = `alive-${Date.now()}`;
                 const proof = window.__fluxSessionProof;
-                if (!('serviceWorker' in navigator)) return { supported: false, path: location.pathname, proof };
+                if (!('serviceWorker' in navigator)) return { supported: false, path: location.pathname, proofStillAlive: true };
                 const script = `${location.origin}${location.pathname.startsWith('/flux') ? '/flux' : ''}/sw.js?release=e2e-${Date.now()}`;
                 const registration = await navigator.serviceWorker.register(script, { updateViaCache: 'none' });
                 const candidate = registration.installing || registration.waiting;
