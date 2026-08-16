@@ -19,7 +19,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
-import { ensureUserDocument, getUser, touchUserPresence } from "@/services/users";
+import { ensureUserDocument, touchUserPresence } from "@/services/users";
 import type { UserProfile } from "@/types";
 
 interface AuthContextValue {
@@ -99,9 +99,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (!user) return;
-    const fresh = await withTimeout(getUser(user.uid), 8_000, "Profile refresh timed out");
-    if (fresh) applyProfile(fresh);
-  }, [applyProfile, user]);
+    const fresh = await loadProfile(user);
+    applyProfile(fresh);
+  }, [applyProfile, loadProfile, user]);
 
   const updateProfileOptimistic = useCallback((patch: Partial<UserProfile>) => {
     setProfile((current) => {
