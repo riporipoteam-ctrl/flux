@@ -1,17 +1,20 @@
-/* Flux X2 service worker — always prefer the deployed release. */
+/* Flux service worker — prefer deployed files without disrupting active sessions. */
 const CACHE = "flux-shell-v4";
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const scoped = (path) => `${SCOPE_PATH}${path}`;
 const PRECACHE = [scoped("/"), scoped("/manifest.webmanifest"), scoped("/favicon.ico"), scoped("/flux-icon.png")];
 
 self.addEventListener("install", (event) => {
+  // Do NOT call skipWaiting(). A newly deployed worker should wait until the
+  // current Flux tab is closed instead of taking over a live social session.
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE).catch(() => undefined)));
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+  // Activation happens naturally after the previous worker has no active
+  // clients. Avoid clients.claim() so an already-loaded page keeps one release
+  // boundary for its full lifetime.
   event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))));
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
