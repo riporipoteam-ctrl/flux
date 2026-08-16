@@ -72,6 +72,25 @@ export interface RecRoomCaptureResponse {
   detail?: string;
 }
 
+export interface RecRoomSteamRecoveryStatus {
+  ok?: boolean;
+  jobId?: string;
+  state?: string;
+  phase?: string;
+  progress?: number;
+  qrReady?: boolean;
+  clientReady?: boolean;
+  targetApp?: string;
+  targetDepot?: string;
+  targetManifest?: string;
+  createdAtMs?: number;
+  updatedAtMs?: number;
+  error?: string | null;
+  logs?: string[];
+  capability?: RecRoomVmRuntimeStatus;
+  detail?: string;
+}
+
 function trimSlash(value: string) {
   return value.replace(/\/+$/, "");
 }
@@ -89,6 +108,10 @@ async function parseJson<T>(response: Response): Promise<T> {
   return payload;
 }
 
+function authHeaders(firebaseIdToken: string): HeadersInit {
+  return { authorization: `Bearer ${firebaseIdToken}` };
+}
+
 function sessionPath(sessionId: string, accessToken?: string) {
   const encodedSession = encodeURIComponent(sessionId);
   const suffix = accessToken ? `?accessToken=${encodeURIComponent(accessToken)}` : "";
@@ -100,6 +123,32 @@ export async function getRecRoomBrokerStatus(): Promise<RecRoomBrokerStatus> {
     cache: "no-store",
   });
   return parseJson<RecRoomBrokerStatus>(response);
+}
+
+export async function getRecRoomSteamRecovery(firebaseIdToken: string): Promise<RecRoomSteamRecoveryStatus> {
+  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/steam-recovery`, {
+    cache: "no-store",
+    headers: authHeaders(firebaseIdToken),
+  });
+  return parseJson<RecRoomSteamRecoveryStatus>(response);
+}
+
+export async function startRecRoomSteamRecovery(firebaseIdToken: string): Promise<RecRoomSteamRecoveryStatus> {
+  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/steam-recovery/start`, {
+    method: "POST",
+    cache: "no-store",
+    headers: authHeaders(firebaseIdToken),
+  });
+  return parseJson<RecRoomSteamRecoveryStatus>(response);
+}
+
+export async function cancelRecRoomSteamRecovery(firebaseIdToken: string): Promise<RecRoomSteamRecoveryStatus> {
+  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/steam-recovery/cancel`, {
+    method: "POST",
+    cache: "no-store",
+    headers: authHeaders(firebaseIdToken),
+  });
+  return parseJson<RecRoomSteamRecoveryStatus>(response);
 }
 
 export async function createRecRoomHostPairing(firebaseIdToken: string): Promise<RecRoomHostPairingResponse> {
