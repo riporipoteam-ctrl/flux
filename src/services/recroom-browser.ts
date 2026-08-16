@@ -1,12 +1,27 @@
 const DEFAULT_RECROOM_BROKER_URL = "https://echoxr-ripoteam-cloud-pc.hf.space";
 const TARGET_BUILD_ID = "recroom-2022-05-19";
 
+export interface RecRoomVmRuntimeStatus {
+  provider?: string;
+  supported?: boolean;
+  readyForGame?: boolean;
+  reason?: string | null;
+  warning?: string | null;
+  runningVms?: number;
+  maxVms?: number;
+  baseImage?: string;
+  checks?: Record<string, boolean | string>;
+}
+
 export interface RecRoomBrokerStatus {
   ok?: boolean;
   targetBuild?: string;
   configured?: boolean;
   onlineHosts?: number;
   sessions?: number;
+  mode?: string;
+  vmReadyForGame?: boolean;
+  vmRuntime?: RecRoomVmRuntimeStatus;
   error?: string;
   detail?: string;
 }
@@ -23,6 +38,9 @@ export interface RecRoomPlayResponse {
   ok?: boolean;
   mode?: string;
   state?: string;
+  phase?: string;
+  progress?: number;
+  provider?: string;
   error?: string;
   detail?: string;
   sessionId?: string;
@@ -119,6 +137,21 @@ export async function releaseRecRoomSession(sessionId: string, accessToken: stri
   );
   if (!response.ok && response.status !== 404) {
     await parseJson(response);
+  }
+}
+
+/** Best-effort VM teardown for page close / navigation. */
+export function releaseRecRoomSessionOnPageExit(sessionId: string, accessToken: string) {
+  const url = `${sessionPath(sessionId)}/release?accessToken=${encodeURIComponent(accessToken)}`;
+  try {
+    void fetch(url, {
+      method: "POST",
+      cache: "no-store",
+      keepalive: true,
+      mode: "cors",
+    });
+  } catch {
+    // The backend also expires abandoned sessions as a final safety net.
   }
 }
 
