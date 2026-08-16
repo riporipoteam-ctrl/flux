@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   Camera,
   Cloud,
+  Cpu,
   Gamepad2,
+  HardDrive,
   Loader2,
-  Radio,
   RefreshCw,
   Send,
   Server,
   ShieldCheck,
   TriangleAlert,
+  Volume2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +30,7 @@ import {
   getRecRoomCapture,
   getRecRoomSession,
   releaseRecRoomSession,
+  releaseRecRoomSessionOnPageExit,
   requestRecRoomCapture,
   type RecRoomBrokerStatus,
   type RecRoomPlayResponse,
@@ -41,6 +44,22 @@ type CapturedImage = {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const PHASES = [
+  { key: "requesting", label: "Requesting private VM" },
+  { key: "creating-overlay", label: "Creating Windows session" },
+  { key: "creating-session-media", label: "Loading your Flux identity" },
+  { key: "booting-windows", label: "Booting Windows" },
+  { key: "waiting-for-windows-agent", label: "Connecting VM agent" },
+  { key: "launching-game", label: "Launching Rec Room" },
+  { key: "ready", label: "Connecting video, audio & controls" },
+] as const;
+
+function phaseIndex(phase: string) {
+  const normalized = phase || "requesting";
+  const index = PHASES.findIndex((item) => item.key === normalized);
+  return index >= 0 ? index : 0;
+}
+
 export function RecRoomCloudPlayer() {
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const [starting, setStarting] = useState(false);
@@ -53,6 +72,10 @@ export function RecRoomCloudPlayer() {
   const [shareText, setShareText] = useState("Captured in Rec Room 🎮 #RecRoom #FluxGames");
 
   const streamUrl = play?.streamUrl || "";
+  const provisioning = Boolean(
+    starting ||
+    (play?.sessionId && play?.sessionAccessToken && !streamUrl && play?.ok !== false && play?.state !== "failed"),
+  );
 
   const clearCapture = () => {
     setCapture((current) => {
@@ -84,9 +107,10 @@ export function RecRoomCloudPlayer() {
     void refreshGateway();
   }, []);
 
-  // A Windows host can need several seconds to launch Unity + the streamer.
-  // The browser receives only a private per-session access token and polls the
-  // authenticated control plane until that host reports its HTTPS stream URL.
+  // A clean Windows VM is created on demand. Poll the control plane while the
+  // qcow2 overlay is created, Windows boots, the guest agent starts Rec Room and
+  // the authenticated game stream becomes ready. Five minutes intentionally
+  // allows a cold Windows boot instead of failing after the old two-minute host limit.
   useEffect(() => {
     const sessionId = play?.sessionId;
     const accessToken = play?.sessionAccessToken;
@@ -115,23 +139,23 @@ export function RecRoomCloudPlayer() {
         }));
         if (next.streamUrl || next.state === "failed" || next.ok === false) return;
       } catch (error) {
-        if (!cancelled && Date.now() - startedAt > 45_000) {
+        if (!cancelled && Date.now() - startedAt > 90_000) {
           setPlay((current) => ({
             ...current,
             ok: false,
-            error: error instanceof Error ? error.message : "Game host status check failed.",
+            error: error instanceof Error ? error.message : "RipoTeamServer VM status check failed.",
           }));
           return;
         }
       }
 
-      if (!cancelled && Date.now() - startedAt < 120_000) {
-        timer = setTimeout(() => void poll(), 1500);
+      if (!cancelled && Date.now() - startedAt < 300_000) {
+        timer = setTimeout(() => void poll(), 1200);
       } else if (!cancelled) {
         setPlay((current) => ({
           ...current,
           ok: false,
-          error: "The Windows game host did not become ready within two minutes.",
+          error: "The disposable Windows VM did not become game-ready within five minutes.",
         }));
       }
     };
@@ -143,6 +167,18 @@ export function RecRoomCloudPlayer() {
     };
   }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, streamUrl]);
 
+  // Closing/navigating away from Flux is the VM lifetime boundary. The backend
+  // also expires abandoned sessions, but pagehide gives normal exits immediate cleanup.
+  useEffect(() => {
+    const sessionId = play?.sessionId;
+    const accessToken = play?.sessionAccessToken;
+    if (!sessionId || !accessToken) return;
+
+    const release = () => releaseRecRoomSessionOnPageExit(sessionId, accessToken);
+    window.addEventListener("pagehide", release);
+    return () => window.removeEventListener("pagehide", release);
+  }, [play?.sessionId, play?.sessionAccessToken]);
+
   const releaseSession = async () => {
     const sessionId = play?.sessionId;
     const accessToken = play?.sessionAccessToken;
@@ -151,15 +187,16 @@ export function RecRoomCloudPlayer() {
       try {
         await releaseRecRoomSession(sessionId, accessToken);
       } catch {
-        // The broker also expires abandoned sessions automatically.
+        // Expiration remains the safety net if the teardown request is interrupted.
       }
     }
+    setStarting(false);
     setPlay(null);
     void refreshGateway();
   };
 
   const startGame = async () => {
-    if (!user) return;
+    if (!user || starting || provisioning) return;
     setStarting(true);
     setPlay(null);
     clearCapture();
@@ -171,7 +208,7 @@ export function RecRoomCloudPlayer() {
     } catch (error) {
       setPlay({
         ok: false,
-        error: error instanceof Error ? error.message : "Could not start Rec Room.",
+        error: error instanceof Error ? error.message : "Could not create your RipoTeamServer Windows VM.",
       });
     } finally {
       setStarting(false);
@@ -195,7 +232,7 @@ export function RecRoomCloudPlayer() {
         await sleep(650);
         const latest = await getRecRoomCapture(sessionId, accessToken, captureId);
         if (latest.state === "failed" || latest.ok === false) {
-          throw new Error(latest.error || latest.detail || "The Windows game host could not capture Rec Room.");
+          throw new Error(latest.error || latest.detail || "The Windows VM could not capture Rec Room.");
         }
         contentType = latest.contentType || contentType;
         if (latest.ready || latest.state === "ready") {
@@ -254,7 +291,7 @@ export function RecRoomCloudPlayer() {
     return (
       <StreamPlayer
         url={streamUrl}
-        title="Rec Room · May 19, 2022"
+        title="Rec Room · RipoTeamServer VM"
         onClose={() => void releaseSession()}
         toolbarActions={
           <button
@@ -276,16 +313,10 @@ export function RecRoomCloudPlayer() {
                   <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/35">Rec Room capture</p>
                   <h2 className="text-base font-black text-white">Share this moment to Flux?</h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={clearCapture}
-                  className="grid h-9 w-9 place-items-center rounded-full bg-white/7 text-white/70 hover:bg-white/12 hover:text-white"
-                  aria-label="Close screenshot preview"
-                >
+                <button type="button" onClick={clearCapture} className="grid h-9 w-9 place-items-center rounded-full bg-white/7 text-white/70 hover:bg-white/12 hover:text-white" aria-label="Close screenshot preview">
                   <X className="h-4 w-4" />
                 </button>
               </div>
-
               <div className="grid max-h-[calc(100dvh-120px)] overflow-auto lg:grid-cols-[1.35fr_.65fr]">
                 <div className="bg-black p-2 sm:p-3">
                   <img src={capture.url} alt="Captured Rec Room game window" className="max-h-[68dvh] w-full rounded-xl object-contain" />
@@ -293,24 +324,10 @@ export function RecRoomCloudPlayer() {
                 <div className="flex flex-col gap-4 p-4 sm:p-5">
                   <div>
                     <label htmlFor="recroom-share-caption" className="text-xs font-black text-white/70">Caption</label>
-                    <textarea
-                      id="recroom-share-caption"
-                      value={shareText}
-                      onChange={(event) => setShareText(event.target.value.slice(0, 500))}
-                      rows={6}
-                      className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 p-3 text-sm leading-6 text-white outline-none placeholder:text-white/25 focus:border-white/25"
-                      placeholder="Say something about this Rec Room moment…"
-                    />
+                    <textarea id="recroom-share-caption" value={shareText} onChange={(event) => setShareText(event.target.value.slice(0, 500))} rows={6} className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 p-3 text-sm leading-6 text-white outline-none placeholder:text-white/25 focus:border-white/25" placeholder="Say something about this Rec Room moment…" />
                   </div>
-                  <p className="text-[11px] leading-5 text-white/38">
-                    Posting is optional. The screenshot is only uploaded to Firebase Storage after you press Post to Flux.
-                  </p>
-                  <button
-                    type="button"
-                    disabled={sharing}
-                    onClick={() => void shareCapture()}
-                    className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-black transition enabled:hover:scale-[1.01] disabled:cursor-wait disabled:opacity-60"
-                  >
+                  <p className="text-[11px] leading-5 text-white/38">Posting is optional. The screenshot is uploaded only after you press Post to Flux.</p>
+                  <button type="button" disabled={sharing} onClick={() => void shareCapture()} className="mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-black transition enabled:hover:scale-[1.01] disabled:cursor-wait disabled:opacity-60">
                     {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     {sharing ? "Posting…" : "Post to Flux"}
                   </button>
@@ -323,171 +340,166 @@ export function RecRoomCloudPlayer() {
     );
   }
 
-  const gatewayOnline = Boolean(gateway?.ok && gateway?.configured);
-  const hostState = play?.state === "starting"
-    ? "Starting game…"
-    : play?.hostId
-      ? "Assigned"
-      : `${gateway?.onlineHosts ?? 0} online`;
+  if (provisioning) {
+    return <VmProvisioningScreen play={play} onCancel={() => void releaseSession()} />;
+  }
+
+  const serviceOnline = Boolean(gateway?.ok);
+  const vmRuntime = gateway?.vmRuntime;
+  const vmSupported = Boolean(vmRuntime?.supported);
+  const vmGameReady = Boolean(vmRuntime?.readyForGame);
+  const runningVms = Number(vmRuntime?.runningVms || gateway?.sessions || 0);
+  const maxVms = Number(vmRuntime?.maxVms || 0);
+  const runtimeDetail = gatewayLoading
+    ? "Checking the Linux virtualization host…"
+    : vmRuntime?.reason || vmRuntime?.warning || "RipoTeamServer KVM pool is available.";
 
   return (
     <main className="min-h-dvh bg-[#05080d] text-white">
       <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
         <header className="flex items-center gap-3">
-          <Link
-            href="/games"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
-            aria-label="Back to games"
-          >
+          <Link href="/games" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10" aria-label="Back to games">
             <ArrowLeft className="h-4.5 w-4.5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[.16em] text-white/40">Flux streamed game</p>
+            <p className="text-[10px] font-black uppercase tracking-[.16em] text-white/40">RipoTeamServer streamed game</p>
             <h1 className="truncate text-xl font-black tracking-[-.04em]">Rec Room · May 2022</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => void refreshGateway()}
-            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
-            aria-label="Refresh backend status"
-          >
+          <button type="button" onClick={() => void refreshGateway()} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10" aria-label="Refresh backend status">
             <RefreshCw className={`h-4 w-4 ${gatewayLoading ? "animate-spin" : ""}`} />
           </button>
         </header>
 
         <section className="mt-6 overflow-hidden rounded-[30px] border border-white/10 bg-[#0a1019] shadow-2xl">
-          <div
-            className="relative min-h-[330px] overflow-hidden p-6 sm:p-9"
-            style={{
-              background:
-                "radial-gradient(circle at 18% 18%,rgba(34,197,94,.23),transparent 30%),radial-gradient(circle at 82% 15%,rgba(59,130,246,.22),transparent 35%),linear-gradient(135deg,#08111c,#101827 58%,#071019)",
-            }}
-          >
+          <div className="relative min-h-[330px] overflow-hidden p-6 sm:p-9" style={{ background: "radial-gradient(circle at 18% 18%,rgba(34,197,94,.23),transparent 30%),radial-gradient(circle at 82% 15%,rgba(59,130,246,.22),transparent 35%),linear-gradient(135deg,#08111c,#101827 58%,#071019)" }}>
             <div className="relative z-10 max-w-3xl">
               <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-white/75">
-                  <Gamepad2 className="h-3.5 w-3.5" /> Build 8751857
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-white/75">
-                  <Cloud className="h-3.5 w-3.5" /> Browser stream
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-white/75">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Flux identity
-                </span>
+                <Badge icon={Gamepad2}>Build 8751857</Badge>
+                <Badge icon={Cpu}>Disposable Windows VM</Badge>
+                <Badge icon={HardDrive}>Copy-on-write disk</Badge>
+                <Badge icon={Volume2}>Audio + controls</Badge>
+                <Badge icon={ShieldCheck}>Flux identity</Badge>
               </div>
-
-              <h2 className="mt-7 text-[clamp(3rem,9vw,6.5rem)] font-black leading-[.82] tracking-[-.075em]">
-                Play inside Flux.
-              </h2>
+              <h2 className="mt-7 text-[clamp(3rem,9vw,6.5rem)] font-black leading-[.82] tracking-[-.075em]">Press Play. Flux builds the PC.</h2>
               <p className="mt-6 max-w-2xl text-sm leading-6 text-white/58 sm:text-base">
-                The May 19, 2022 Windows client runs on a compatible game host. Flux requests a private session, links it to your signed-in account, and streams the game back into this page.
+                RipoTeamServer creates a private Windows VM only for your session, boots the May 19, 2022 client, signs it into your Flux-backed Rec Room identity, then replaces the loading screen with the live game. When you exit, the temporary VM disk is deleted while your supported account and save state stay in Flux.
               </p>
             </div>
           </div>
 
           <div className="grid gap-4 border-t border-white/8 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="grid gap-2 sm:grid-cols-2">
-              <StatusCard
-                icon={Server}
-                title="Compatibility service"
-                value={gatewayLoading ? "Checking…" : gatewayOnline ? "Online" : "Unavailable"}
-                detail={gateway?.error || `${gateway?.onlineHosts ?? 0} Windows host(s) online`}
-                good={gatewayOnline}
-              />
-              <StatusCard
-                icon={Radio}
-                title="Game host"
-                value={hostState}
-                detail={play?.hostId ? `Host ${play.hostId}` : "A Windows host is allocated when you press Play."}
-                good={Boolean(play?.hostId) || Boolean(gateway?.onlineHosts)}
-              />
+              <StatusCard icon={Server} title="Compatibility service" value={gatewayLoading ? "Checking…" : serviceOnline ? "Online" : "Unavailable"} detail={gateway?.error || "Flux identity + May 2022 compatibility API"} good={serviceOnline} />
+              <StatusCard icon={Cpu} title="RipoTeamServer VM pool" value={gatewayLoading ? "Checking…" : vmGameReady ? "Game-ready" : vmSupported ? "VM-ready · GPU pending" : "Unavailable"} detail={runtimeDetail} good={vmGameReady} />
             </div>
 
             <div className="min-w-[230px]">
               {authLoading ? (
-                <button disabled className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white/10 px-6 text-sm font-black text-white/60">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Checking account…
-                </button>
+                <button disabled className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white/10 px-6 text-sm font-black text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Checking Flux account…</button>
               ) : !user ? (
-                <Link
-                  href="/login"
-                  className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-black text-black"
-                >
-                  Sign in to play
-                </Link>
-              ) : play?.state === "starting" && play.ok !== false ? (
-                <button disabled className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white/10 px-6 text-sm font-black text-white/70">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Starting Windows host…
-                </button>
+                <Link href="/login" className="flex h-12 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-black text-black">Sign in to play</Link>
               ) : (
-                <button
-                  type="button"
-                  disabled={starting || !gatewayOnline}
-                  onClick={() => void startGame()}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black transition enabled:hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-45"
-                >
+                <button type="button" disabled={starting || !serviceOnline} onClick={() => void startGame()} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-black text-black transition enabled:hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-45">
                   {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gamepad2 className="h-4 w-4" />}
-                  {starting ? "Requesting host…" : gatewayOnline ? "Play Rec Room" : "Service unavailable"}
+                  {starting ? "Creating VM…" : "Play Rec Room"}
                 </button>
               )}
+              <p className="mt-2 text-center text-[10px] text-white/32">{maxVms ? `${runningVms}/${maxVms} VM slots active` : `${runningVms} active VM session(s)`}</p>
             </div>
           </div>
         </section>
+
+        {!gatewayLoading && serviceOnline && !vmGameReady ? (
+          <section className="mt-4 flex gap-3 rounded-[22px] border border-amber-300/15 bg-amber-300/8 p-4 text-amber-50">
+            <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+            <div>
+              <p className="text-sm font-black">Windows VM runtime is not game-ready on this server</p>
+              <p className="mt-1 text-xs leading-5 text-amber-50/65">{runtimeDetail}</p>
+            </div>
+          </section>
+        ) : null}
 
         {play?.error ? (
           <section className="mt-4 flex gap-3 rounded-[22px] border border-amber-300/15 bg-amber-300/8 p-4 text-amber-50">
             <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
             <div>
-              <p className="text-sm font-black">Rec Room session did not start</p>
+              <p className="text-sm font-black">RipoTeamServer could not start the game VM</p>
               <p className="mt-1 text-xs leading-5 text-amber-50/65">{play.error}</p>
-              {play.mode ? <p className="mt-2 text-[10px] font-black uppercase tracking-[.12em] text-amber-200/45">Mode: {play.mode}</p> : null}
             </div>
           </section>
         ) : null}
 
         <section className="mt-6 grid gap-3 md:grid-cols-3">
-          <InfoCard title="Account" text="Uses your signed-in Flux Firebase account rather than trusting a typed player ID." />
-          <InfoCard title="Saves" text="The compatibility backend stores supported profile and game state against the same Flux identity." />
-          <InfoCard title="Multiplayer" text="Photon configuration is supplied by the compatibility service once the Windows client reaches room networking." />
+          <InfoCard title="Instant account" text="Your signed-in Flux Firebase identity is exchanged automatically. No separate Rec Room login screen is required by the compatibility backend." />
+          <InfoCard title="Persistent saves" text="Supported profile, inventory, avatar and game state live outside the disposable VM and are restored from the Flux-backed compatibility service." />
+          <InfoCard title="Disposable machine" text="One shared golden Windows image plus a temporary per-player overlay avoids duplicating the full Windows/Rec Room disk for every session." />
         </section>
       </div>
     </main>
   );
 }
 
-function StatusCard({
-  icon: Icon,
-  title,
-  value,
-  detail,
-  good,
-}: {
-  icon: typeof Server;
-  title: string;
-  value: string;
-  detail: string;
-  good: boolean;
-}) {
+function VmProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse | null; onCancel: () => void }) {
+  const phase = play?.phase || (play?.sessionId ? "creating-overlay" : "requesting");
+  const current = phaseIndex(phase);
+  const progress = Math.max(4, Math.min(99, Number(play?.progress || (current + 1) * 12)));
+  const headline = PHASES[current]?.label || "Preparing Rec Room";
+
+  return (
+    <main className="fixed inset-0 z-[280] overflow-hidden bg-[#04070c] text-white">
+      <div className="absolute inset-0 opacity-80" style={{ background: "radial-gradient(circle at 50% 15%,rgba(59,130,246,.24),transparent 38%),radial-gradient(circle at 20% 85%,rgba(34,197,94,.15),transparent 32%),linear-gradient(180deg,#050b14,#030508)" }} />
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-3xl flex-col items-center justify-center px-6 py-12 text-center">
+        <div className="relative grid h-24 w-24 place-items-center rounded-[30px] border border-white/10 bg-white/[.055] shadow-2xl">
+          <div className="absolute inset-3 animate-pulse rounded-[22px] bg-white/[.045]" />
+          <Cpu className="relative h-10 w-10 text-white" />
+          <Loader2 className="absolute -bottom-2 -right-2 h-8 w-8 animate-spin rounded-full bg-[#0b1420] p-1.5 text-emerald-300" />
+        </div>
+
+        <p className="mt-8 text-[10px] font-black uppercase tracking-[.2em] text-white/35">RipoTeamServer · private Windows session</p>
+        <h1 className="mt-2 text-3xl font-black tracking-[-.05em] sm:text-5xl">{headline}</h1>
+        <p className="mt-4 max-w-xl text-sm leading-6 text-white/48">Keep this page open. Your temporary machine exists only for this play session; your Flux account and supported saves live separately and survive when this VM is destroyed.</p>
+
+        <div className="mt-8 w-full max-w-xl">
+          <div className="h-2 overflow-hidden rounded-full bg-white/8">
+            <div className="h-full rounded-full bg-white transition-[width] duration-700" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="mt-2 flex justify-between text-[10px] font-black uppercase tracking-[.12em] text-white/30"><span>{phase.replaceAll("-", " ")}</span><span>{progress}%</span></div>
+        </div>
+
+        <div className="mt-8 grid w-full max-w-xl gap-2 text-left sm:grid-cols-2">
+          {PHASES.slice(0, -1).map((item, index) => {
+            const done = index < current;
+            const active = index === current;
+            return (
+              <div key={item.key} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${active ? "border-white/18 bg-white/8" : "border-white/7 bg-white/[.025]"}`}>
+                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-black ${done ? "bg-emerald-400 text-black" : active ? "bg-white text-black" : "bg-white/7 text-white/25"}`}>{done ? "✓" : index + 1}</span>
+                <span className={`text-xs font-bold ${done || active ? "text-white/80" : "text-white/30"}`}>{item.label}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {play?.sessionId ? <p className="mt-5 font-mono text-[9px] text-white/20">Session {play.sessionId}</p> : null}
+        <button type="button" onClick={onCancel} className="mt-7 h-10 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-black text-white/55 hover:bg-white/10 hover:text-white">Cancel & destroy VM</button>
+      </div>
+    </main>
+  );
+}
+
+function Badge({ icon: Icon, children }: { icon: typeof Gamepad2; children: string }) {
+  return <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-white/75"><Icon className="h-3.5 w-3.5" /> {children}</span>;
+}
+
+function StatusCard({ icon: Icon, title, value, detail, good }: { icon: typeof Server; title: string; value: string; detail: string; good: boolean }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[.035] p-4">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-white/42" />
-        <p className="text-[10px] font-black uppercase tracking-[.13em] text-white/40">{title}</p>
-      </div>
-      <div className="mt-2 flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${good ? "bg-emerald-400" : "bg-white/20"}`} />
-        <p className="text-sm font-black">{value}</p>
-      </div>
-      <p className="mt-1 truncate text-[10px] text-white/35">{detail}</p>
+      <div className="flex items-center gap-2"><Icon className="h-4 w-4 text-white/42" /><p className="text-[10px] font-black uppercase tracking-[.13em] text-white/40">{title}</p></div>
+      <div className="mt-2 flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${good ? "bg-emerald-400" : "bg-white/20"}`} /><p className="text-sm font-black">{value}</p></div>
+      <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-white/35">{detail}</p>
     </div>
   );
 }
 
 function InfoCard({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-[22px] border border-white/8 bg-white/[.025] p-5">
-      <p className="text-sm font-black">{title}</p>
-      <p className="mt-2 text-xs leading-5 text-white/42">{text}</p>
-    </div>
-  );
+  return <div className="rounded-[22px] border border-white/8 bg-white/[.025] p-5"><p className="text-sm font-black">{title}</p><p className="mt-2 text-xs leading-5 text-white/42">{text}</p></div>;
 }
