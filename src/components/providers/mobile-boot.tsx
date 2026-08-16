@@ -11,6 +11,37 @@ export function MobileBoot() {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Register the service worker once for this page lifetime. A new deployment
+  // must never force-refresh or take over an already-open Flux session. The
+  // browser can activate the new worker naturally after the current tab closes.
+  useEffect(() => {
+    if ("caches" in window) {
+      void caches.keys()
+        .then((keys) => Promise.all(
+          keys
+            .filter((key) => key.startsWith("flux-shell-") && key !== "flux-shell-v4")
+            .map((key) => caches.delete(key))
+        ))
+        .catch(() => undefined);
+    }
+
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker
+        .register(`${assetUrl("/sw.js")}?release=${encodeURIComponent(release)}`, { updateViaCache: "none" })
+        .then(() => {
+          // Remember which UI bundle this page actually loaded, but do not
+          // broadcast an update event and do not call registration.update().
+          // Both can cause update churn while a user is in the middle of Flux.
+          try {
+            localStorage.setItem("flux-active-release", release);
+          } catch {
+            // Storage may be unavailable in private browsing.
+          }
+        })
+        .catch(() => undefined);
+    }
+  }, []);
+
   useEffect(() => {
     const root = document.documentElement;
     const syncVisualViewport = () => {
@@ -23,22 +54,6 @@ export function MobileBoot() {
     window.visualViewport?.addEventListener("resize", syncVisualViewport);
     window.visualViewport?.addEventListener("scroll", syncVisualViewport);
     window.addEventListener("orientationchange", syncVisualViewport);
-
-    if ("caches" in window) {
-      void caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("flux-shell-") && key !== "flux-shell-v4").map((key) => caches.delete(key)))).catch(() => undefined);
-    }
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register(`${assetUrl("/sw.js")}?release=${encodeURIComponent(release)}`, { updateViaCache: "none" })
-        .then(async (registration) => {
-          await registration.update();
-          const previous = localStorage.getItem("flux-active-release");
-          if (previous !== release) {
-            localStorage.setItem("flux-active-release", release);
-            window.dispatchEvent(new CustomEvent("flux-release-updated", { detail: release }));
-          }
-        })
-        .catch(() => undefined);
-    }
 
     const appMode = isFluxMobileApp() || isCapacitorNative();
     if (appMode) {
