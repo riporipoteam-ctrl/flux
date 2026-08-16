@@ -8,7 +8,15 @@ import { createRecRoomHostPairing } from "@/services/recroom-browser";
 
 const INSTALLER_URL = "https://raw.githubusercontent.com/riporipoteam-ctrl/ripoteamserver/main/windows-live-agent/install-recroom-host.ps1";
 
-export function RecRoomHostSetup() {
+type RecRoomHostSetupProps = {
+  variant?: "floating" | "inline";
+  label?: string;
+};
+
+export function RecRoomHostSetup({
+  variant = "floating",
+  label = "Windows host setup",
+}: RecRoomHostSetupProps = {}) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,23 +45,27 @@ export function RecRoomHostSetup() {
     ? `powershell -ExecutionPolicy Bypass -Command "$p=$env:TEMP+'\\\\install-recroom-host.ps1'; irm '${INSTALLER_URL}' -OutFile $p; & $p -PairingCode '${pairingCode}' -TrySteamDownload -Start"`
     : "";
 
-  const copy = async (value: string, label: string) => {
+  const copy = async (value: string, copyLabel: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.success(`${label} copied`);
+      toast.success(`${copyLabel} copied`);
     } catch {
-      toast.error(`Could not copy ${label.toLowerCase()}.`);
+      toast.error(`Could not copy ${copyLabel.toLowerCase()}.`);
     }
   };
+
+  const triggerClassName = variant === "inline"
+    ? "inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 text-sm font-black text-white transition hover:bg-white/15"
+    : "fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[65] inline-flex h-11 items-center gap-2 rounded-full border border-white/12 bg-[#101722]/95 px-4 text-xs font-black text-white shadow-2xl backdrop-blur-xl transition hover:bg-[#182231] sm:right-6";
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[65] inline-flex h-11 items-center gap-2 rounded-full border border-white/12 bg-[#101722]/95 px-4 text-xs font-black text-white shadow-2xl backdrop-blur-xl transition hover:bg-[#182231] sm:right-6"
+        className={triggerClassName}
       >
-        <MonitorUp className="h-4 w-4" /> Windows host setup
+        <MonitorUp className="h-4 w-4" /> {label}
       </button>
 
       {open ? (
@@ -64,7 +76,7 @@ export function RecRoomHostSetup() {
                 <p className="text-[10px] font-black uppercase tracking-[.14em] text-white/35">Flux Rec Room</p>
                 <h2 className="mt-1 text-xl font-black tracking-[-.04em]">Pair a Windows game host</h2>
                 <p className="mt-2 max-w-xl text-xs leading-5 text-white/45">
-                  Flux creates a short-lived, single-use pairing code. The Windows installer claims it once, finds or recovers your May 19 2022 client, then starts the host and browser stream.
+                  Flux creates a short-lived, single-use pairing code. The Windows installer claims it once, verifies the exact May 19 2022 client, then starts the host and browser stream.
                 </p>
               </div>
               <button
@@ -75,6 +87,12 @@ export function RecRoomHostSetup() {
               >
                 <X className="h-4 w-4" />
               </button>
+            </div>
+
+            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+              <BuildFact label="Build" value="8751857" />
+              <BuildFact label="Depot" value="471711" />
+              <BuildFact label="Manifest" value="6337851004861751095" />
             </div>
 
             {!pairingCode ? (
@@ -124,7 +142,7 @@ export function RecRoomHostSetup() {
                     {installCommand}
                   </code>
                   <p className="mt-3 text-[11px] leading-5 text-white/38">
-                    If the exact client is not already on the PC, the installer asks for your Steam username and opens Steam QR approval locally. Your Steam password is not sent to Flux or GitHub.
+                    The host verifies depot 471711 / manifest 6337851004861751095 before registering. If that exact client is not already on the PC, the installer can request it through your Steam account locally. Steam authentication stays on the Windows PC.
                   </p>
                 </div>
 
@@ -142,5 +160,14 @@ export function RecRoomHostSetup() {
         </div>
       ) : null}
     </>
+  );
+}
+
+function BuildFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/[.035] p-3">
+      <p className="text-[9px] font-black uppercase tracking-[.12em] text-white/35">{label}</p>
+      <p className="mt-1 break-all font-mono text-[11px] font-bold text-white/75">{value}</p>
+    </div>
   );
 }
