@@ -5,6 +5,7 @@ export interface RecRoomVmRuntimeStatus {
   provider?: string;
   supported?: boolean;
   readyForGame?: boolean;
+  exactBuild?: boolean;
   reason?: string | null;
   warning?: string | null;
   runningVms?: number;
@@ -15,6 +16,14 @@ export interface RecRoomVmRuntimeStatus {
   clientDir?: string;
   targetBuild?: string;
   targetManifest?: string;
+  targetFingerprint?: string;
+  clientFingerprint?: {
+    ok?: boolean;
+    buildId?: string;
+    manifestId?: string;
+    manifestPresent?: boolean;
+    mismatches?: string[];
+  };
   graphics?: string;
   checks?: Record<string, boolean | string>;
 }
@@ -72,21 +81,26 @@ export interface RecRoomCaptureResponse {
   detail?: string;
 }
 
-export interface RecRoomSteamRecoveryStatus {
+export interface RecRoomClientInstallStatus {
   ok?: boolean;
   jobId?: string;
   state?: string;
-  phase?: string;
   progress?: number;
-  qrReady?: boolean;
-  clientReady?: boolean;
-  targetApp?: string;
-  targetDepot?: string;
+  downloadedBytes?: number;
+  totalBytes?: number;
+  exactBuild?: boolean;
+  buildId?: string;
+  manifestId?: string;
+  fingerprintSha256?: string;
+  targetBuild?: string;
   targetManifest?: string;
+  targetFingerprint?: string;
+  installed?: boolean;
+  expectedSha256?: boolean;
+  actualSha256?: string;
   createdAtMs?: number;
   updatedAtMs?: number;
   error?: string | null;
-  logs?: string[];
   capability?: RecRoomVmRuntimeStatus;
   detail?: string;
 }
@@ -125,30 +139,35 @@ export async function getRecRoomBrokerStatus(): Promise<RecRoomBrokerStatus> {
   return parseJson<RecRoomBrokerStatus>(response);
 }
 
-export async function getRecRoomSteamRecovery(firebaseIdToken: string): Promise<RecRoomSteamRecoveryStatus> {
-  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/steam-recovery`, {
-    cache: "no-store",
-    headers: authHeaders(firebaseIdToken),
-  });
-  return parseJson<RecRoomSteamRecoveryStatus>(response);
-}
-
-export async function startRecRoomSteamRecovery(firebaseIdToken: string): Promise<RecRoomSteamRecoveryStatus> {
-  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/steam-recovery/start`, {
+export async function startRecRoomClientInstall(
+  firebaseIdToken: string,
+  url: string,
+  sha256?: string,
+): Promise<RecRoomClientInstallStatus> {
+  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/client-install`, {
     method: "POST",
     cache: "no-store",
-    headers: authHeaders(firebaseIdToken),
+    headers: {
+      ...authHeaders(firebaseIdToken),
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ url, sha256: sha256?.trim() || "" }),
   });
-  return parseJson<RecRoomSteamRecoveryStatus>(response);
+  return parseJson<RecRoomClientInstallStatus>(response);
 }
 
-export async function cancelRecRoomSteamRecovery(firebaseIdToken: string): Promise<RecRoomSteamRecoveryStatus> {
-  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/steam-recovery/cancel`, {
-    method: "POST",
-    cache: "no-store",
-    headers: authHeaders(firebaseIdToken),
-  });
-  return parseJson<RecRoomSteamRecoveryStatus>(response);
+export async function getRecRoomClientInstall(
+  firebaseIdToken: string,
+  jobId: string,
+): Promise<RecRoomClientInstallStatus> {
+  const response = await fetch(
+    `${getRecRoomBrokerUrl()}/api/recroom-public/client-install/${encodeURIComponent(jobId)}`,
+    {
+      cache: "no-store",
+      headers: authHeaders(firebaseIdToken),
+    },
+  );
+  return parseJson<RecRoomClientInstallStatus>(response);
 }
 
 export async function createRecRoomHostPairing(firebaseIdToken: string): Promise<RecRoomHostPairingResponse> {
