@@ -47,7 +47,7 @@ jobs:
           done
           echo "Production Pages never exposed release $EXPECTED_SHA"
           exit 1
-      - name: Click through the actual public Flux website
+      - name: Require real Rec Room window and browser stream
         env:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -65,15 +65,15 @@ jobs:
             const runAttempt = process.env.RUN_ATTEMPT || '1';
             const now = String(Date.now());
             const nonce = `${runId}-${runAttempt}-${now}`;
-            const email = `recroom.runtime.prod.${nonce}@example.com`;
-            const password = `FluxRuntime-${runId}-${runAttempt}!Aa9`;
-            const username = `rrrt${runId.slice(-6)}a${runAttempt}${now.slice(-5)}`;
+            const email = `recroom.native.prod.${nonce}@example.com`;
+            const password = `FluxNative-${runId}-${runAttempt}!Aa9`;
+            const username = `rrnat${runId.slice(-6)}a${runAttempt}${now.slice(-5)}`;
             const result = {
               runId, runAttempt, email, username,
               signup: false,
               onboarding: false,
               recroomPage: false,
-              serverRuntimeUi: false,
+              runtimeReadyBeforePlay: false,
               browserOnlyUi: false,
               manualPairingRemoved: false,
               playClicked: false,
@@ -81,6 +81,7 @@ jobs:
               streamStarted: false,
               runtimeBlocked: false,
               sessionError: '',
+              finalBodyExcerpt: '',
               consoleErrors: [],
               fatal: '',
             };
@@ -92,7 +93,7 @@ jobs:
             try {
               await page.goto(`${base}/signup/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
               await page.locator('#name').waitFor({ state: 'visible', timeout: 30000 });
-              await page.locator('#name').fill('Rec Room Browser Production Player');
+              await page.locator('#name').fill('Rec Room Native Production Player');
               await page.locator('#email').fill(email);
               await page.locator('#password').fill(password);
               await page.getByRole('button', { name: 'Create account' }).click();
@@ -105,18 +106,15 @@ jobs:
               await page.getByText('Available', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
               await page.getByRole('button', { name: 'Continue' }).click();
               await page.locator('#displayName').waitFor({ state: 'visible', timeout: 15000 });
-              await page.locator('#displayName').fill('Rec Room Browser Production Player');
-              await page.locator('#bio').fill('RipoTeamServer browser-stream production test.');
+              await page.locator('#displayName').fill('Rec Room Native Production Player');
+              await page.locator('#bio').fill('RipoTeamServer native Rec Room stream test.');
               await page.getByRole('button', { name: 'Continue' }).click();
-              const avatar = page.locator('img[alt="Friendly Bot"]');
-              await avatar.waitFor({ state: 'visible', timeout: 15000 });
-              await avatar.click();
+              await page.locator('img[alt="Friendly Bot"]').click();
               await page.getByRole('button', { name: 'Continue' }).click();
               await page.getByText('Pick a header banner', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
               await page.getByRole('button', { name: 'Continue' }).click();
               await page.getByRole('button', { name: 'Gaming', exact: true }).click();
               await page.getByRole('button', { name: 'Continue' }).click();
-              await page.getByRole('button', { name: 'Enter Flux' }).waitFor({ state: 'visible', timeout: 30000 });
               await page.getByRole('button', { name: 'Enter Flux' }).click();
               await page.waitForFunction(() => window.location.pathname.includes('/home'), null, { timeout: 30000 });
               result.onboarding = true;
@@ -124,27 +122,35 @@ jobs:
               await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
               await page.getByText('Rec Room · May 2022').first().waitFor({ state: 'visible', timeout: 30000 });
               result.recroomPage = true;
-              await page.getByText('RipoTeamServer game runtime', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
-              result.serverRuntimeUi = true;
               await page.getByText('Browser only · no download', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
               result.browserOnlyUi = true;
               result.manualPairingRemoved = (await page.getByRole('button', { name: 'Windows host setup', exact: true }).count()) === 0;
               if (!result.manualPairingRemoved) throw new Error('Legacy manual Windows-host pairing UI is still exposed.');
-              await page.screenshot({ path: 'test-results/recroom-production/01-browser-player.png', fullPage: true });
+
+              for (let i = 0; i < 30; i += 1) {
+                const body = await page.locator('body').innerText();
+                if (body.includes('Wine sandbox ready') || body.includes('Server runtime ready')) {
+                  result.runtimeReadyBeforePlay = true;
+                  break;
+                }
+                await page.waitForTimeout(1000);
+              }
+              await page.screenshot({ path: 'test-results/recroom-production/01-ready-before-play.png', fullPage: true });
 
               const play = page.getByRole('button', { name: 'Play Rec Room', exact: true });
               await play.waitFor({ state: 'visible', timeout: 15000 });
-              if (!(await play.isEnabled())) throw new Error('Play Rec Room is disabled even though the compatibility API is online.');
+              if (!(await play.isEnabled())) throw new Error('Play Rec Room is disabled while the exact server client is ready.');
               await play.click();
               result.playClicked = true;
 
-              for (let i = 0; i < 90; i += 1) {
+              for (let i = 0; i < 240; i += 1) {
                 await page.waitForTimeout(1000);
                 const body = await page.locator('body').innerText();
+                result.finalBodyExcerpt = body.slice(0, 1800);
                 if (body.includes('RipoTeamServer · private')) result.provisioningScreen = true;
                 if (body.includes('RipoTeamServer could not start Rec Room')) {
                   result.runtimeBlocked = true;
-                  result.sessionError = body.match(/RipoTeamServer could not start Rec Room[\s\S]{0,900}/)?.[0] || 'Server runtime blocked';
+                  result.sessionError = body.match(/RipoTeamServer could not start Rec Room[\s\S]{0,1200}/)?.[0] || 'Server runtime blocked';
                   break;
                 }
                 if (body.includes('Rec Room · RipoTeamServer') && !body.includes('Press Play. Flux starts the game.')) {
@@ -152,11 +158,10 @@ jobs:
                   break;
                 }
               }
-              await page.screenshot({ path: 'test-results/recroom-production/02-after-play.png', fullPage: true });
+              await page.screenshot({ path: 'test-results/recroom-production/02-native-stream.png', fullPage: true });
 
-              if (!result.streamStarted && !result.runtimeBlocked && !result.provisioningScreen) {
-                throw new Error('Play reached neither provisioning, a live stream, nor an explicit server runtime blocker.');
-              }
+              if (result.runtimeBlocked) throw new Error(`Native Rec Room runtime blocked: ${result.sessionError}`);
+              if (!result.streamStarted) throw new Error(`Native Rec Room stream never started. provisioning=${result.provisioningScreen}`);
             } catch (error) {
               result.fatal = String(error && error.stack || error);
               await page.screenshot({ path: 'test-results/recroom-production/failure.png', fullPage: true }).catch(() => {});
@@ -166,9 +171,8 @@ jobs:
               await browser.close();
             }
 
-            const required = result.signup && result.onboarding && result.recroomPage && result.serverRuntimeUi && result.browserOnlyUi && result.manualPairingRemoved && result.playClicked;
-            const reachedRuntimeBoundary = result.provisioningScreen || result.streamStarted || result.runtimeBlocked;
-            if (!required || !reachedRuntimeBoundary || result.fatal) process.exit(1);
+            const required = result.signup && result.onboarding && result.recroomPage && result.browserOnlyUi && result.manualPairingRemoved && result.playClicked && result.provisioningScreen && result.streamStarted;
+            if (!required || result.runtimeBlocked || result.fatal) process.exit(1);
           })().catch(error => {
             console.error(error);
             process.exit(1);
@@ -178,6 +182,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: recroom-production-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          name: recroom-production-native-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/recroom-production
           if-no-files-found: warn
