@@ -1,0 +1,224 @@
+name: Rec Room Stream Quality E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/recroom-stream-quality-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-stream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Prove native Rec Room video audio and input
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          mkdir -p test-results/recroom-stream-quality
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+            const page = await context.newPage();
+            const base = 'https://riporipoteam-ctrl.github.io/flux';
+            const nonce = `${process.env.RUN_ID}-${process.env.RUN_ATTEMPT}-${Date.now()}`;
+            const email = `rr.quality.${nonce}@example.com`;
+            const password = `RRQuality-${nonce}!Aa9`;
+            const username = `rrq${String(Date.now()).slice(-12)}`.slice(0, 20);
+            const result = {
+              signup: false, onboarding: false, runtimeReady: false, playClicked: false,
+              streamShell: false, iframeLoaded: false, frameLoaded: false,
+              frameWidth: 0, frameHeight: 0, frameBrightness: 0, frameVariance: 0,
+              frameSha256: '', streamConnected: false, audioHealth: false,
+              audioBytes: 0, audioOgg: false, inputDown: false, inputUp: false,
+              finalStreamStatus: '', runtimeError: '', fatal: '',
+            };
+
+            try {
+              await page.goto(`${base}/signup/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#name').fill('Rec Room Stream Quality');
+              await page.locator('#email').fill(email);
+              await page.locator('#password').fill(password);
+              await page.getByRole('button', { name: 'Create account' }).click();
+              await page.waitForFunction(() => !location.pathname.includes('/signup'), null, { timeout: 30000 });
+              result.signup = true;
+
+              await page.goto(`${base}/onboarding/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              await page.locator('#username').waitFor({ state: 'visible', timeout: 30000 });
+              await page.locator('#username').fill(username);
+              await page.getByText('Available', { exact: true }).waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.locator('#displayName').fill('Rec Room Stream Quality');
+              await page.locator('#bio').fill('Native stream quality verification.');
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.locator('img[alt="Friendly Bot"]').click();
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByText('Pick a header banner', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByRole('button', { name: 'Gaming', exact: true }).click();
+              await page.getByRole('button', { name: 'Continue' }).click();
+              await page.getByRole('button', { name: 'Enter Flux' }).click();
+              await page.waitForFunction(() => location.pathname.includes('/home'), null, { timeout: 30000 });
+              result.onboarding = true;
+
+              await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+              for (let i = 0; i < 90; i++) {
+                const body = await page.locator('body').innerText();
+                if (body.includes('Wine sandbox ready') || body.includes('Server runtime ready')) { result.runtimeReady = true; break; }
+                await sleep(1000);
+              }
+              if (!result.runtimeReady) throw new Error('RipoTeamServer exact Rec Room runtime never became ready.');
+
+              const play = page.getByRole('button', { name: 'Play Rec Room', exact: true });
+              await play.waitFor({ state: 'visible', timeout: 15000 });
+              await play.click(); result.playClicked = true;
+
+              for (let i = 0; i < 210; i++) {
+                await sleep(1000);
+                const body = await page.locator('body').innerText();
+                if (body.includes('RipoTeamServer could not start Rec Room')) {
+                  result.runtimeError = body.match(/RipoTeamServer could not start Rec Room[\s\S]{0,1400}/)?.[0] || body.slice(0, 1400);
+                  throw new Error(result.runtimeError);
+                }
+                if ((await page.locator('iframe[title="Rec Room · RipoTeamServer"]').count()) > 0) {
+                  result.streamShell = true; break;
+                }
+              }
+              if (!result.streamShell) throw new Error('Flux never received the Rec Room stream URL.');
+
+              const iframe = page.locator('iframe[title="Rec Room · RipoTeamServer"]');
+              await iframe.waitFor({ state: 'visible', timeout: 30000 });
+              const frameHandle = await iframe.elementHandle();
+              const frame = await frameHandle.contentFrame();
+              if (!frame) throw new Error('Rec Room stream iframe did not create a browsing context.');
+              await frame.waitForLoadState('domcontentloaded', { timeout: 30000 });
+              result.iframeLoaded = true;
+              await frame.locator('#frame').waitFor({ state: 'visible', timeout: 30000 });
+
+              // Wait up to two minutes for a real rendered game frame, not merely
+              // the visible Wine window/title bar. Sample pixels inside the iframe.
+              for (let i = 0; i < 120; i++) {
+                await sleep(1000);
+                const sample = await frame.locator('#frame').evaluate(img => {
+                  if (!img.complete || !img.naturalWidth || !img.naturalHeight) return null;
+                  const canvas = document.createElement('canvas');
+                  canvas.width = 64; canvas.height = 36;
+                  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                  ctx.drawImage(img, 0, 0, 64, 36);
+                  const d = ctx.getImageData(0, 0, 64, 36).data;
+                  let sum=0, sum2=0, n=0;
+                  for (let p=0; p<d.length; p+=4) {
+                    const y=(d[p]+d[p+1]+d[p+2])/3;
+                    sum+=y; sum2+=y*y; n++;
+                  }
+                  const mean=sum/n; const variance=sum2/n-mean*mean;
+                  return { width: img.naturalWidth, height: img.naturalHeight, mean, variance };
+                }).catch(() => null);
+                if (sample) {
+                  result.frameLoaded = true;
+                  result.frameWidth = sample.width; result.frameHeight = sample.height;
+                  result.frameBrightness = Number(sample.mean.toFixed(2));
+                  result.frameVariance = Number(sample.variance.toFixed(2));
+                  result.finalStreamStatus = await frame.locator('#status').innerText().catch(() => '');
+                  if (result.finalStreamStatus.startsWith('Connected') && (sample.mean > 2 || sample.variance > 4)) {
+                    result.streamConnected = true; break;
+                  }
+                }
+              }
+              if (!result.frameLoaded) throw new Error('No JPEG frame ever loaded from the Rec Room Wine display.');
+              if (!result.streamConnected) throw new Error(`Rec Room frame stayed black/unconnected: status=${result.finalStreamStatus} brightness=${result.frameBrightness} variance=${result.frameVariance}`);
+
+              const frameBytes = await frame.evaluate(async () => {
+                const token = new URL(location.href).searchParams.get('token') || '';
+                const r = await fetch(`frame.jpg?token=${encodeURIComponent(token)}&e2e=${Date.now()}`, { cache: 'no-store' });
+                if (!r.ok) throw new Error(`frame HTTP ${r.status}`);
+                return Array.from(new Uint8Array(await r.arrayBuffer()));
+              });
+              result.frameSha256 = crypto.createHash('sha256').update(Buffer.from(frameBytes)).digest('hex');
+
+              const health = await frame.evaluate(async () => {
+                const r = await fetch(`health?e2e=${Date.now()}`, { cache: 'no-store' });
+                return r.ok ? await r.json() : { ok:false, status:r.status };
+              });
+              result.audioHealth = health.ok === true && health.audio === true;
+              if (!result.audioHealth) throw new Error(`Stream health did not expose audio: ${JSON.stringify(health)}`);
+
+              const inputResult = await frame.evaluate(async () => {
+                const token = new URL(location.href).searchParams.get('token') || '';
+                const send = async (down) => {
+                  const r = await fetch(`input?token=${encodeURIComponent(token)}`, {
+                    method:'POST', headers:{'content-type':'application/json'},
+                    body:JSON.stringify({type:'key',key:'w',down}), cache:'no-store'
+                  });
+                  return { status:r.status, body:await r.json().catch(()=>({})) };
+                };
+                const down = await send(true); await new Promise(r=>setTimeout(r,350)); const up = await send(false);
+                return { down, up };
+              });
+              result.inputDown = inputResult.down.status === 200 && inputResult.down.body.ok === true;
+              result.inputUp = inputResult.up.status === 200 && inputResult.up.body.ok === true;
+              if (!result.inputDown || !result.inputUp) throw new Error(`Keyboard input delivery failed: ${JSON.stringify(inputResult)}`);
+
+              // Read the beginning of the live Ogg/Opus audio stream. Ogg headers
+              // are emitted even if the current game moment is quiet.
+              const audio = await frame.evaluate(async () => {
+                const token = new URL(location.href).searchParams.get('token') || '';
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 12000);
+                try {
+                  const r = await fetch(`audio.ogg?token=${encodeURIComponent(token)}&e2e=${Date.now()}`, { signal:controller.signal, cache:'no-store' });
+                  if (!r.ok || !r.body) return { ok:false, status:r.status, bytes:[] };
+                  const reader = r.body.getReader(); const parts=[]; let total=0;
+                  while (total < 4096) {
+                    const {value,done}=await reader.read(); if (done) break;
+                    if (value) { parts.push(...Array.from(value.slice(0, Math.min(value.length,4096-total)))); total+=Math.min(value.length,4096-total); }
+                  }
+                  controller.abort(); return {ok:true,status:r.status,bytes:parts};
+                } catch (e) { return {ok:false,error:String(e),bytes:[]}; }
+                finally { clearTimeout(timer); }
+              });
+              result.audioBytes = audio.bytes.length;
+              result.audioOgg = audio.bytes.length >= 4 && String.fromCharCode(...audio.bytes.slice(0,4)) === 'OggS';
+              if (!result.audioOgg) throw new Error(`Live audio did not return Ogg/Opus bytes: ${JSON.stringify({ok:audio.ok,status:audio.status,error:audio.error,bytes:audio.bytes.length})}`);
+
+              await page.screenshot({ path: 'test-results/recroom-stream-quality/playable.png', fullPage: true });
+            } catch (error) {
+              result.fatal = String(error && error.stack || error);
+              await page.screenshot({ path: 'test-results/recroom-stream-quality/failure.png', fullPage: true }).catch(()=>{});
+            } finally {
+              fs.writeFileSync('test-results/recroom-stream-quality/result.json', JSON.stringify(result, null, 2));
+              console.log(JSON.stringify(result, null, 2));
+              await browser.close();
+            }
+            const ok = result.signup && result.onboarding && result.runtimeReady && result.playClicked && result.streamShell && result.iframeLoaded && result.frameLoaded && result.streamConnected && result.audioHealth && result.audioOgg && result.inputDown && result.inputUp && !result.runtimeError && !result.fatal;
+            if (!ok) process.exit(1);
+          })().catch(e => { console.error(e); process.exit(1); });
+          NODE
+      - name: Upload proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recroom-stream-quality-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/recroom-stream-quality
+          if-no-files-found: warn
