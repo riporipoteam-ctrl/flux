@@ -1,5 +1,7 @@
 const DEFAULT_RECROOM_BROKER_URL = "https://echoxr-ripoteam-cloud-pc.hf.space";
 const TARGET_BUILD_ID = "recroom-2022-05-19";
+const SESSION_CREATE_WAIT_MS = 10 * 60_000;
+const SESSION_CREATE_POLL_MS = 1_500;
 
 export interface RecRoomVmRuntimeStatus {
   provider?: string;
@@ -132,6 +134,53 @@ function sessionPath(sessionId: string, accessToken?: string) {
   return `${getRecRoomBrokerUrl()}/api/recroom-public/sessions/${encodedSession}${suffix}`;
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function runtimeFromStatus(status: RecRoomBrokerStatus): RecRoomVmRuntimeStatus | undefined {
+  return status.serverRuntime || status.vmRuntime || status.wineRuntime || status.kvmRuntime;
+}
+
+function runtimeReady(status: RecRoomBrokerStatus) {
+  const runtime = runtimeFromStatus(status);
+  const ready = Boolean(runtime?.readyForGame || status.runtimeReadyForGame || status.vmReadyForGame);
+  // If the server advertises exact-build state, require it. Older compatible
+  // status responses may omit exactBuild, so only an explicit false blocks Play.
+  return Boolean(status.ok && ready && runtime?.exactBuild !== false);
+}
+
+function runtimeStatusDetail(status: RecRoomBrokerStatus) {
+  const runtime = runtimeFromStatus(status);
+  return (
+    runtime?.reason ||
+    runtime?.warning ||
+    status.error ||
+    status.detail ||
+    "RipoTeamServer is restoring the May 19, 2022 Rec Room server image."
+  );
+}
+
+function isTransientRuntimeMessage(message: string) {
+  const value = message.toLowerCase();
+  return [
+    "game image has not been installed",
+    "client is not installed",
+    "server rec room client is not installed",
+    "runtime is still preparing",
+    "does not currently have a game-ready rec room runtime slot",
+    "game-ready runtime slot",
+    "no free capacity",
+    "sandbox slot",
+    "service returned http 502",
+    "service returned http 503",
+    "service returned http 504",
+    "failed to fetch",
+    "networkerror",
+    "load failed",
+  ].some((part) => value.includes(part));
+}
+
 export async function getRecRoomBrokerStatus(): Promise<RecRoomBrokerStatus> {
   const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/status`, {
     cache: "no-store",
@@ -184,16 +233,51 @@ export async function createRecRoomHostPairing(firebaseIdToken: string): Promise
 }
 
 export async function createRecRoomSession(firebaseIdToken: string): Promise<RecRoomPlayResponse> {
-  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/sessions`, {
-    method: "POST",
-    cache: "no-store",
-    headers: {
-      authorization: `Bearer ${firebaseIdToken}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ buildId: TARGET_BUILD_ID }),
-  });
-  return parseJson<RecRoomPlayResponse>(response);
+  // Hugging Face Space restarts use ephemeral local storage. RipoTeamServer
+  // automatically restores and verifies the pinned May 19, 2022 client, but the
+  // restore can take a few minutes. Never turn that temporary state into a
+  // permanent "game image not installed" Play failure. Wait until the exact
+  // runtime is ready, and retry if a restart races the session POST.
+  const deadline = Date.now() + SESSION_CREATE_WAIT_MS;
+  let lastTransient = "RipoTeamServer is restoring the May 19, 2022 Rec Room server image.";
+
+  while (Date.now() < deadline) {
+    try {
+      const status = await getRecRoomBrokerStatus();
+      if (!runtimeReady(status)) {
+        lastTransient = runtimeStatusDetail(status);
+        await delay(SESSION_CREATE_POLL_MS);
+        continue;
+      }
+
+      try {
+        const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/sessions`, {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            authorization: `Bearer ${firebaseIdToken}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ buildId: TARGET_BUILD_ID }),
+        });
+        return await parseJson<RecRoomPlayResponse>(response);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!isTransientRuntimeMessage(message)) throw error;
+        lastTransient = message;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isTransientRuntimeMessage(message)) throw error;
+      lastTransient = message;
+    }
+
+    await delay(SESSION_CREATE_POLL_MS);
+  }
+
+  throw new Error(
+    `RipoTeamServer did not finish restoring the May 19, 2022 Rec Room server image in time. ${lastTransient}`,
+  );
 }
 
 export async function getRecRoomSession(
