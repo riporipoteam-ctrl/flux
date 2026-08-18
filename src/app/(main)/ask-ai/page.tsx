@@ -1,24 +1,13 @@
-import Link from "next/link";
-import { Users } from "lucide-react";
-import AskAIWorkspace from "@/components/ask-ai/askai-workspace";
-import { AskAIConnectionStatus } from "@/components/ask-ai/askai-connection-status";
+import RakazoAskAIWorkspace from "@/components/ask-ai/rakazo-askai-workspace";
 import { AskAIWorkspaceSync } from "@/components/ask-ai/askai-workspace-sync";
 
-// Keep the legacy route name as a compatibility seam for existing audits and deep links.
-const AskAIGroqWorkspace = AskAIWorkspace;
+// Legacy AskAIGroqWorkspace surface retired. RakazoAskAIWorkspace is the production AskAI route.
 
 export default function AskAIPage() {
-  return <>
+  return (
+    <>
     <AskAIWorkspaceSync />
-    <AskAIGroqWorkspace />
-    <Link
-      href="/ask-ai/agents"
-      className="fixed bottom-24 right-4 z-[55] inline-flex h-11 items-center gap-2 rounded-full border border-border bg-foreground px-4 text-xs font-black text-background shadow-2xl transition hover:-translate-y-0.5 sm:bottom-5 sm:right-5"
-      aria-label="Open Maus Agents"
-    >
-      <Users className="h-4 w-4" />
-      <span>Maus Agents</span>
-    </Link>
-    <AskAIConnectionStatus />
-  </>;
+    <RakazoAskAIWorkspace />
+    </>
+  );
 }
