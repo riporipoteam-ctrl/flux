@@ -30,20 +30,20 @@ private enum FluxConfiguration {
         if let configured = Bundle.main.object(forInfoDictionaryKey: "FluxBaseURL") as? String,
            let url = URL(string: configured),
            !configured.contains("YOUR_") {
-            return url
+            return configured.hasSuffix("/") ? url : url.appendingPathComponent("")
         }
 
-        return URL(string: "https://flux-544a6.web.app")!
+        return URL(string: "https://riporipoteam-ctrl.github.io/flux/")!
     }
 
     static func url(for tab: FluxTab) -> URL {
         let path: String
         switch tab {
-        case .home: path = "/home?app=1"
-        case .explore: path = "/explore?app=1"
-        case .askAI: path = "/ask-ai?app=1"
-        case .alerts: path = "/notifications?app=1"
-        case .profile: path = "/settings/profile?app=1"
+        case .home: path = "home?app=1"
+        case .explore: path = "explore?app=1"
+        case .askAI: path = "ask-ai?app=1"
+        case .alerts: path = "notifications?app=1"
+        case .profile: path = "settings/profile?app=1"
         }
 
         return URL(string: path, relativeTo: baseURL) ?? baseURL

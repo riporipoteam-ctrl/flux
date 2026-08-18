@@ -17,4 +17,5 @@ npx cap open ios
 ```
 
 Set `FluxBaseURL` in `ios/App/App/Info.plist` to the public Flux deployment
-before archiving.
+before archiving. The checked-in default is the GitHub Pages release at
+`https://riporipoteam-ctrl.github.io/flux/`.

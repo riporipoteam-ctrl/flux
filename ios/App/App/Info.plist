@@ -23,7 +23,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>FluxBaseURL</key>
-	<string>https://flux-544a6.web.app</string>
+	<string>https://riporipoteam-ctrl.github.io/flux/</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Flux uses the camera when you attach an image to a post or AskAI conversation.</string>
 	<key>NSMicrophoneUsageDescription</key>
