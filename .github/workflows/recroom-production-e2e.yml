@@ -120,7 +120,7 @@ jobs:
               result.onboarding = true;
 
               await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-              await page.getByText('Rec Room · May 2022').first().waitFor({ state: 'visible', timeout: 30000 });
+              await page.getByText('Rec Room · Aug 2021').first().waitFor({ state: 'visible', timeout: 30000 });
               result.recroomPage = true;
               await page.getByText('Browser only · no download', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
               result.browserOnlyUi = true;
