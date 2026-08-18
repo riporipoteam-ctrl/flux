@@ -1,0 +1,120 @@
+name: Fix Rec Room 2021 Steam stream gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fix-recroom-2021-stream-gate.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch canonical 2021 session and Steam polling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          service = Path('src/services/recroom-browser.ts')
+          text = service.read_text()
+          replacements = [
+              ('const TARGET_BUILD_ID = "recroom-2022-05-19";', 'const TARGET_BUILD_ID = "recroom-2021-08-25";'),
+              ('  streamUrl?: string;\n  expiresAtMs?: number;', '  streamUrl?: string;\n  streamReady?: boolean;\n  gameReady?: boolean;\n  interactionRequired?: string | null;\n  expiresAtMs?: number;'),
+              ('May 19, 2022', 'Aug 25, 2021'),
+          ]
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'missing service patch marker: {old!r}')
+              text = text.replace(old, new)
+          service.write_text(text)
+
+          player = Path('src/components/game/recroom-cloud-player.tsx')
+          text = player.read_text()
+          old = '''    const pending = Boolean(\n      sessionId &&\n      accessToken &&\n      !streamUrl &&\n      play?.ok !== false &&\n      play?.state !== "failed",\n    );'''
+          new = '''    const pending = Boolean(\n      sessionId &&\n      accessToken &&\n      play?.gameReady !== true &&\n      play?.ok !== false &&\n      play?.state !== "failed",\n    );'''
+          if old not in text:
+              raise SystemExit('missing player pending marker')
+          text = text.replace(old, new, 1)
+
+          old = '        if (next.streamUrl || next.state === "failed" || next.ok === false) return;'
+          new = '        if (next.gameReady === true || next.state === "failed" || next.ok === false) return;'
+          if old not in text:
+              raise SystemExit('missing player stop marker')
+          text = text.replace(old, new, 1)
+
+          old = '      if (!cancelled && Date.now() - startedAt < 300_000) {'
+          new = '      if (!cancelled && Date.now() - startedAt < 1_200_000) {'
+          if old not in text:
+              raise SystemExit('missing player timeout marker')
+          text = text.replace(old, new, 1)
+
+          old = '          error: "The server-side Rec Room session did not become game-ready within five minutes.",'
+          new = '          error: "The server-side Rec Room session did not become game-ready within twenty minutes.",'
+          if old not in text:
+              raise SystemExit('missing player timeout text marker')
+          text = text.replace(old, new, 1)
+
+          old = '  }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, streamUrl]);'
+          new = '  }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, play?.gameReady]);'
+          if old not in text:
+              raise SystemExit('missing player dependency marker')
+          text = text.replace(old, new, 1)
+
+          old = '  { key: "launching-game", label: "Launching Rec Room" },\n  { key: "ready", label: "Connecting video, sound & controls" },'
+          new = '  { key: "launching-game", label: "Launching Rec Room" },\n  { key: "steam-login-required", label: "Sign in to Steam in the streamed session" },\n  { key: "steam-authenticated", label: "Steam signed in · launching Rec Room" },\n  { key: "ready", label: "Connecting video, sound & controls" },'
+          if old not in text:
+              raise SystemExit('missing phase marker')
+          text = text.replace(old, new, 1)
+
+          text = text.replace('buildId: "recroom-2022-05-19"', 'buildId: "recroom-2021-08-25"')
+          text = text.replace('Rec Room · May 2022', 'Rec Room · Aug 2021')
+          text = text.replace('Build 8751857', 'Build 7225744')
+          text = text.replace('May 19, 2022 Windows client', 'Aug 25, 2021 Windows client')
+
+          # Keep the Steam stream interactive while explicitly telling the user
+          # what is required. Do not cover the player with an overlay.
+          old = '''        toolbarActions={\n          <button'''
+          new = '''        toolbarActions={\n          <>\n            {play?.interactionRequired === "steam-sign-in" || play?.phase === "steam-login-required" ? (\n              <span className="hidden rounded-md bg-sky-400/15 px-2.5 py-1 text-xs font-bold text-sky-100 sm:inline">\n                Sign in to Steam here · Steam Guard is supported\n              </span>\n            ) : play?.gameReady ? (\n              <span className="hidden rounded-md bg-emerald-400/15 px-2.5 py-1 text-xs font-bold text-emerald-100 sm:inline">Rec Room ready</span>\n            ) : null}\n          <button'''
+          if old not in text:
+              raise SystemExit('missing toolbar opening marker')
+          text = text.replace(old, new, 1)
+          old = '''          </button>\n        }\n        overlay={capture ? ('''
+          new = '''          </button>\n          </>\n        }\n        overlay={capture ? ('''
+          if old not in text:
+              raise SystemExit('missing toolbar closing marker')
+          text = text.replace(old, new, 1)
+          player.write_text(text)
+
+          page = Path('src/app/games/recroom/page.tsx')
+          text = page.read_text()
+          text = text.replace('Launch the May 19, 2022 Rec Room client', 'Launch the Aug 25, 2021 Rec Room client')
+          text = text.replace('title="RipoTeam owner: recover the May 2022 server client from Steam"', 'title="RipoTeam owner: recover the Aug 2021 server client"')
+          page.write_text(text)
+          PY
+
+      - name: Type-check changed Rec Room frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund >/dev/null
+          npx tsc --noEmit
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/services/recroom-browser.ts src/components/game/recroom-cloud-player.tsx src/app/games/recroom/page.tsx
+          git commit -m 'Keep Steam stream alive until Aug 2021 Rec Room is ready'
+          git pull --rebase origin main
+          git push
