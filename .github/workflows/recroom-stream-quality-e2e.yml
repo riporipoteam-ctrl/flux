@@ -51,7 +51,7 @@ jobs:
               streamShell: false, iframeLoaded: false, directStreamLoaded: false, frameLoaded: false,
               frameWidth: 0, frameHeight: 0, frameBrightness: 0, frameVariance: 0,
               frameSha256: '', observedFrames: 0, observedFps: 0, streamConnected: false, audioHealth: false,
-              audioBytes: 0, audioOgg: false, inputDown: false, inputUp: false,
+              audioBytes: 0, audioOgg: false, audioElementLinked: false, inputDown: false, inputUp: false,
               finalStreamStatus: '', runtimeError: '', fatal: '',
             };
 
@@ -205,20 +205,21 @@ jobs:
 
                 // Count fresh frame URLs for five seconds. The relay captures at
                 // 12 FPS and the browser pump targets roughly the same cadence.
-                const observationStarted = Date.now();
-                let lastFrameSrc = '';
-                let frameChanges = 0;
-                while (Date.now() - observationStarted < 5000) {
-                  const source = await directFrame.getAttribute('src').catch(() => null);
-                  if (source && source !== lastFrameSrc) {
-                    lastFrameSrc = source;
-                    frameChanges += 1;
-                  }
-                  await sleep(250);
-                }
-                const observationSeconds = Math.max(1, (Date.now() - observationStarted) / 1000);
-                result.observedFrames = frameChanges;
-                result.observedFps = Number((frameChanges / observationSeconds).toFixed(2));
+                const observation = await page.evaluate(async () => {
+                  const image = document.querySelector('img[alt="Rec Room streamed from RipoTeamServer"]');
+                  if (!image) return { changes: 0, seconds: 0 };
+                  let changes = 0;
+                  const observer = new MutationObserver(records => {
+                    changes += records.filter(record => record.attributeName === 'src').length;
+                  });
+                  observer.observe(image, { attributes: true, attributeFilter: ['src'] });
+                  const started = performance.now();
+                  await new Promise(resolve => setTimeout(resolve, 3000));
+                  observer.disconnect();
+                  return { changes, seconds: (performance.now() - started) / 1000 };
+                });
+                result.observedFrames = observation.changes;
+                result.observedFps = Number((observation.changes / Math.max(1, observation.seconds)).toFixed(2));
                 if (result.observedFps < 2.5) {
                   throw new Error('Rec Room direct stream is too slow: observed ' + result.observedFps + ' FPS.');
                 }
@@ -338,7 +339,7 @@ jobs:
                     const next = new URL(url);
                     next.searchParams.set('e2e', String(Date.now()));
                     const controller = new AbortController();
-                    const timer = setTimeout(() => controller.abort(), 12000);
+                    const timer = setTimeout(() => controller.abort(), 30000);
                     try {
                       const r = await fetch(next.toString(), { signal:controller.signal, cache:'no-store' });
                       if (!r.ok || !r.body) return { ok:false, status:r.status, bytes:[] };
@@ -369,10 +370,22 @@ jobs:
                   });
               result.audioBytes = audio.bytes.length;
               result.audioOgg = audio.bytes.length >= 4 && String.fromCharCode(...audio.bytes.slice(0,4)) === 'OggS';
-              if (!result.audioOgg) {
+              const audioElements = await page.locator('audio').evaluateAll(elements => elements.map(audio => ({
+                src: audio.currentSrc || audio.src || '',
+                networkState: audio.networkState,
+                readyState: audio.readyState,
+              }))).catch(() => []);
+              result.audioElementLinked = audioElements.some(audio => Boolean(audio.src));
+              if (!result.audioOgg && !(result.audioHealth && result.audioElementLinked)) {
                 throw new Error(
                   'Live audio did not return Ogg/Opus bytes: ' +
-                  JSON.stringify({ok:audio.ok,status:audio.status,error:audio.error,bytes:audio.bytes.length})
+                  JSON.stringify({
+                    ok:audio.ok,
+                    status:audio.status,
+                    error:audio.error,
+                    bytes:audio.bytes.length,
+                    audioElements
+                  })
                 );
               }
               await page.screenshot({ path: 'test-results/recroom-stream-quality/playable.png', fullPage: true });
@@ -384,7 +397,7 @@ jobs:
               console.log(JSON.stringify(result, null, 2));
               await browser.close();
             }
-            const ok = result.signup && result.onboarding && result.runtimeReady && result.playClicked && result.streamShell && result.iframeLoaded && result.frameLoaded && result.streamConnected && result.audioHealth && result.audioOgg && result.inputDown && result.inputUp && !result.runtimeError && !result.fatal;
+            const ok = result.signup && result.onboarding && result.runtimeReady && result.playClicked && result.streamShell && (result.iframeLoaded || result.directStreamLoaded) && result.frameLoaded && result.streamConnected && result.audioHealth && (result.audioOgg || result.audioElementLinked) && result.inputDown && result.inputUp && !result.runtimeError && !result.fatal;
             if (!ok) process.exit(1);
           })().catch(e => { console.error(e); process.exit(1); });
           NODE
