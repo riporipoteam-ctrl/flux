@@ -80,6 +80,7 @@ private struct FluxGlassTabBar: View {
     @Binding var selection: FluxTab
 
     var body: some View {
+#if swift(>=6.2)
         if #available(iOS 26.0, *) {
             GlassEffectContainer(spacing: 10) {
                 HStack(spacing: 6) {
@@ -97,8 +98,17 @@ private struct FluxGlassTabBar: View {
                 }
             }
             .padding(8)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         }
+#else
+        HStack(spacing: 6) {
+            ForEach(FluxTab.allCases) { tab in
+                tabButton(tab)
+            }
+        }
+        .padding(8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+#endif
     }
 
     @ViewBuilder
@@ -130,6 +140,7 @@ private struct FluxTabGlassModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
+#if swift(>=6.2)
         if #available(iOS 26.0, *) {
             content
                 .glassEffect(
@@ -143,6 +154,13 @@ private struct FluxTabGlassModifier: ViewModifier {
                     in: RoundedRectangle(cornerRadius: 20, style: .continuous)
                 )
         }
+#else
+        content
+            .background(
+                isSelected ? Color.accentColor.opacity(0.12) : .clear,
+                in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+            )
+#endif
     }
 }
 
