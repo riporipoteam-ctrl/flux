@@ -49,14 +49,12 @@ jobs:
 
       - name: Generate and sync iOS project
         run: |
-          rm -rf ios
-          npx cap add ios
           npx cap sync ios
 
       - name: Build unsigned iPhone application
         run: |
           xcodebuild \
-            -workspace ios/App/App.xcworkspace \
+            -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
