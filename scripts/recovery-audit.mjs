@@ -59,7 +59,7 @@ forbidText(giftsService, "emoji:", "Gift definitions");
 // overwrite — a real profile, which is what used to reset onboarding and wipe
 // a person's account on the first load after a deploy.
 const users = read("src/services/users.ts");
-for (const marker of ["getDocFromServer", "{ merge: true }"]) {
+for (const marker of ["getDocFromServer", "{ merge: true }", "onboardingRequired: true", "data.onboardingRequired !== true"]) {
   requireText(users, marker, "Profile creation guard");
 }
 forbidText(users, "await setDoc(ref, payload);", "Profile creation guard");

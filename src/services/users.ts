@@ -35,8 +35,14 @@ function isOwnerEmail(email: string) {
 
 function mapUser(id: string, data: DocumentData): UserProfile {
   const email = data.email ?? "";
+  const hasUsername = Boolean(String(data.username || "").trim());
   const onboardingComplete =
-    data.onboardingComplete === true || Boolean(String(data.username || "").trim());
+    data.onboardingComplete === true ||
+    hasUsername ||
+    // Older Flux profiles predate the explicit onboardingRequired marker. An
+    // existing user document must never be mistaken for a new account after a
+    // deploy or a cache miss.
+    data.onboardingRequired !== true;
   const owner = isOwnerEmail(email);
   const planTier = data.planTier === "premium" || data.planTier === "basic" ? data.planTier : "free";
   return {
@@ -136,11 +142,12 @@ export async function ensureUserDocument(
 
   if (existing.exists()) {
     const data = existing.data() || {};
+    const hasUsername = Boolean(String(data.username || "").trim());
 
     // Never let an unverified, locally cached pre-onboarding document become
     // navigation truth. Showing a retry screen is safer than resetting an
     // existing account's setup state when Firestore is temporarily offline.
-    if (!serverVerified && data.onboardingComplete !== true && !Boolean(String(data.username || "").trim())) {
+    if (!serverVerified && data.onboardingComplete !== true && !hasUsername) {
       throw new Error("Flux could not verify your profile with the server. Your account is safe; retry the connection.");
     }
 
@@ -156,7 +163,7 @@ export async function ensureUserDocument(
       repair.isAdmin = false;
       repair.isOwner = false;
     }
-    if (data.onboardingComplete !== true && Boolean(String(data.username || "").trim())) {
+    if (data.onboardingComplete !== true && (hasUsername || data.onboardingRequired !== true)) {
       repair.onboardingComplete = true;
     }
     if (!data.planTier) repair.planTier = "free";
@@ -195,6 +202,7 @@ export async function ensureUserDocument(
     isOwner: owner,
     isPrivate: false,
     onboardingComplete: false,
+    onboardingRequired: true,
     accountType: "personal",
     businessName: null,
     coins: COIN_REWARDS.welcomeBonus,
@@ -273,6 +281,7 @@ export async function updateUserProfile(
     location: string | null;
     interests: string[];
     onboardingComplete: boolean;
+    onboardingRequired: boolean;
     settings: Partial<UserSettings>;
     pinnedPostId: string | null;
     mood: string | null;
@@ -349,6 +358,7 @@ export async function completeOnboarding(
     bannerUrl: data.bannerUrl ?? null,
     interests: data.interests || [],
     onboardingComplete: true,
+    onboardingRequired: false,
   });
 }
 

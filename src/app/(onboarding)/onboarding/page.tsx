@@ -63,7 +63,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
-    else if (profile?.onboardingComplete) router.replace("/home");
+    else if (profile?.onboardingComplete || String(profile?.username || "").trim()) router.replace("/home");
     else if (profile) {
       setDisplayName(profile.displayName || "");
       setAvatarPreview(profile.avatarUrl || DEFAULT_AVATARS[0].src);
