@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy:
@@ -22,40 +23,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Hugging Face Hub client
-        run: python -m pip install --disable-pip-version-check huggingface_hub
+      - name: Install Hugging Face Hub CLI with OIDC support
+        run: python -m pip install --disable-pip-version-check --upgrade "huggingface_hub>=1.19.0"
+
+      - name: Stage direct-launch backend patch
+        env:
+          STAGING_DIR: ${{ runner.temp }}/recroom-space-patch
+        run: |
+          mkdir -p "$STAGING_DIR"
+          cp ops/recroom-space-patch/README.md "$STAGING_DIR/README.md"
+          cp ops/recroom-space-patch/recroom_autoload.py "$STAGING_DIR/recroom_autoload.py"
+          cp ops/recroom-space-patch/recroom_black_viewport_fix.py "$STAGING_DIR/recroom_black_viewport_fix.py"
+          cp ops/recroom-space-patch/recroom_vm_bridge.py "$STAGING_DIR/recroom_vm_bridge.py"
+          cp ops/recroom-space-patch/recroom_wine_pool.py "$STAGING_DIR/recroom_wine_pool.py"
+          cp ops/recroom-space-patch/recroom_wine_runtime_fix.py "$STAGING_DIR/recroom_wine_runtime_fix.py"
+          echo "HF_STAGING_DIR=$STAGING_DIR" >> "$GITHUB_ENV"
 
       - name: Upload direct-launch backend patch
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_OIDC_RESOURCE: spaces/Echoxr/ripoteam-cloud-pc
           HF_SPACE: Echoxr/ripoteam-cloud-pc
         run: |
-          if [ -z "${HF_TOKEN:-}" ]; then
-            echo "::error::The HF_TOKEN GitHub Actions secret is missing. Add a Hugging Face token with write access to the Space."
-            exit 1
-          fi
-          python - <<'PY'
-          import os
-          from huggingface_hub import CommitOperationAdd, HfApi
-
-          files = [
-              ("ops/recroom-space-patch/README.md", "README.md"),
-              ("ops/recroom-space-patch/recroom_autoload.py", "recroom_autoload.py"),
-              ("ops/recroom-space-patch/recroom_black_viewport_fix.py", "recroom_black_viewport_fix.py"),
-              ("ops/recroom-space-patch/recroom_vm_bridge.py", "recroom_vm_bridge.py"),
-              ("ops/recroom-space-patch/recroom_wine_pool.py", "recroom_wine_pool.py"),
-              ("ops/recroom-space-patch/recroom_wine_runtime_fix.py", "recroom_wine_runtime_fix.py"),
-          ]
-          api = HfApi(token=os.environ["HF_TOKEN"])
-          operations = [
-              CommitOperationAdd(path_in_repo=target, path_or_fileobj=source)
-              for source, target in files
-          ]
-          commit = api.create_commit(
-              repo_id=os.environ["HF_SPACE"],
-              repo_type="space",
-              operations=operations,
-              commit_message="Launch Rec Room directly without Steam",
-          )
-          print(f"Published {commit.commit_url or commit.oid}")
-          PY
+          hf upload "$HF_SPACE" "$HF_STAGING_DIR" . \
+            --repo-type space \
+            --commit-message "Launch Rec Room directly without Steam"
