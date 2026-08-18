@@ -7,6 +7,7 @@ on:
     paths:
       - "src/**"
       - "public/**"
+      - "ios/**"
       - "capacitor.config.ts"
       - "next.config.ts"
       - "package*.json"
