@@ -479,6 +479,36 @@
 .askai-scrim { position: fixed; inset: 0; z-index: 25; border: 0; background: rgba(10, 12, 18, .48); }
 .askai-right-scrim { z-index: 34; }
 
+/* Rakazo-inspired computer/routines rail, kept transparent about what is a preview. */
+.askai-computer-preview {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ask-border) 90%, transparent);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #111a27, #0c1119);
+  box-shadow: 0 16px 34px rgba(16, 30, 52, .18), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.askai-computer-topbar { display: flex; align-items: center; gap: 5px; padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.askai-computer-topbar > i { width: 6px; height: 6px; border-radius: 999px; background: #ff6257; }
+.askai-computer-topbar > i:nth-child(2) { background: #ffbd2e; }
+.askai-computer-topbar > i:nth-child(3) { background: #28c840; }
+.askai-computer-topbar > span { min-width: 0; margin-left: 5px; overflow: hidden; border-radius: 5px; background: rgba(255,255,255,.06); padding: 4px 7px; color: rgba(255,255,255,.58); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.askai-computer-body { display: grid; justify-items: start; gap: 5px; padding: 15px 14px 14px; color: white; }
+.askai-computer-spark { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 8px; background: rgba(47,140,246,.2); color: #8fc9ff; font-size: 15px; }
+.askai-computer-body strong { font-size: 10px; }
+.askai-computer-body small { color: rgba(255,255,255,.52); font-size: 8px; }
+.askai-computer-body > div { display: grid; width: 100%; gap: 6px; margin-top: 4px; }
+.askai-computer-body > div i { display: block; height: 5px; border-radius: 999px; background: rgba(255,255,255,.12); }
+.askai-computer-body > div i:nth-child(1) { width: 80%; background: rgba(47,140,246,.46); }
+.askai-computer-body > div i:nth-child(2) { width: 62%; }
+.askai-computer-body > div i:nth-child(3) { width: 42%; }
+.askai-routine-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; border: 1px solid var(--ask-border); border-radius: 11px; background: color-mix(in srgb, var(--ask-surface) 84%, transparent); padding: 8px; }
+.askai-routine-row > span { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 8px; background: var(--ask-accent-soft); color: var(--ask-accent); }
+.askai-routine-row > div { min-width: 0; flex: 1; }
+.askai-routine-row strong, .askai-routine-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.askai-routine-row strong { font-size: 9px; }
+.askai-routine-row small { margin-top: 2px; color: var(--ask-muted); font-size: 8px; }
+.askai-routine-row > i { width: 7px; height: 7px; border-radius: 999px; background: #22b985; box-shadow: 0 0 0 4px rgba(34,185,133,.12); }
+
 @media (max-width: 1260px) {
   .askai-shell { grid-template-columns: 252px minmax(0, 1fr); }
   .askai-context-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(340px, 90vw); transform: translateX(102%); transition: transform 180ms ease; box-shadow: -18px 0 60px rgba(0,0,0,.18); }

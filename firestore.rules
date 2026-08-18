@@ -388,6 +388,10 @@ service cloud.firestore {
       }
     }
 
+    match /askAIWorkspaces/{uid} {
+      allow read, write: if isSelf(uid);
+    }
+
     match /activity/{uid}/events/{eventId} {
       allow read, write: if isSelf(uid);
     }

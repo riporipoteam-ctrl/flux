@@ -22,6 +22,7 @@ Production data model for Firebase (Auth + Firestore + Storage).
 | `shopItems`, `purchases`, `gifts`, `coinTransactions` | Economy |
 | `dailyChallenges`, `userChallenges` | Daily rewards |
 | `aiConversations/{id}/messages` | AskAI |
+| `askAIWorkspaces/{uid}` | Synced AskAI agents, jobs, miniapps, files, memory and settings |
 | `activity/{uid}/events` | History |
 | `adminLogs` | Moderation audit |
 

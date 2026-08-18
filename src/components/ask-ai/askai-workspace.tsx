@@ -152,7 +152,7 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 const VIEWS: Array<{ id: AskAIWorkspaceView; label: string; icon: LucideIcon }> = [
   { id: "chat", label: "Home", icon: MessageSquareText },
   { id: "agents", label: "Agents", icon: Bot },
-  { id: "jobs", label: "Jobs", icon: Clock3 },
+  { id: "jobs", label: "Routines", icon: Clock3 },
   { id: "miniapps", label: "Miniapps", icon: LayoutDashboard },
   { id: "files", label: "Files", icon: FolderOpen },
   { id: "memory", label: "Memory", icon: Brain },
@@ -778,7 +778,9 @@ export default function AskAIWorkspace() {
 
       <aside className={cn("askai-context-panel", rightOpen && "is-open")}>
         <div className="askai-context-header"><div><strong>Workspace activity</strong><span>Live tool and engine status</span></div><button type="button" onClick={() => setRightOpen(false)} aria-label="Close activity"><X className="h-4 w-4" /></button></div>
+        <section className="askai-context-section"><h3>Computer</h3><div className="askai-computer-preview"><div className="askai-computer-topbar"><i /><i /><i /><span>flux.social / workspace</span></div><div className="askai-computer-body"><span className="askai-computer-spark">✦</span><strong>{selectedAgent?.name || "AskAI"} is ready</strong><small>Flux workspace preview · synced</small><div><i /><i /><i /></div></div></div></section>
         <section className="askai-context-section"><h3>Active agent</h3>{selectedAgent ? <div className="askai-agent-summary"><span style={{ background: selectedAgent.color }}>{selectedAgent.icon}</span><div><strong>{selectedAgent.name}</strong><p>{selectedAgent.description}</p></div></div> : null}<div className="askai-tool-grid">{selectedAgent?.tools.map((tool) => <span key={tool}>{TOOL_LABELS[tool]}</span>)}</div></section>
+        <section className="askai-context-section"><h3>Routines</h3>{jobs.filter((job) => job.enabled).slice(0, 3).map((job) => <div key={job.id} className="askai-routine-row"><span><Clock3 className="h-3.5 w-3.5" /></span><div><strong>{job.title}</strong><small>{job.schedule}</small></div><i /></div>)}{!jobs.filter((job) => job.enabled).length ? <p className="askai-empty-small">Create a routine to keep recurring Flux work visible here.</p> : null}</section>
         <section className="askai-context-section"><h3>Recent activity</h3><div className="askai-activity-list">{activities.length ? activities.map((item) => <div key={item.id} className={cn("askai-activity", `is-${item.status}`)}><span>{item.status === "running" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : item.status === "done" ? <Check className="h-3.5 w-3.5" /> : item.status === "error" ? <X className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}</span><div><strong>{item.label}</strong><p>{item.detail}</p></div></div>) : <p className="askai-empty-small">Tool calls and actions appear here while AskAI works.</p>}</div></section>
         <section className="askai-context-section"><h3>Workspace</h3><div className="askai-stat-grid"><Stat label="Agents" value={agents.length} /><Stat label="Jobs" value={jobs.length} /><Stat label="Miniapps" value={miniapps.length} /><Stat label="Files" value={files.length} /></div></section>
         <section className="askai-context-section askai-trust"><ShieldCheck className="h-5 w-5" /><div><strong>Actions stay visible</strong><p>AskAI shows tool activity and asks before creating or changing Flux content when approvals are enabled.</p></div></section>

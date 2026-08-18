@@ -123,6 +123,11 @@ It resolves a connection in this order:
 That ordering is what makes Pro work on the static Pages build at all: there is
 no server there to hold a secret, so the browser has to bring its own.
 
+The AskAI home uses a Rakazo-inspired workspace layout: specialist agents,
+persistent threads, routines, activity, files, memory and miniapps live beside
+the chat. Signed-in workspace state is mirrored to Firestore so it follows the
+same user across browsers and the iOS shell.
+
 ---
 
 ## Platform features
@@ -184,3 +189,4 @@ firebase deploy --only firestore:rules,storage,firestore:indexes
   in repository settings.
 - **Netlify** — `netlify.toml` builds the full app including API routes.
 - **Mobile** — Capacitor: `npm run mobile:sync`, then `mobile:android` / `mobile:ios`.
+  The iOS target includes a SwiftUI Liquid Glass navigation shell in `ios/`.
