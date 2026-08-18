@@ -50,21 +50,21 @@ const PHASES = [
   { key: "creating-sandbox", label: "Creating private sandbox" },
   { key: "creating-overlay", label: "Creating private game disk" },
   { key: "preparing-audio", label: "Starting game audio" },
-  { key: "preparing-windows-runtime", label: "Preparing Windows compatibility" },
+  { key: "preparing-windows-runtime", label: "Starting compatibility runtime" },
   { key: "creating-session-media", label: "Loading your Flux identity" },
   { key: "linking-game-image", label: "Mounting Rec Room" },
   { key: "connecting-flux-account", label: "Signing in with Flux" },
   { key: "booting-windows", label: "Starting Windows runtime" },
   { key: "waiting-for-windows-agent", label: "Connecting game runtime" },
-  { key: "starting-browser-stream", label: "Starting browser stream" },
-  { key: "launching-game", label: "Launching Rec Room" },
-  { key: "steam-login-required", label: "Sign in to Steam in the streamed session" },
-  { key: "steam-authenticated", label: "Steam signed in · launching Rec Room" },
+  { key: "starting-browser-stream", label: "Opening browser player" },
+  { key: "launching-game", label: "Launching Rec Room directly" },
   { key: "ready", label: "Connecting video, sound & controls" },
 ] as const;
 
 function phaseIndex(phase: string) {
-  const normalized = phase || "requesting";
+  // Older server revisions reported an internal launcher phase. Keep those
+  // sessions understandable without exposing the launcher to players.
+  const normalized = phase.startsWith("steam-") ? "launching-game" : phase || "requesting";
   const index = PHASES.findIndex((item) => item.key === normalized);
   return index >= 0 ? index : 0;
 }
@@ -81,10 +81,14 @@ export function RecRoomCloudPlayer() {
   const [shareText, setShareText] = useState("Captured in Rec Room 🎮 #RecRoom #FluxGames");
 
   const streamUrl = play?.streamUrl || "";
-  const provisioning = Boolean(
-    starting ||
-    (play?.sessionId && play?.sessionAccessToken && !streamUrl && play?.ok !== false && play?.state !== "failed"),
+  const waitingForGame = Boolean(
+    play?.sessionId &&
+    play?.sessionAccessToken &&
+    play?.gameReady !== true &&
+    play?.ok !== false &&
+    play?.state !== "failed",
   );
+  const provisioning = Boolean(starting || waitingForGame);
 
   const clearCapture = () => {
     setCapture((current) => {
@@ -295,7 +299,7 @@ export function RecRoomCloudPlayer() {
     }
   };
 
-  if (streamUrl && play?.ok !== false) {
+  if (streamUrl && play?.gameReady === true && play?.ok !== false) {
     return (
       <StreamPlayer
         url={streamUrl}
@@ -306,11 +310,7 @@ export function RecRoomCloudPlayer() {
         )}
         toolbarActions={
           <>
-            {play?.interactionRequired === "steam-sign-in" || play?.phase === "steam-login-required" ? (
-              <span className="hidden rounded-md bg-sky-400/15 px-2.5 py-1 text-xs font-bold text-sky-100 sm:inline">
-                Sign in to Steam here · Steam Guard is supported
-              </span>
-            ) : play?.gameReady ? (
+            {play?.gameReady ? (
               <span className="hidden rounded-md bg-emerald-400/15 px-2.5 py-1 text-xs font-bold text-emerald-100 sm:inline">Rec Room ready</span>
             ) : null}
           <button
@@ -410,7 +410,7 @@ export function RecRoomCloudPlayer() {
 
           <div className="grid gap-4 border-t border-white/8 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="grid gap-2 sm:grid-cols-2">
-              <StatusCard icon={Server} title="Compatibility service" value={gatewayLoading ? "Checking…" : serviceOnline ? "Online" : "Unavailable"} detail={gateway?.error || "Flux identity + May 2022 compatibility API"} good={serviceOnline} />
+              <StatusCard icon={Server} title="Compatibility service" value={gatewayLoading ? "Checking…" : serviceOnline ? "Online" : "Unavailable"} detail={gateway?.error || "Flux identity + Aug 2021 compatibility service"} good={serviceOnline} />
               <StatusCard icon={Cpu} title="RipoTeamServer game runtime" value={gatewayLoading ? "Checking…" : runtimeGameReady ? `${providerLabel} ready` : runtimeSupported ? "Runtime preparing" : "Unavailable"} detail={runtimeDetail} good={runtimeGameReady} />
             </div>
 
@@ -462,6 +462,7 @@ export function RecRoomCloudPlayer() {
 
 function GameProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse | null; onCancel: () => void }) {
   const phase = play?.phase || (play?.sessionId ? "creating-sandbox" : "requesting");
+  const visiblePhase = phase.startsWith("steam-") ? "launching-game" : phase;
   const current = phaseIndex(phase);
   const progress = Math.max(4, Math.min(99, Number(play?.progress || (current + 1) * 8)));
   const headline = PHASES[current]?.label || "Preparing Rec Room";
@@ -485,14 +486,14 @@ function GameProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse 
           <div className="h-2 overflow-hidden rounded-full bg-white/8">
             <div className="h-full rounded-full bg-white transition-[width] duration-700" style={{ width: `${progress}%` }} />
           </div>
-          <div className="mt-2 flex justify-between text-[10px] font-black uppercase tracking-[.12em] text-white/30"><span>{phase.replaceAll("-", " ")}</span><span>{progress}%</span></div>
+          <div className="mt-2 flex justify-between text-[10px] font-black uppercase tracking-[.12em] text-white/30"><span>{visiblePhase.replaceAll("-", " ")}</span><span>{progress}%</span></div>
         </div>
 
         <div className="mt-8 grid w-full max-w-xl gap-2 text-left sm:grid-cols-2">
           {PHASES.filter((item) => ["requesting", "creating-sandbox", "preparing-audio", "preparing-windows-runtime", "linking-game-image", "connecting-flux-account", "starting-browser-stream", "launching-game"].includes(item.key)).map((item) => {
             const index = phaseIndex(item.key);
             const done = index < current;
-            const active = item.key === phase;
+            const active = item.key === visiblePhase;
             return (
               <div key={item.key} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${active ? "border-white/18 bg-white/8" : "border-white/7 bg-white/[.025]"}`}>
                 <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-black ${done ? "bg-emerald-400 text-black" : active ? "bg-white text-black" : "bg-white/7 text-white/25"}`}>{done ? "✓" : "·"}</span>
