@@ -57,6 +57,8 @@ const PHASES = [
   { key: "waiting-for-windows-agent", label: "Connecting game runtime" },
   { key: "starting-browser-stream", label: "Starting browser stream" },
   { key: "launching-game", label: "Launching Rec Room" },
+  { key: "steam-login-required", label: "Sign in to Steam in the streamed session" },
+  { key: "steam-authenticated", label: "Steam signed in · launching Rec Room" },
   { key: "ready", label: "Connecting video, sound & controls" },
 ] as const;
 
@@ -122,7 +124,7 @@ export function RecRoomCloudPlayer() {
     const pending = Boolean(
       sessionId &&
       accessToken &&
-      !streamUrl &&
+      play?.gameReady !== true &&
       play?.ok !== false &&
       play?.state !== "failed",
     );
@@ -142,7 +144,7 @@ export function RecRoomCloudPlayer() {
           ...next,
           sessionAccessToken: current?.sessionAccessToken || accessToken,
         }));
-        if (next.streamUrl || next.state === "failed" || next.ok === false) return;
+        if (next.gameReady === true || next.state === "failed" || next.ok === false) return;
       } catch (error) {
         if (!cancelled && Date.now() - startedAt > 90_000) {
           setPlay((current) => ({
@@ -154,13 +156,13 @@ export function RecRoomCloudPlayer() {
         }
       }
 
-      if (!cancelled && Date.now() - startedAt < 300_000) {
+      if (!cancelled && Date.now() - startedAt < 1_200_000) {
         timer = setTimeout(() => void poll(), 1200);
       } else if (!cancelled) {
         setPlay((current) => ({
           ...current,
           ok: false,
-          error: "The server-side Rec Room session did not become game-ready within five minutes.",
+          error: "The server-side Rec Room session did not become game-ready within twenty minutes.",
         }));
       }
     };
@@ -170,7 +172,7 @@ export function RecRoomCloudPlayer() {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, streamUrl]);
+  }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, play?.gameReady]);
 
   // The browser page is the lifetime boundary for the disposable runtime. A
   // backend idle reaper is the final safety net if pagehide never reaches us.
@@ -277,7 +279,7 @@ export function RecRoomCloudPlayer() {
       await tagGamePost(postId, user.uid, {
         gameId: "recroom",
         gameName: "Rec Room",
-        buildId: "recroom-2022-05-19",
+        buildId: "recroom-2021-08-25",
         captureId: capture.captureId,
       });
       await refreshProfile();
@@ -299,6 +301,14 @@ export function RecRoomCloudPlayer() {
         title="Rec Room · RipoTeamServer"
         onClose={() => void releaseSession()}
         toolbarActions={
+          <>
+            {play?.interactionRequired === "steam-sign-in" || play?.phase === "steam-login-required" ? (
+              <span className="hidden rounded-md bg-sky-400/15 px-2.5 py-1 text-xs font-bold text-sky-100 sm:inline">
+                Sign in to Steam here · Steam Guard is supported
+              </span>
+            ) : play?.gameReady ? (
+              <span className="hidden rounded-md bg-emerald-400/15 px-2.5 py-1 text-xs font-bold text-emerald-100 sm:inline">Rec Room ready</span>
+            ) : null}
           <button
             type="button"
             disabled={capturing}
@@ -309,6 +319,7 @@ export function RecRoomCloudPlayer() {
             {capturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             <span className="hidden sm:inline">{capturing ? "Capturing…" : "Capture"}</span>
           </button>
+          </>
         }
         overlay={capture ? (
           <div className="flex h-full w-full items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
@@ -369,7 +380,7 @@ export function RecRoomCloudPlayer() {
           </Link>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black uppercase tracking-[.16em] text-white/40">RipoTeamServer streamed game</p>
-            <h1 className="truncate text-xl font-black tracking-[-.04em]">Rec Room · May 2022</h1>
+            <h1 className="truncate text-xl font-black tracking-[-.04em]">Rec Room · Aug 2021</h1>
           </div>
           <button type="button" onClick={() => void refreshGateway()} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10" aria-label="Refresh backend status">
             <RefreshCw className={`h-4 w-4 ${gatewayLoading ? "animate-spin" : ""}`} />
@@ -380,7 +391,7 @@ export function RecRoomCloudPlayer() {
           <div className="relative min-h-[330px] overflow-hidden p-6 sm:p-9" style={{ background: "radial-gradient(circle at 18% 18%,rgba(34,197,94,.23),transparent 30%),radial-gradient(circle at 82% 15%,rgba(59,130,246,.22),transparent 35%),linear-gradient(135deg,#08111c,#101827 58%,#071019)" }}>
             <div className="relative z-10 max-w-3xl">
               <div className="flex flex-wrap gap-2">
-                <Badge icon={Gamepad2}>Build 8751857</Badge>
+                <Badge icon={Gamepad2}>Build 7225744</Badge>
                 <Badge icon={Cloud}>Browser only · no download</Badge>
                 <Badge icon={HardDrive}>Disposable sandbox</Badge>
                 <Badge icon={Volume2}>Sound + controls</Badge>
@@ -388,7 +399,7 @@ export function RecRoomCloudPlayer() {
               </div>
               <h2 className="mt-7 text-[clamp(3rem,9vw,6.5rem)] font-black leading-[.82] tracking-[-.075em]">Press Play. Flux starts the game.</h2>
               <p className="mt-6 max-w-2xl text-sm leading-6 text-white/58 sm:text-base">
-                RipoTeamServer creates a private server-side game session, launches the May 19, 2022 Windows client through the best runtime available on the server, signs it into your Flux-backed Rec Room identity, then replaces the loading screen with the live game. Players install nothing. When you exit, the temporary sandbox is deleted while supported account and save state stay in Flux.
+                RipoTeamServer creates a private server-side game session, launches the Aug 25, 2021 Windows client through the best runtime available on the server, signs it into your Flux-backed Rec Room identity, then replaces the loading screen with the live game. Players install nothing. When you exit, the temporary sandbox is deleted while supported account and save state stay in Flux.
               </p>
             </div>
           </div>

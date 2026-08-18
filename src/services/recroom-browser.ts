@@ -1,5 +1,5 @@
 const DEFAULT_RECROOM_BROKER_URL = "https://echoxr-ripoteam-cloud-pc.hf.space";
-const TARGET_BUILD_ID = "recroom-2022-05-19";
+const TARGET_BUILD_ID = "recroom-2021-08-25";
 const SESSION_CREATE_WAIT_MS = 10 * 60_000;
 const SESSION_CREATE_POLL_MS = 1_500;
 
@@ -67,6 +67,9 @@ export interface RecRoomPlayResponse {
   sessionId?: string;
   sessionAccessToken?: string;
   streamUrl?: string;
+  streamReady?: boolean;
+  gameReady?: boolean;
+  interactionRequired?: string | null;
   expiresAtMs?: number;
   hostId?: string;
   buildId?: string;
@@ -157,7 +160,7 @@ function runtimeStatusDetail(status: RecRoomBrokerStatus) {
     runtime?.warning ||
     status.error ||
     status.detail ||
-    "RipoTeamServer is restoring the May 19, 2022 Rec Room server image."
+    "RipoTeamServer is restoring the Aug 25, 2021 Rec Room server image."
   );
 }
 
@@ -234,12 +237,12 @@ export async function createRecRoomHostPairing(firebaseIdToken: string): Promise
 
 export async function createRecRoomSession(firebaseIdToken: string): Promise<RecRoomPlayResponse> {
   // Hugging Face Space restarts use ephemeral local storage. RipoTeamServer
-  // automatically restores and verifies the pinned May 19, 2022 client, but the
+  // automatically restores and verifies the pinned Aug 25, 2021 client, but the
   // restore can take a few minutes. Never turn that temporary state into a
   // permanent "game image not installed" Play failure. Wait until the exact
   // runtime is ready, and retry if a restart races the session POST.
   const deadline = Date.now() + SESSION_CREATE_WAIT_MS;
-  let lastTransient = "RipoTeamServer is restoring the May 19, 2022 Rec Room server image.";
+  let lastTransient = "RipoTeamServer is restoring the Aug 25, 2021 Rec Room server image.";
 
   while (Date.now() < deadline) {
     try {
@@ -276,7 +279,7 @@ export async function createRecRoomSession(firebaseIdToken: string): Promise<Rec
   }
 
   throw new Error(
-    `RipoTeamServer did not finish restoring the May 19, 2022 Rec Room server image in time. ${lastTransient}`,
+    `RipoTeamServer did not finish restoring the Aug 25, 2021 Rec Room server image in time. ${lastTransient}`,
   );
 }
 
