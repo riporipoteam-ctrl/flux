@@ -1,4 +1,4 @@
-name: Rec Room Production E2E
+# Manual post-deploy verification trigger.\nname: Rec Room Production E2E
 
 on:
   push:

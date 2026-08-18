@@ -1,4 +1,4 @@
-name: Rec Room Stream Quality E2E
+# Manual post-deploy verification trigger.\nname: Rec Room Stream Quality E2E
 
 on:
   push:
