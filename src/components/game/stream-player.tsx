@@ -39,6 +39,8 @@ export function StreamPlayer({
   useEffect(() => {
     setSrc(url);
     setLoading(true);
+    const fallback = window.setTimeout(() => setLoading(false), 4500);
+    return () => window.clearTimeout(fallback);
   }, [url]);
 
   useEffect(() => {
