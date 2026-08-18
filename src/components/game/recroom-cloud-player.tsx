@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { StreamPlayer } from "@/components/game/stream-player";
+import { RecRoomDirectStream } from "@/components/game/recroom-direct-stream";
 import { createPost } from "@/services/posts";
 import { tagGamePost } from "@/services/game-posts";
 import {
@@ -300,6 +301,9 @@ export function RecRoomCloudPlayer() {
         url={streamUrl}
         title="Rec Room · RipoTeamServer"
         onClose={() => void releaseSession()}
+        stage={(source, markReady) => (
+          <RecRoomDirectStream url={source} onReady={markReady} />
+        )}
         toolbarActions={
           <>
             {play?.interactionRequired === "steam-sign-in" || play?.phase === "steam-login-required" ? (

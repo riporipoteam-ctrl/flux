@@ -22,12 +22,14 @@ export function StreamPlayer({
   onClose,
   toolbarActions,
   overlay,
+  stage,
 }: {
   url: string;
   title?: string;
   onClose?: () => void;
   toolbarActions?: ReactNode;
   overlay?: ReactNode;
+  stage?: (src: string, markReady: () => void) => ReactNode;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [src, setSrc] = useState(url);
@@ -193,6 +195,9 @@ export function StreamPlayer({
             </p>
           </div>
         )}
+        {stage ? (
+          stage(src, () => setLoading(false))
+        ) : (
         <iframe
           title={title}
           src={src}
@@ -201,6 +206,7 @@ export function StreamPlayer({
           allowFullScreen
           onLoad={() => setLoading(false)}
         />
+        )}
       </div>
 
       <div
