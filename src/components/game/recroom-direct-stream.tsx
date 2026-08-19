@@ -11,11 +11,13 @@ import {
 import { Volume2, VolumeX } from "lucide-react";
 
 type InputPayload = {
-  type: "key" | "move" | "button" | "wheel" | "release";
+  type: "key" | "move" | "position" | "button" | "wheel" | "release";
   key?: string;
   down?: boolean;
   dx?: number;
   dy?: number;
+  x?: number;
+  y?: number;
   button?: "left" | "middle" | "right";
   delta?: number;
 };
@@ -56,6 +58,21 @@ function pointerButton(button: number): "left" | "middle" | "right" {
   return "left";
 }
 
+function framePoint(frame: HTMLImageElement, clientX: number, clientY: number) {
+  const rect = frame.getBoundingClientRect();
+  const width = frame.naturalWidth || 1280;
+  const height = frame.naturalHeight || 720;
+  const scale = Math.min(rect.width / width, rect.height / height) || 1;
+  const renderedWidth = width * scale;
+  const renderedHeight = height * scale;
+  const x = (clientX - rect.left - (rect.width - renderedWidth) / 2) / scale;
+  const y = (clientY - rect.top - (rect.height - renderedHeight) / 2) / scale;
+  return {
+    x: Math.max(0, Math.min(width - 1, Math.round(x))),
+    y: Math.max(0, Math.min(height - 1, Math.round(y))),
+  };
+}
+
 export function RecRoomDirectStream({
   url,
   onReady,
@@ -73,6 +90,7 @@ export function RecRoomDirectStream({
   const moveCenterRef = useRef({ x: 0, y: 0 });
   const lookPointerRef = useRef<number | null>(null);
   const lookPositionRef = useRef({ x: 0, y: 0 });
+  const lookMovedRef = useRef(false);
   const touchFramePointerRef = useRef<number | null>(null);
   const touchFramePositionRef = useRef({ x: 0, y: 0 });
   const touchFrameMovedRef = useRef(false);
@@ -130,6 +148,9 @@ export function RecRoomDirectStream({
       if (payload.type === "move" && previous?.type === "move") {
         previous.dx = Math.max(-4000, Math.min(4000, (previous.dx || 0) + (payload.dx || 0)));
         previous.dy = Math.max(-4000, Math.min(4000, (previous.dy || 0) + (payload.dy || 0)));
+      } else if (payload.type === "position" && previous?.type === "position") {
+        previous.x = payload.x;
+        previous.y = payload.y;
       } else {
         queue.push(payload);
       }
@@ -335,6 +356,8 @@ export function RecRoomDirectStream({
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
+    const point = framePoint(event.currentTarget, event.clientX, event.clientY);
+    sendInput({ type: "position", ...point });
     sendInput({ type: "button", button: pointerButton(event.button), down: true });
     if (event.button === 0 && document.pointerLockElement !== frameRef.current) {
       try {
@@ -349,6 +372,8 @@ export function RecRoomDirectStream({
     event.preventDefault();
     if (touchFramePointerRef.current === event.pointerId) {
       if (!touchFrameMovedRef.current) {
+        const point = framePoint(event.currentTarget, event.clientX, event.clientY);
+        sendInput({ type: "position", ...point });
         sendInput({ type: "button", button: "left", down: true });
         sendInput({ type: "button", button: "left", down: false });
       }
@@ -356,6 +381,8 @@ export function RecRoomDirectStream({
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       return;
     }
+    const point = framePoint(event.currentTarget, event.clientX, event.clientY);
+    sendInput({ type: "position", ...point });
     sendInput({ type: "button", button: pointerButton(event.button), down: false });
   };
 
@@ -370,7 +397,12 @@ export function RecRoomDirectStream({
       touchFramePositionRef.current = { x: event.clientX, y: event.clientY };
       return;
     }
-    if (document.pointerLockElement === frameRef.current) queueMove(event.movementX, event.movementY);
+    if (document.pointerLockElement === frameRef.current) {
+      queueMove(event.movementX, event.movementY);
+      return;
+    }
+    const point = framePoint(event.currentTarget, event.clientX, event.clientY);
+    sendInput({ type: "position", ...point });
   };
 
   const onFramePointerCancel = (event: ReactPointerEvent<HTMLImageElement>) => {
@@ -407,6 +439,7 @@ export function RecRoomDirectStream({
     void enableSound();
     lookPointerRef.current = event.pointerId;
     lookPositionRef.current = { x: event.clientX, y: event.clientY };
+    lookMovedRef.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
@@ -414,11 +447,20 @@ export function RecRoomDirectStream({
     if (event.pointerId !== lookPointerRef.current) return;
     event.preventDefault();
     const previous = lookPositionRef.current;
-    queueMove((event.clientX - previous.x) * 1.45, (event.clientY - previous.y) * 1.45);
+    const dx = event.clientX - previous.x;
+    const dy = event.clientY - previous.y;
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) lookMovedRef.current = true;
+    queueMove(dx * 1.45, dy * 1.45);
     lookPositionRef.current = { x: event.clientX, y: event.clientY };
   };
 
   const releaseLook = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!lookMovedRef.current && frameRef.current) {
+      const point = framePoint(frameRef.current, event.clientX, event.clientY);
+      sendInput({ type: "position", ...point });
+      sendInput({ type: "button", button: "left", down: true });
+      sendInput({ type: "button", button: "left", down: false });
+    }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     lookPointerRef.current = null;
   };
