@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import mmap
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -18,7 +19,7 @@ from PIL import Image, ImageStat
 from recroom_wine_pool import RecRoomWinePool, SUFFIX_BY_HOST, WineInstance
 
 
-_RUNTIME_REVISION = "render-audio-v4-touch-safe-steam-diagnostic"
+_RUNTIME_REVISION = "render-audio-v4-touch-safe-steam-diagnostic-v2-fast-auth"
 _ORIGINAL_START_AUDIO = RecRoomWinePool._start_audio
 _ORIGINAL_DESTROY = RecRoomWinePool.destroy
 _ORIGINAL_PROGRESS = RecRoomWinePool.progress
@@ -34,6 +35,27 @@ _STEAM_APP_ID = "471710"
 
 def _steam_exe(prefix: Path) -> Path:
     return prefix / "drive_c" / "Program Files (x86)" / "Steam" / "Steam.exe"
+
+
+def _steam_loginusers(prefix: Path) -> Path:
+    return prefix / "drive_c" / "Program Files (x86)" / "Steam" / "config" / "loginusers.vdf"
+
+
+def _has_remembered_steam_user(prefix: Path) -> bool:
+    """Return whether Steam has a locally remembered, previously authenticated account.
+
+    The archived client cannot authenticate against Steam anonymously. Checking the
+    non-secret login marker before launching Rec Room avoids showing its misleading
+    "Failed to initialize Steam Platform" screen for an entire render-attempt cycle.
+    """
+    try:
+        text = _steam_loginusers(prefix).read_text(errors="replace")
+    except OSError:
+        return False
+    return bool(
+        re.search(r'"AccountName"\\s+"[^"]+"', text, flags=re.IGNORECASE)
+        and re.search(r'"MostRecent"\\s+"1"', text, flags=re.IGNORECASE)
+    )
 
 
 def _steam_setup_path(self: RecRoomWinePool) -> Path:
@@ -183,6 +205,12 @@ def _start_headless_steam(self: RecRoomWinePool, instance: WineInstance) -> None
     setattr(instance, "steam_process", process)
     time.sleep(max(4, min(20, int(os.environ.get("RECROOM_STEAM_BOOT_WAIT_SECONDS", "10")))))
     _hide_steam_windows(self, instance)
+    if not _has_remembered_steam_user(instance.prefix_dir):
+        raise RuntimeError(
+            "Rec Room requires an authenticated official Steam client. "
+            "This server has no remembered Steam account for the exact archived Windows build; "
+            "the build cannot run Steam-free, and no Steam UI was exposed to the browser."
+        )
 
 
 def _terminate_process(process: subprocess.Popen[Any] | None, timeout: float = 4.0) -> None:
@@ -711,6 +739,7 @@ def _capability_with_runtime_marker(self: RecRoomWinePool) -> dict[str, Any]:
     payload["fastRedirectPatch"] = True
     payload["steamRuntime"] = "official-headless-required-by-client"
     payload["steamUiStreamed"] = False
+    payload["steamAuth"] = "remembered-official-account-required"
     return payload
 
 
