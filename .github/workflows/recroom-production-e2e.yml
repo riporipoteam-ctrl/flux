@@ -148,7 +148,7 @@ jobs:
                 const body = await page.locator('body').innerText();
                 result.finalBodyExcerpt = body.slice(0, 1800);
                 if (body.includes('RipoTeamServer · private')) result.provisioningScreen = true;
-                if (body.includes('RipoTeamServer could not start Rec Room')) {
+                if (body.includes('RipoTeamServer could not start Rec Room') || body.includes('Steam sign-in is required by this exact Rec Room build')) {
                   result.runtimeBlocked = true;
                   result.sessionError = body.match(/RipoTeamServer could not start Rec Room[\s\S]{0,1200}/)?.[0] || 'Server runtime blocked';
                   break;
