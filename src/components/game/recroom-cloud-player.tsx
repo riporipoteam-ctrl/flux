@@ -70,6 +70,7 @@ function phaseIndex(phase: string) {
   return index >= 0 ? index : 0;
 }
 
+// Keep the exact-build platform dependency explicit in the browser recovery state.
 function isSteamAuthenticationError(error: string | undefined) {
   return Boolean(error && /steamapi|steam platform|official steam client|steam authentication/i.test(error));
 }
