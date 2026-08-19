@@ -587,8 +587,9 @@ def _capability(self: RecRoomWinePool) -> dict[str, Any]:
     payload["recNetTraceFile"] = _TRACE_NAME
     payload["recNetRedirectPatch"] = nameserver_fix._PATCH_REVISION
     payload["recNetDirectUrlScan"] = False
-    payload["steamRuntime"] = "official-headless-required-by-client"
+    payload["steamRuntime"] = "disabled-by-default-direct-launch"
     payload["steamUiStreamed"] = False
+    payload["steamRequiredByArchivedClient"] = True
     return payload
 
 
