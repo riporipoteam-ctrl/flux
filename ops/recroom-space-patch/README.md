@@ -16,6 +16,6 @@ pinned: false
 
 Ripo Team's browser-accessible Cloud PC, TikTok AI backend, and streamed Aug-25-2021 Rec Room runtime.
 
-This Space stays on the free Gradio/ZeroGPU-compatible SDK. Rec Room uses a SHA256-pinned portable Wine amd64-wow64 runtime and launches the archived client directly inside an isolated server sandbox. Steam is not shown or streamed to players.
+This Space stays on the free Gradio/ZeroGPU-compatible SDK. Rec Room uses a SHA256-pinned portable Wine amd64-wow64 runtime and launches the archived client directly inside an isolated server sandbox. The archive contains no iOS or Android client binary. The archived client requires Steamworks, so the official Steam client runs as a hidden background dependency; its UI is not shown or streamed to players. A legitimate authenticated Steam session may still be required.
 
 TikTok Login Kit credentials remain configured through Hugging Face Variables and Secrets. Deployment verification checks the live server health and Rec Room runtime after rollout.
