@@ -66,6 +66,7 @@ const coarse=matchMedia('(pointer:coarse)').matches;let stopped=false,framePendi
 audio.src=`audio.mp3?token=${{encodeURIComponent(token)}}&t=${{Date.now()}}`;
 async function enableSound(){{try{{await audio.play();sound.textContent='🔊 Sound on';}}catch{{sound.textContent='🔇 Tap to enable sound';}}}}
 sound.addEventListener('click',enableSound);
+function framePoint(clientX,clientY){{const r=frame.getBoundingClientRect(),scale=Math.min(r.width/1280,r.height/720)||1,ox=(r.width-1280*scale)/2,oy=(r.height-720*scale)/2;return{{type:'position',x:Math.max(0,Math.min(1279,Math.round((clientX-r.left-ox)/scale))),y:Math.max(0,Math.min(719,Math.round((clientY-r.top-oy)/scale)))}};}}
 function refresh(){{if(stopped)return;const now=Date.now();if(!framePending&&now>=retryAt){{framePending=true;frame.src=`frame.jpg?token=${{encodeURIComponent(token)}}&t=${{now}}`;}}requestAnimationFrame(refresh);}}
 frame.onload=()=>{{framePending=false;retryAt=0;status.textContent=coarse?'Connected · touch controls ready':(document.pointerLockElement===frame?'Connected · mouse captured':'Connected · click game to control');}};
 frame.onerror=()=>{{framePending=false;retryAt=Date.now()+250;status.textContent='Waiting for the first game frame…';}};
@@ -74,24 +75,24 @@ function buttonName(button){{return button===2?'right':button===1?'middle':'left
 function flushMove(){{moveScheduled=false;const dx=Math.round(pendingDx),dy=Math.round(pendingDy);pendingDx=0;pendingDy=0;if(dx||dy)input({{type:'move',dx,dy}});}}
 function queueMove(dx,dy){{pendingDx+=dx;pendingDy+=dy;if(!moveScheduled){{moveScheduled=true;requestAnimationFrame(flushMove);}}}}
 if(!coarse){{
- frame.addEventListener('pointerdown',ev=>{{ev.preventDefault();enableSound();frame.focus();input({{type:'button',button:buttonName(ev.button),down:true}});if(ev.button===0&&document.pointerLockElement!==frame&&frame.requestPointerLock){{try{{frame.requestPointerLock();}}catch{{}}}}}});
- frame.addEventListener('pointerup',ev=>{{ev.preventDefault();input({{type:'button',button:buttonName(ev.button),down:false}});}});
- frame.addEventListener('mousemove',ev=>{{if(document.pointerLockElement===frame)queueMove(ev.movementX||0,ev.movementY||0);}});
+ frame.addEventListener('pointerdown',ev=>{{ev.preventDefault();enableSound();frame.focus();input(framePoint(ev.clientX,ev.clientY));input({{type:'button',button:buttonName(ev.button),down:true}});if(ev.button===0&&document.pointerLockElement!==frame&&frame.requestPointerLock){{try{{frame.requestPointerLock();}}catch{{}}}}}});
+ frame.addEventListener('pointerup',ev=>{{ev.preventDefault();input(framePoint(ev.clientX,ev.clientY));input({{type:'button',button:buttonName(ev.button),down:false}});}});
+ frame.addEventListener('mousemove',ev=>{{if(document.pointerLockElement===frame)queueMove(ev.movementX||0,ev.movementY||0);else input(framePoint(ev.clientX,ev.clientY));}});
  frame.addEventListener('wheel',ev=>{{ev.preventDefault();input({{type:'wheel',delta:ev.deltaY<0?1:-1}});}},{{passive:false}});
  frame.addEventListener('contextmenu',ev=>ev.preventDefault());
  document.addEventListener('pointerlockchange',()=>{{if(document.pointerLockElement!==frame)input({{type:'release'}});}});
  window.addEventListener('keydown',ev=>{{if(['F5','F11','F12'].includes(ev.key))return;ev.preventDefault();input({{type:'key',key:ev.key,down:true}});}});
  window.addEventListener('keyup',ev=>{{if(['F5','F11','F12'].includes(ev.key))return;ev.preventDefault();input({{type:'key',key:ev.key,down:false}});}});
 }}
-const movePad=document.getElementById('movePad'),moveStick=document.getElementById('moveStick'),lookPad=document.getElementById('lookPad');let movePointer=null,moveCx=0,moveCy=0,activeMove=new Set(),lookPointer=null,lookX=0,lookY=0;
+const movePad=document.getElementById('movePad'),moveStick=document.getElementById('moveStick'),lookPad=document.getElementById('lookPad');let movePointer=null,moveCx=0,moveCy=0,activeMove=new Set(),lookPointer=null,lookX=0,lookY=0,lookMoved=false;
 function setMove(next){{const desired=new Set(next);for(const key of activeMove)if(!desired.has(key))input({{type:'key',key,down:false}});for(const key of desired)if(!activeMove.has(key))input({{type:'key',key,down:true}});activeMove=desired;}}
 function stopMove(){{setMove([]);moveStick.style.transform='translate(0,0)';movePointer=null;}}
 movePad.addEventListener('pointerdown',ev=>{{if(!coarse)return;ev.preventDefault();enableSound();movePointer=ev.pointerId;movePad.setPointerCapture(ev.pointerId);const r=movePad.getBoundingClientRect();moveCx=r.left+r.width/2;moveCy=r.top+r.height/2;}});
 movePad.addEventListener('pointermove',ev=>{{if(ev.pointerId!==movePointer)return;ev.preventDefault();let dx=ev.clientX-moveCx,dy=ev.clientY-moveCy;const mag=Math.hypot(dx,dy)||1,max=42,scale=Math.min(1,max/mag);dx*=scale;dy*=scale;moveStick.style.transform=`translate(${{dx}}px,${{dy}}px)`;const keys=[];if(dy<-13)keys.push('w');if(dy>13)keys.push('s');if(dx<-13)keys.push('a');if(dx>13)keys.push('d');setMove(keys);}});
 movePad.addEventListener('pointerup',stopMove);movePad.addEventListener('pointercancel',stopMove);
-lookPad.addEventListener('pointerdown',ev=>{{if(!coarse)return;ev.preventDefault();enableSound();lookPointer=ev.pointerId;lookX=ev.clientX;lookY=ev.clientY;lookPad.setPointerCapture(ev.pointerId);}});
-lookPad.addEventListener('pointermove',ev=>{{if(ev.pointerId!==lookPointer)return;ev.preventDefault();const dx=(ev.clientX-lookX)*1.45,dy=(ev.clientY-lookY)*1.45;lookX=ev.clientX;lookY=ev.clientY;queueMove(dx,dy);}});
-lookPad.addEventListener('pointerup',ev=>{{if(ev.pointerId===lookPointer)lookPointer=null;}});lookPad.addEventListener('pointercancel',ev=>{{if(ev.pointerId===lookPointer)lookPointer=null;}});
+lookPad.addEventListener('pointerdown',ev=>{{if(!coarse)return;ev.preventDefault();enableSound();lookPointer=ev.pointerId;lookX=ev.clientX;lookY=ev.clientY;lookMoved=false;lookPad.setPointerCapture(ev.pointerId);}});
+lookPad.addEventListener('pointermove',ev=>{{if(ev.pointerId!==lookPointer)return;ev.preventDefault();const dx=ev.clientX-lookX,dy=ev.clientY-lookY;if(Math.abs(dx)>1||Math.abs(dy)>1)lookMoved=true;lookX=ev.clientX;lookY=ev.clientY;queueMove(dx*1.45,dy*1.45);}});
+lookPad.addEventListener('pointerup',ev=>{{if(ev.pointerId===lookPointer&&!lookMoved){{input(framePoint(ev.clientX,ev.clientY));input({{type:'button',button:'left',down:true}});input({{type:'button',button:'left',down:false}});}}if(ev.pointerId===lookPointer)lookPointer=null;}});lookPad.addEventListener('pointercancel',ev=>{{if(ev.pointerId===lookPointer)lookPointer=null;}});
 function bindKeyButton(id,key){{const el=document.getElementById(id);const down=ev=>{{ev.preventDefault();enableSound();input({{type:'key',key,down:true}});}};const up=ev=>{{ev.preventDefault();input({{type:'key',key,down:false}});}};el.addEventListener('pointerdown',down);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);}}
 bindKeyButton('jumpBtn','Space');bindKeyButton('actBtn','e');bindKeyButton('runBtn','Shift');
 window.addEventListener('blur',()=>{{setMove([]);input({{type:'release'}});}});window.addEventListener('beforeunload',()=>{{stopped=true;input({{type:'release'}});}});frame.focus();enableSound();refresh();
