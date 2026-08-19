@@ -309,6 +309,21 @@ export function RecRoomDirectStream({
     if (moveFrameRef.current !== null) window.cancelAnimationFrame(moveFrameRef.current);
   }, [releaseMove, sendInput]);
 
+  useEffect(() => {
+    const releaseTouchState = () => {
+      releaseMove();
+      touchFramePointerRef.current = null;
+      lookPointerRef.current = null;
+      sendInput({ type: "release" });
+    };
+    window.addEventListener("blur", releaseTouchState);
+    window.addEventListener("pagehide", releaseTouchState);
+    return () => {
+      window.removeEventListener("blur", releaseTouchState);
+      window.removeEventListener("pagehide", releaseTouchState);
+    };
+  }, [releaseMove, sendInput]);
+
   const onFramePointerDown = (event: ReactPointerEvent<HTMLImageElement>) => {
     event.preventDefault();
     void enableSound();
@@ -356,6 +371,13 @@ export function RecRoomDirectStream({
       return;
     }
     if (document.pointerLockElement === frameRef.current) queueMove(event.movementX, event.movementY);
+  };
+
+  const onFramePointerCancel = (event: ReactPointerEvent<HTMLImageElement>) => {
+    if (touchFramePointerRef.current !== event.pointerId) return;
+    touchFramePointerRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    sendInput({ type: "release" });
   };
 
   const onMovePadDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -433,6 +455,7 @@ export function RecRoomDirectStream({
         onContextMenu={(event) => event.preventDefault()}
         onPointerDown={onFramePointerDown}
         onPointerUp={onFramePointerUp}
+        onPointerCancel={onFramePointerCancel}
         onPointerMove={onFramePointerMove}
         onWheel={(event) => {
           event.preventDefault();
