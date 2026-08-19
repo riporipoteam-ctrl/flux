@@ -23,6 +23,7 @@ type InputPayload = {
 type StreamEndpoints = {
   frameUrl: () => string;
   audioUrl: string;
+  audioFallbackUrl: string;
   inputUrl: string;
 };
 
@@ -43,7 +44,8 @@ function getEndpoints(streamUrl: string): StreamEndpoints {
       next.searchParams.set("t", String(Date.now()));
       return next.toString();
     },
-    audioUrl: endpoint("audio.ogg").toString(),
+    audioUrl: endpoint("audio.mp3").toString(),
+    audioFallbackUrl: endpoint("audio.ogg").toString(),
     inputUrl: endpoint("input").toString(),
   };
 }
@@ -71,14 +73,21 @@ export function RecRoomDirectStream({
   const moveCenterRef = useRef({ x: 0, y: 0 });
   const lookPointerRef = useRef<number | null>(null);
   const lookPositionRef = useRef({ x: 0, y: 0 });
+  const touchFramePointerRef = useRef<number | null>(null);
+  const touchFramePositionRef = useRef({ x: 0, y: 0 });
+  const touchFrameMovedRef = useRef(false);
   const activeMoveKeysRef = useRef(new Set<string>());
   const pendingMoveRef = useRef({ dx: 0, dy: 0 });
   const moveFrameRef = useRef<number | null>(null);
   const pressedKeysRef = useRef(new Set<string>());
+  const inputQueueRef = useRef<InputPayload[]>([]);
+  const inputBusyRef = useRef(false);
+  const audioSourceRef = useRef<"mp3" | "ogg">("mp3");
   const [coarse, setCoarse] = useState(false);
   const [stick, setStick] = useState({ x: 0, y: 0 });
   const [status, setStatus] = useState("Connecting Rec Room…");
-  const [soundBlocked, setSoundBlocked] = useState(false);
+  const [soundBlocked, setSoundBlocked] = useState(true);
+  const [soundError, setSoundError] = useState(false);
 
   useEffect(() => {
     onReadyRef.current = onReady;
@@ -90,35 +99,86 @@ export function RecRoomDirectStream({
     setCoarse(isCoarse);
   }, []);
 
+  const pumpInput = useCallback(async () => {
+    if (inputBusyRef.current) return;
+    inputBusyRef.current = true;
+    try {
+      while (inputQueueRef.current.length > 0) {
+        const payload = inputQueueRef.current.shift();
+        if (!payload) continue;
+        try {
+          await fetch(endpoints.inputUrl, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+            cache: "no-store",
+          });
+        } catch {
+          // A dropped input packet should not block the rest of the queue.
+        }
+      }
+    } finally {
+      inputBusyRef.current = false;
+      if (inputQueueRef.current.length > 0) void pumpInput();
+    }
+  }, [endpoints.inputUrl]);
+
   const sendInput = useCallback(
     (payload: InputPayload) => {
-      void fetch(endpoints.inputUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-        cache: "no-store",
-      }).catch(() => undefined);
+      const queue = inputQueueRef.current;
+      const previous = queue[queue.length - 1];
+      if (payload.type === "move" && previous?.type === "move") {
+        previous.dx = Math.max(-4000, Math.min(4000, (previous.dx || 0) + (payload.dx || 0)));
+        previous.dy = Math.max(-4000, Math.min(4000, (previous.dy || 0) + (payload.dy || 0)));
+      } else {
+        queue.push(payload);
+      }
+      if (queue.length > 64) queue.splice(0, queue.length - 64);
+      void pumpInput();
     },
-    [endpoints.inputUrl],
+    [pumpInput],
   );
 
   const enableSound = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio) return;
+    if (!audio.currentSrc) {
+      audioSourceRef.current = "mp3";
+      audio.src = endpoints.audioUrl;
+      audio.load();
+    }
     try {
       await audio.play();
       setSoundBlocked(false);
+      setSoundError(false);
     } catch {
+      if (audioSourceRef.current === "mp3") {
+        audioSourceRef.current = "ogg";
+        audio.src = endpoints.audioFallbackUrl;
+        audio.load();
+        try {
+          await audio.play();
+          setSoundBlocked(false);
+          setSoundError(false);
+          return;
+        } catch {
+          // Keep the visible retry button enabled.
+        }
+      }
       setSoundBlocked(true);
+      setSoundError(true);
     }
-  }, []);
+  }, [endpoints.audioFallbackUrl, endpoints.audioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    audioSourceRef.current = "mp3";
+    audio.preload = "auto";
     audio.src = endpoints.audioUrl;
     audio.load();
-    void audio.play().catch(() => setSoundBlocked(true));
+    setSoundBlocked(true);
+    setSoundError(false);
     return () => {
       audio.pause();
       audio.removeAttribute("src");
@@ -253,6 +313,13 @@ export function RecRoomDirectStream({
     event.preventDefault();
     void enableSound();
     frameRef.current?.focus();
+    if (coarseRef.current && event.pointerType === "touch") {
+      touchFramePointerRef.current = event.pointerId;
+      touchFramePositionRef.current = { x: event.clientX, y: event.clientY };
+      touchFrameMovedRef.current = false;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      return;
+    }
     sendInput({ type: "button", button: pointerButton(event.button), down: true });
     if (event.button === 0 && document.pointerLockElement !== frameRef.current) {
       try {
@@ -265,10 +332,29 @@ export function RecRoomDirectStream({
 
   const onFramePointerUp = (event: ReactPointerEvent<HTMLImageElement>) => {
     event.preventDefault();
+    if (touchFramePointerRef.current === event.pointerId) {
+      if (!touchFrameMovedRef.current) {
+        sendInput({ type: "button", button: "left", down: true });
+        sendInput({ type: "button", button: "left", down: false });
+      }
+      touchFramePointerRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      return;
+    }
     sendInput({ type: "button", button: pointerButton(event.button), down: false });
   };
 
   const onFramePointerMove = (event: ReactPointerEvent<HTMLImageElement>) => {
+    if (touchFramePointerRef.current === event.pointerId) {
+      event.preventDefault();
+      const previous = touchFramePositionRef.current;
+      const dx = event.clientX - previous.x;
+      const dy = event.clientY - previous.y;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) touchFrameMovedRef.current = true;
+      queueMove(dx * 1.45, dy * 1.45);
+      touchFramePositionRef.current = { x: event.clientX, y: event.clientY };
+      return;
+    }
     if (document.pointerLockElement === frameRef.current) queueMove(event.movementX, event.movementY);
   };
 
@@ -310,6 +396,11 @@ export function RecRoomDirectStream({
     lookPositionRef.current = { x: event.clientX, y: event.clientY };
   };
 
+  const releaseLook = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    lookPointerRef.current = null;
+  };
+
   const actionButton = (label: string, key: string, className: string) => (
     <button
       type="button"
@@ -317,11 +408,13 @@ export function RecRoomDirectStream({
       onPointerDown={(event) => {
         event.preventDefault();
         void enableSound();
+        event.currentTarget.setPointerCapture(event.pointerId);
         sendInput({ type: "key", key, down: true });
       }}
       onPointerUp={(event) => {
         event.preventDefault();
         sendInput({ type: "key", key, down: false });
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       }}
       onPointerCancel={() => sendInput({ type: "key", key, down: false })}
     >
@@ -346,18 +439,41 @@ export function RecRoomDirectStream({
           sendInput({ type: "wheel", delta: event.deltaY < 0 ? 1 : -1 });
         }}
       />
-      <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/65 px-2.5 py-1 text-[11px] text-white/85 backdrop-blur-sm">
+      <div className="pointer-events-none absolute left-3 top-3 z-40 rounded-full bg-black/65 px-2.5 py-1 text-[11px] text-white/85 backdrop-blur-sm">
         {status}
       </div>
       <button
         type="button"
         onClick={() => void enableSound()}
-        className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/65 px-2.5 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm"
+        className="absolute right-3 top-3 z-40 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/65 px-2.5 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm"
+        aria-label={soundBlocked ? "Enable Rec Room sound" : "Rec Room sound is on"}
       >
         {soundBlocked ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-        {soundBlocked ? "Tap for sound" : "Sound"}
+        {soundError ? "Retry sound" : soundBlocked ? "Tap to enable sound" : "Sound on"}
       </button>
-      <audio ref={audioRef} autoPlay playsInline preload="none" className="hidden" />
+      <audio
+        ref={audioRef}
+        playsInline
+        preload="auto"
+        className="hidden"
+        onCanPlay={() => setSoundError(false)}
+        onPlaying={() => {
+          setSoundBlocked(false);
+          setSoundError(false);
+        }}
+        onError={() => {
+          const audio = audioRef.current;
+          if (!audio) return;
+          if (audioSourceRef.current === "mp3") {
+            audioSourceRef.current = "ogg";
+            audio.src = endpoints.audioFallbackUrl;
+            audio.load();
+            return;
+          }
+          setSoundBlocked(true);
+          setSoundError(true);
+        }}
+      />
 
       {coarse ? (
         <div className="pointer-events-none absolute inset-0 z-20">
@@ -365,7 +481,10 @@ export function RecRoomDirectStream({
             className="pointer-events-auto absolute bottom-5 left-5 h-32 w-32 rounded-full border border-white/25 bg-black/45 shadow-xl backdrop-blur-sm touch-none"
             onPointerDown={onMovePadDown}
             onPointerMove={onMovePadMove}
-            onPointerUp={releaseMove}
+            onPointerUp={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+              releaseMove();
+            }}
             onPointerCancel={releaseMove}
           >
             <div
@@ -373,7 +492,10 @@ export function RecRoomDirectStream({
               style={{ transform: `translate(calc(-50% + ${stick.x}px), calc(-50% + ${stick.y}px))` }}
             />
           </div>
-          <div className="pointer-events-auto absolute inset-y-0 right-0 w-[58%] touch-none" onPointerDown={onLookDown} onPointerMove={onLookMove} onPointerUp={() => { lookPointerRef.current = null; }} onPointerCancel={() => { lookPointerRef.current = null; }} />
+          <div className="pointer-events-auto absolute inset-y-0 right-0 w-[58%] touch-none" onPointerDown={onLookDown} onPointerMove={onLookMove} onPointerUp={releaseLook} onPointerCancel={releaseLook} />
+          <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-bold tracking-wide text-white/75 backdrop-blur-sm">
+            Drag right side to look
+          </div>
           {actionButton("JUMP", "Space", "bottom-5 right-5 h-[76px] w-[76px]")}
           {actionButton("ACT", "e", "bottom-[94px] right-[102px] h-[62px] w-[62px]")}
           {actionButton("RUN", "Shift", "bottom-[178px] left-[120px] h-[50px] w-[50px] text-[9px]")}
