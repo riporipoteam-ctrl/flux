@@ -1,4 +1,4 @@
-// Direct-launch backend verification marker: the server selects the real screen-mode executable and supplies Steam app metadata without starting Steam.
+// Direct-launch backend verification marker: the server selects the real screen-mode executable and supplies Steam app metadata without starting Steam; server-owned Steam mode is now being verified.
 "use client";
 
 import { useEffect, useState } from "react";
