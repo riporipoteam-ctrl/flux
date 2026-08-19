@@ -583,7 +583,7 @@ def _provision_render_checked(
             # The archived Windows build reads its app id from this file when
             # started outside a desktop launcher. This is metadata only and
             # does not start Steam or expose a launcher window.
-            (instance.client_dir / "steam_appid.txt").write_text("471710\n", encoding="ascii")
+            (instance.client_dir / "steam_appid.txt").unlink(missing_ok=True)
 
             profiles: list[tuple[str, list[str]]] = [
                 (
@@ -617,10 +617,9 @@ def _provision_render_checked(
 
             diagnostics: list[str] = []
             env = self._wine_env(instance)
-            env.setdefault("SteamAppId", "471710")
-            env.setdefault("SteamGameId", "471710")
             progress("starting-game-platform", 62)
-            _start_headless_steam(self, instance)
+            if os.environ.get("RECROOM_HEADLESS_STEAM", "0").strip().lower() not in {"0", "false", "no"}:
+                _start_headless_steam(self, instance)
             progress("launching-game", 68)
 
             selected = False
@@ -633,7 +632,8 @@ def _provision_render_checked(
                 command = [
                     str(self.wine),
                     str(exe),
-                    "+forcemode:screen",\n                    "-screen-fullscreen",
+                    "+forcemode:screen",
+                    "-screen-fullscreen",
                     "0",
                     "-screen-width",
                     str(self.width),
