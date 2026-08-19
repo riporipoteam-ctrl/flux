@@ -3,6 +3,8 @@ const RAKAZO_APP_URL = "https://app.rakazo.com/app";
 /**
  * AskAI uses the real Rakazo web client published from
  * https://github.com/elie222/rakazo. Flux does not recreate Rakazo's UI here.
+ * Flux Pages is a static frontend deployment, so the running Rakazo web app
+ * is embedded directly instead of being rebuilt as a Flux mock.
  */
 export default function RakazoOfficialApp() {
   return (
