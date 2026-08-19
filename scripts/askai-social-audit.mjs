@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 const requireText = (source, marker, label) => {
@@ -9,47 +9,26 @@ const forbidText = (source, marker, label) => {
 };
 
 const route = read("src/app/(main)/ask-ai/page.tsx");
-requireText(route, "AskAIGroqWorkspace", "AskAI route");
+requireText(route, "RakazoOfficialApp", "AskAI route");
+for (const marker of ["AskAIGroqWorkspace", "RakazoAskAIWorkspace", "AskAIWorkspaceSync"]) {
+  forbidText(route, marker, "AskAI route");
+}
 
-const workspace = read("src/components/ask-ai/askai-groq-workspace.tsx");
+const officialApp = read("src/components/ask-ai/rakazo-official-app.tsx");
 for (const marker of [
-  "Ripo Local · Qwen3 4B",
-  "AskAI Pro",
-  "AskAI Instant",
-  "runAskAIGroq",
-  "Web research",
-  "Cloud compute",
-  "searchFlux",
-  "lastProvider",
-  "lastModel",
-]) requireText(workspace, marker, "Hybrid AskAI workspace");
-for (const marker of ["Kimi K3", "runLocalAskAI", "Groq GPT-OSS 120B", "Groq GPT-OSS 20B"]) forbidText(workspace, marker, "Hybrid AskAI workspace");
+  "https://app.rakazo.com/app",
+  "https://github.com/elie222/rakazo",
+  "<iframe",
+  "Flux Pages is a static frontend deployment",
+]) requireText(officialApp, marker, "Official Rakazo app bridge");
 
-const client = read("src/lib/ai/askai-groq.ts");
-for (const marker of [
-  "askaiGroq",
-  "getIdToken",
-  "Authorization",
-  "checkAskAIGroqHealth",
-  "provider?: string",
-  "ASKAI_UPSTREAM_FAILED",
-]) requireText(client, marker, "AskAI browser client");
-forbidText(client, "gsk_", "AskAI browser client");
-
-const gateway = read("functions/src/index.ts");
-for (const marker of [
-  "verifyIdToken",
-  "RIPO_ASKAI_BASE_URL",
-  "qwen3:4b-instruct",
-  "browser_search",
-  "code_interpreter",
-  "askaiRateLimits",
-  "toolsRequested",
-  "callRipoAskAI",
-  "firebaseIdToken",
-  "probeRipoAskAI",
-]) requireText(gateway, marker, "AskAI Firebase gateway");
-forbidText(gateway, "gsk_", "AskAI Firebase gateway");
+for (const obsoletePath of [
+  "src/components/ask-ai/rakazo-askai-workspace.tsx",
+  "src/components/ask-ai/askai-workspace-sync.tsx",
+  "src/styles/rakazo-askai.css",
+]) {
+  if (existsSync(obsoletePath)) throw new Error(`Official Rakazo app bridge: obsolete mock remains at ${obsoletePath}`);
+}
 
 const mainLayout = read("src/app/(main)/layout.tsx");
 requireText(mainLayout, "if (isStudio)", "Immersive Studio shell");
@@ -65,4 +44,4 @@ for (const marker of ["#1d9bf0", ".flux8-sidebar", ".flux8-mobile-nav", ".flux8-
 const askStyles = read("src/styles/askai-workspace-v2.css");
 for (const marker of [".askx-shell", ".askx-model-switch", ".askx-composer", ".askx-context"]) requireText(askStyles, marker, "AskAI workspace styles");
 
-console.log("Self-hosted Ripo AskAI and Flux social audit passed.");
+console.log("Official Rakazo app bridge and Flux social audit passed.");
