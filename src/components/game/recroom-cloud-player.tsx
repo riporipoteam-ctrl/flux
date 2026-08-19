@@ -70,6 +70,10 @@ function phaseIndex(phase: string) {
   return index >= 0 ? index : 0;
 }
 
+function isSteamAuthenticationError(error: string | undefined) {
+  return Boolean(error && /steamapi|steam platform|official steam client|steam authentication/i.test(error));
+}
+
 export function RecRoomCloudPlayer() {
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const [starting, setStarting] = useState(false);
@@ -90,6 +94,7 @@ export function RecRoomCloudPlayer() {
     play?.state !== "failed",
   );
   const provisioning = Boolean(starting || waitingForGame);
+  const steamAuthenticationError = isSteamAuthenticationError(play?.error);
 
   const clearCapture = () => {
     setCapture((current) => {
@@ -445,8 +450,8 @@ export function RecRoomCloudPlayer() {
           <section className="mt-4 flex gap-3 rounded-[22px] border border-amber-300/15 bg-amber-300/8 p-4 text-amber-50">
             <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
             <div>
-              <p className="text-sm font-black">RipoTeamServer could not start Rec Room</p>
-              <p className="mt-1 text-xs leading-5 text-amber-50/65">{play.error}</p>
+              <p className="text-sm font-black">{steamAuthenticationError ? "Steam sign-in is required by this exact Rec Room build" : "RipoTeamServer could not start Rec Room"}</p>
+              <p className="mt-1 text-xs leading-5 text-amber-50/65">{steamAuthenticationError ? "The Aug 25, 2021 Windows client calls SteamAPI_Init. Steam runs hidden on the server and is never sent to the browser, but this sandbox has no remembered authenticated Steam account, so the build cannot launch fully Steam-free." : play.error}</p>
             </div>
           </section>
         ) : null}
