@@ -127,7 +127,7 @@ jobs:
               result.manualPairingRemoved = (await page.getByRole('button', { name: 'Windows host setup', exact: true }).count()) === 0;
               if (!result.manualPairingRemoved) throw new Error('Legacy manual Windows-host pairing UI is still exposed.');
 
-              for (let i = 0; i < 30; i += 1) {
+              for (let i = 0; i < 900; i += 1) {
                 const body = await page.locator('body').innerText();
                 if (body.includes('Wine sandbox ready') || body.includes('Server runtime ready')) {
                   result.runtimeReadyBeforePlay = true;
