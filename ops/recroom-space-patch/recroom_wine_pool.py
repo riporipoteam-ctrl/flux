@@ -116,7 +116,7 @@ class RecRoomWinePool:
 
     def _client_layout(self) -> dict[str, Any]:
         root = self.client_dir
-        exe = next((root / name for name in ("RecRoom.exe", "Recroom_Release.exe") if (root / name).is_file()), None)
+        # RecRoom.exe is the small bootstrapper; launch the real screen-mode game executable when available.\n        exe = next((root / name for name in ("Recroom_Release.exe", "RecRoom.exe") if (root / name).is_file()), None)
         assembly = root / "GameAssembly.dll"
         data = next((root / name for name in ("RecRoom_Data", "Recroom_Release_Data") if (root / name).is_dir()), None)
         metadata = data / "il2cpp_data" / "Metadata" / "global-metadata.dat" if data else None
@@ -540,7 +540,7 @@ class RecRoomWinePool:
                 instance.game_process = subprocess.Popen(
                     [
                         str(self.wine), str(exe),
-                        "-screen-fullscreen", "0",
+                        "+forcemode:screen",\n                        "-screen-fullscreen", "0",
                         "-screen-width", str(self.width),
                         "-screen-height", str(self.height),
                         "-force-d3d11",
