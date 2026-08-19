@@ -51,7 +51,7 @@ jobs:
               streamShell: false, iframeLoaded: false, directStreamLoaded: false, frameLoaded: false,
               frameWidth: 0, frameHeight: 0, frameBrightness: 0, frameVariance: 0,
               frameSha256: '', observedFrames: 0, observedFps: 0, streamConnected: false, audioHealth: false,
-              audioBytes: 0, audioOgg: false, audioElementLinked: false, inputDown: false, inputUp: false,
+              audioBytes: 0, audioMp3: false, audioOgg: false, audioElementLinked: false, inputDown: false, inputUp: false,
               finalStreamStatus: '', runtimeError: '', fatal: '',
             };
 
@@ -138,7 +138,7 @@ jobs:
                   frameUrl: endpoint('frame.jpg'),
                   healthUrl: endpoint('health'),
                   inputUrl: endpoint('input'),
-                  audioUrl: endpoint('audio.ogg'),
+                  audioUrl: endpoint('audio.mp3'),
                 };
 
                 const sampleFrame = async () => page.evaluate(async url => {
@@ -332,7 +332,7 @@ jobs:
               result.inputUp = inputResult.up.status === 200 && inputResult.up.body.ok === true;
               if (!result.inputDown || !result.inputUp) throw new Error('Keyboard input delivery failed: ' + JSON.stringify(inputResult));
 
-              // Read the beginning of the live Ogg/Opus audio stream. Ogg
+              // Read the beginning of the live MP3 audio stream. MP3
               // headers are emitted even if the current game moment is quiet.
               const audio = directStream
                 ? await page.evaluate(async url => {
@@ -369,16 +369,21 @@ jobs:
                     finally { clearTimeout(timer); }
                   });
               result.audioBytes = audio.bytes.length;
-              result.audioOgg = audio.bytes.length >= 4 && String.fromCharCode(...audio.bytes.slice(0,4)) === 'OggS';
+              const audioHeader = audio.bytes.slice(0, 4);
+              result.audioMp3 = audio.bytes.length >= 2 && (
+                (audioHeader[0] === 0x49 && audioHeader[1] === 0x44) ||
+                (audioHeader[0] === 0xff && (audioHeader[1] & 0xe0) === 0xe0)
+              );
+              result.audioOgg = audio.bytes.length >= 4 && String.fromCharCode(...audioHeader) === 'OggS';
               const audioElements = await page.locator('audio').evaluateAll(elements => elements.map(audio => ({
                 src: audio.currentSrc || audio.src || '',
                 networkState: audio.networkState,
                 readyState: audio.readyState,
               }))).catch(() => []);
               result.audioElementLinked = audioElements.some(audio => Boolean(audio.src));
-              if (!result.audioOgg && !(result.audioHealth && result.audioElementLinked)) {
+              if (!result.audioMp3 && !(result.audioHealth && result.audioElementLinked)) {
                 throw new Error(
-                  'Live audio did not return Ogg/Opus bytes: ' +
+                  'Live audio did not return MP3 bytes: ' +
                   JSON.stringify({
                     ok:audio.ok,
                     status:audio.status,
@@ -397,7 +402,7 @@ jobs:
               console.log(JSON.stringify(result, null, 2));
               await browser.close();
             }
-            const ok = result.signup && result.onboarding && result.runtimeReady && result.playClicked && result.streamShell && (result.iframeLoaded || result.directStreamLoaded) && result.frameLoaded && result.streamConnected && result.audioHealth && (result.audioOgg || result.audioElementLinked) && result.inputDown && result.inputUp && !result.runtimeError && !result.fatal;
+            const ok = result.signup && result.onboarding && result.runtimeReady && result.playClicked && result.streamShell && (result.iframeLoaded || result.directStreamLoaded) && result.frameLoaded && result.streamConnected && result.audioHealth && (result.audioMp3 || result.audioElementLinked) && result.inputDown && result.inputUp && !result.runtimeError && !result.fatal;
             if (!ok) process.exit(1);
           })().catch(e => { console.error(e); process.exit(1); });
           NODE
