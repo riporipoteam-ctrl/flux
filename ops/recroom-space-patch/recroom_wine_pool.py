@@ -649,7 +649,10 @@ class RecRoomWinePool:
 def install_recroom_wine_routes(app: Any, pool: RecRoomWinePool) -> None:
     @app.get("/api/recroom-wine/capabilities")
     async def recroom_wine_capabilities() -> dict[str, Any]:
-        return {"ok": True, **pool.capability()}
+        try:
+            return {"ok": True, **pool.capability()}
+        except Exception as exc:
+            return {"ok": False, "capabilityError": f"{type(exc).__name__}: {exc}"[:1200]}
 
     async def proxy(request: Request, host_id: str, path: str) -> Response:
         target = pool.proxy_target(host_id, path, request.url.query)
