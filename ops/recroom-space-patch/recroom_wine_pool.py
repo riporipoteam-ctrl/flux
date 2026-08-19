@@ -531,16 +531,15 @@ class RecRoomWinePool:
                 # The archived Windows build reads its app id from this file
                 # when started outside a desktop launcher. It is metadata only;
                 # writing it does not start Steam or expose a launcher window.
-                (instance.client_dir / "steam_appid.txt").write_text("471710\n", encoding="ascii")
+                (instance.client_dir / "steam_appid.txt").unlink(missing_ok=True)
                 env = self._wine_env(instance)
-                env.setdefault("SteamAppId", "471710")
-                env.setdefault("SteamGameId", "471710")
                 progress("launching-game", 68)
                 glog = (work_dir / "wine-game.log").open("ab", buffering=0)
                 instance.game_process = subprocess.Popen(
                     [
                         str(self.wine), str(exe),
-                        "+forcemode:screen",\n                        "-screen-fullscreen", "0",
+                        "+forcemode:screen",
+                        "-screen-fullscreen", "0",
                         "-screen-width", str(self.width),
                         "-screen-height", str(self.height),
                         "-force-d3d11",
