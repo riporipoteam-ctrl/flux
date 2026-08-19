@@ -381,7 +381,7 @@ jobs:
                 readyState: audio.readyState,
               }))).catch(() => []);
               result.audioElementLinked = audioElements.some(audio => Boolean(audio.src));
-              if (!result.audioMp3 && !(result.audioHealth && result.audioElementLinked)) {
+              if (!result.audioMp3) {
                 throw new Error(
                   'Live audio did not return MP3 bytes: ' +
                   JSON.stringify({
@@ -402,7 +402,7 @@ jobs:
               console.log(JSON.stringify(result, null, 2));
               await browser.close();
             }
-            const ok = result.signup && result.onboarding && result.runtimeReady && result.playClicked && result.streamShell && (result.iframeLoaded || result.directStreamLoaded) && result.frameLoaded && result.streamConnected && result.audioHealth && (result.audioMp3 || result.audioElementLinked) && result.inputDown && result.inputUp && !result.runtimeError && !result.fatal;
+            const ok = result.signup && result.onboarding && result.runtimeReady && result.playClicked && result.streamShell && (result.iframeLoaded || result.directStreamLoaded) && result.frameLoaded && result.streamConnected && result.audioHealth && result.audioMp3 && result.inputDown && result.inputUp && !result.runtimeError && !result.fatal;
             if (!ok) process.exit(1);
           })().catch(e => { console.error(e); process.exit(1); });
           NODE
