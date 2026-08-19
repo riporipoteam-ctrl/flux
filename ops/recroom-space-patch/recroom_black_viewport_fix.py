@@ -347,7 +347,7 @@ def _provision_visible(
             # The archived Windows build reads its app id from this file when
             # started outside a desktop launcher. The official Steam client is
             # started separately in the background; its UI is never streamed.
-            (instance.client_dir / "steam_appid.txt").write_text("471710\n", encoding="ascii")
+            (instance.client_dir / "steam_appid.txt").unlink(missing_ok=True)
 
             profiles: list[tuple[str, list[str], dict[str, str], int]] = [
                 (
@@ -394,10 +394,9 @@ def _provision_visible(
 
             diagnostics: list[str] = []
             base_env = self._wine_env(instance)
-            base_env.setdefault("SteamAppId", "471710")
-            base_env.setdefault("SteamGameId", "471710")
             progress("starting-game-platform", 62)
-            runtime_fix._start_headless_steam(self, instance)
+            if os.environ.get("RECROOM_HEADLESS_STEAM", "0").strip().lower() not in {"0", "false", "no"}:
+                runtime_fix._start_headless_steam(self, instance)
             progress("launching-game", 68)
             selected = False
 
@@ -415,6 +414,7 @@ def _provision_visible(
                 command = [
                     str(self.wine),
                     str(exe),
+                    "+forcemode:screen",
                     "-screen-fullscreen",
                     "0",
                     "-screen-width",
