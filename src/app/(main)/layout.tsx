@@ -21,6 +21,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [stickyComplete, setStickyComplete] = useState(false);
   const isPublicLiveViewer = pathname?.startsWith("/live/view");
   const isAskAI = pathname?.startsWith("/ask-ai");
+  const isPublicAskAI = pathname === "/ask-ai";
   const isMessages = pathname?.startsWith("/messages");
   const isCall = pathname?.startsWith("/messages/call");
   const isGames = pathname?.startsWith("/games");
@@ -52,15 +53,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   );
 
   useEffect(() => {
-    if (loading || !stickyResolved || isPublicLiveViewer) return;
+    if (loading || !stickyResolved || isPublicLiveViewer || isPublicAskAI) return;
     if (!user) router.replace("/login");
     else if (needsOnboarding) router.replace("/onboarding");
-  }, [user, needsOnboarding, loading, stickyResolved, router, isPublicLiveViewer]);
+  }, [user, needsOnboarding, loading, stickyResolved, router, isPublicLiveViewer, isPublicAskAI]);
 
   // The viewer page must load before a full Flux profile exists. It creates a
   // temporary anonymous Firebase identity for secure signaling when necessary.
   if (isPublicLiveViewer) {
     return <div className="h-[100dvh] w-full overflow-hidden bg-black">{children}</div>;
+  }
+
+  // Rakazo AskAI is a public workspace. Guests can use its local runtime and
+  // keep local threads; signing in is only needed for Firebase sync.
+  if (isPublicAskAI) {
+    return <div className="h-[100dvh] w-full overflow-auto bg-background">{children}</div>;
   }
 
   if (loading || !stickyResolved) return <LoadingScreen label="Loading Flux" />;

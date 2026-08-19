@@ -1,0 +1,442 @@
+diff --git a/apps/web/src/App.tsx b/apps/web/src/App.tsx
+index c2c17e6..919e3b0 100644
+--- a/apps/web/src/App.tsx
++++ b/apps/web/src/App.tsx
+@@ -16,12 +16,13 @@ const WelcomePage = lazy(() =>
+ 
+ export function App() {
+   const session = authClient.useSession();
++  const guestMode = import.meta.env.VITE_GUEST_MODE === "true";
+   useLayoutEffect(() => {
+     if (session.isPending) return;
+     markOnce("rk:renderer:session-committed");
+     markAfterPaint("rk:renderer:session-painted");
+   }, [session.isPending]);
+-  if (session.isPending) {
++  if (session.isPending && !guestMode) {
+     return window.location.pathname.startsWith("/app") ? (
+       <ShellSkeleton />
+     ) : (
+@@ -29,26 +30,27 @@ export function App() {
+     );
+   }
+   const user = session.data?.user;
++  const hasAccess = guestMode || Boolean(user);
+   return (
+     <Suspense fallback={<div className="h-full bg-[#050506]" />}>
+       <Routes>
+-        <Route path="/" element={user ? <Navigate to="/app" replace /> : <WelcomePage />} />
++        <Route path="/" element={hasAccess ? <Navigate to="/app" replace /> : <WelcomePage />} />
+         <Route
+           path="/sign-in"
+-          element={user ? <Navigate to="/app" replace /> : <AuthPage mode="in" />}
++          element={hasAccess ? <Navigate to="/app" replace /> : <AuthPage mode="in" />}
+         />
+         <Route
+           path="/sign-up"
+-          element={user ? <Navigate to="/onboarding" replace /> : <AuthPage mode="up" />}
++          element={hasAccess ? <Navigate to="/app" replace /> : <AuthPage mode="up" />}
+         />
+         <Route
+           path="/onboarding"
+-          element={user ? <OnboardingPage /> : <Navigate to="/sign-in" replace />}
++          element={guestMode ? <Navigate to="/app" replace /> : user ? <OnboardingPage /> : <Navigate to="/sign-in" replace />}
+         />
+-        <Route path="/app" element={user ? <ShellPage /> : <Navigate to="/sign-in" replace />} />
++        <Route path="/app" element={hasAccess ? <ShellPage /> : <Navigate to="/sign-in" replace />} />
+         <Route
+           path="/app/:botId"
+-          element={user ? <ShellPage /> : <Navigate to="/sign-in" replace />}
++          element={hasAccess ? <ShellPage /> : <Navigate to="/sign-in" replace />}
+         />
+       </Routes>
+     </Suspense>
+diff --git a/apps/web/src/lib/rpc.ts b/apps/web/src/lib/rpc.ts
+index 37cf64f..61821f9 100644
+--- a/apps/web/src/lib/rpc.ts
++++ b/apps/web/src/lib/rpc.ts
+@@ -2,6 +2,7 @@ import { createORPCClient } from "@orpc/client";
+ import { RPCLink } from "@orpc/client/fetch";
+ import type { ContractRouterClient } from "@orpc/contract";
+ import type { AppContract } from "@rakazo/contracts";
++import { guestRpc } from "./guest-rpc";
+ 
+ const link = new RPCLink({
+   url: () =>
+@@ -9,4 +10,5 @@ const link = new RPCLink({
+   fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
+ });
+ 
+-export const rpc: ContractRouterClient<AppContract> = createORPCClient(link);
++export const rpc: ContractRouterClient<AppContract> =
++  import.meta.env.VITE_GUEST_MODE === "true" ? guestRpc : createORPCClient(link);
+diff --git a/apps/web/src/main.tsx b/apps/web/src/main.tsx
+index 19bd469..c11cd91 100644
+--- a/apps/web/src/main.tsx
++++ b/apps/web/src/main.tsx
+@@ -18,7 +18,7 @@ function PerformanceProbe() {
+ createRoot(document.getElementById("root")!).render(
+   <StrictMode>
+     <PerformanceProbe />
+-    <BrowserRouter>
++    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || undefined}>
+       <App />
+     </BrowserRouter>
+   </StrictMode>,
+diff --git a/apps/web/src/pages/Shell.tsx b/apps/web/src/pages/Shell.tsx
+index f63096e..bd5c16f 100644
+--- a/apps/web/src/pages/Shell.tsx
++++ b/apps/web/src/pages/Shell.tsx
+@@ -89,6 +89,7 @@ export function ShellPage() {
+   const navigate = useNavigate();
+   const [searchParams, setSearchParams] = useSearchParams();
+   const session = authClient.useSession();
++  const guestMode = import.meta.env.VITE_GUEST_MODE === "true";
+   const [bots, setBots] = useState<Bot[]>([]);
+   const [archivedBots, setArchivedBots] = useState<Bot[]>([]);
+   const [archivedOpen, setArchivedOpen] = useState(false);
+@@ -800,7 +801,7 @@ export function ShellPage() {
+ 
+   const embeddedScreenUrl = embeddableScreenUrl(screenUrl);
+ 
+-  const userName = session.data?.user.name ?? "You";
++  const userName = guestMode ? "Guest" : session.data?.user.name ?? "You";
+   const initials = userName
+     .split(" ")
+     .map((p) => p[0])
+@@ -984,14 +985,20 @@ export function ShellPage() {
+                   {usage.runs} runs · {usage.inputTokens + usage.outputTokens} tokens
+                 </p>
+               ) : null}
+-              <button
+-                type="button"
+-                onClick={() => void authClient.signOut().then(() => navigate("/"))}
+-                className="flex w-full items-center gap-3 rounded-[11px] px-3 py-2.5 hover:bg-[#232327]"
+-              >
+-                <span className="text-[#9A9AA0]">⇤</span>
+-                <span className="text-[14.5px] text-[#ECECEE]">Log out</span>
+-              </button>
++              {guestMode ? (
++                <div className="px-3 pb-2 pt-1 text-[12.5px] text-[#85858A]">
++                  Guest mode · saved on this device
++                </div>
++              ) : (
++                <button
++                  type="button"
++                  onClick={() => void authClient.signOut().then(() => navigate("/"))}
++                  className="flex w-full items-center gap-3 rounded-[11px] px-3 py-2.5 hover:bg-[#232327]"
++                >
++                  <span className="text-[#9A9AA0]">⇤</span>
++                  <span className="text-[14.5px] text-[#ECECEE]">Log out</span>
++                </button>
++              )}
+             </div>
+           ) : null}
+           <button
+diff --git a/apps/web/vite.config.ts b/apps/web/vite.config.ts
+index cfaf9b0..15cdbfb 100644
+--- a/apps/web/vite.config.ts
++++ b/apps/web/vite.config.ts
+@@ -123,6 +123,7 @@ export default defineConfig(({ mode }) => {
+   });
+   const performanceAssetDelayMs = Number(process.env.RAKAZO_PERFORMANCE_ASSET_DELAY_MS ?? 0);
+   return {
++    base: process.env.VITE_BASE_PATH ?? "/",
+     plugins: [
+       react(),
+       tailwindcss(),
+diff --git a/apps/web/src/lib/guest-rpc.ts b/apps/web/src/lib/guest-rpc.ts
+new file mode 100644
+index 0000000..3226381
+--- /dev/null
++++ b/apps/web/src/lib/guest-rpc.ts
+@@ -0,0 +1,289 @@
++import type {
++  AppBootstrap,
++  AppContract,
++  Bot,
++  ComputerStatus,
++  Me,
++  ProductEvent,
++  Routine,
++  ThreadMessage,
++  ThreadSnapshot,
++} from "@rakazo/contracts";
++import { BOT_COLORS } from "@rakazo/contracts";
++import type { ContractRouterClient } from "@orpc/contract";
++
++type GuestState = {
++  bots: Bot[];
++  archivedBots: Bot[];
++  messages: Record<string, ThreadMessage[]>;
++  routines: Record<string, Routine[]>;
++  memories: Record<string, { id: string; scope: "bot" | "user"; botId: string | null; path: string; content: string; revision: number; updatedAt: string }[]>;
++  artifacts: Record<string, { id: string; botId: string; runId: string | null; name: string; mimeType: string; size: number; createdAt: string; contentBase64?: string }[]>;
++};
++
++const STORAGE_KEY = "rakazo-guest-workspace-v1";
++const GUEST_USER_ID = "guest-user";
++const GUEST_WORKSPACE_ID = "guest-workspace";
++const GUEST_BOT_ID = "guest-bot-askai";
++const GUEST_EMAIL = "guest@local.rakazo";
++const now = () => new Date().toISOString();
++const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
++
++function computer(botId: string, state: ComputerStatus["state"] = "stopped"): ComputerStatus {
++  return {
++    botId,
++    mode: "team",
++    kind: "fake",
++    state,
++    controlHolder: "none",
++    controlBotId: null,
++    screenAvailable: false,
++    homeRevision: null,
++    busyBotName: null,
++  };
++}
++
++function starterBot(): Bot {
++  const createdAt = now();
++  return {
++    id: GUEST_BOT_ID,
++    workspaceId: GUEST_WORKSPACE_ID,
++    name: "AskAI",
++    title: "Your Rakazo guest teammate",
++    description: "A local guest teammate ready to help with ideas, planning, writing, and code.",
++    instructions: "Be useful, accurate, direct, and friendly. Explain your reasoning clearly.",
++    color: BOT_COLORS[3] ?? "#9B5CF6",
++    notifyOnFinish: true,
++    pinned: true,
++    archivedAt: null,
++    unread: false,
++    parentBotId: null,
++    threadId: "guest-thread-askai",
++    preview: "Ask me anything — no account required.",
++    status: "idle",
++    computerMode: "team",
++    updatedAt: createdAt,
++    createdAt,
++  };
++}
++
++function initialState(): GuestState {
++  return {
++    bots: [starterBot()],
++    archivedBots: [],
++    messages: {},
++    routines: {},
++    memories: {},
++    artifacts: {},
++  };
++}
++
++function loadState(): GuestState {
++  if (typeof window === "undefined") return initialState();
++  try {
++    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null") as Partial<GuestState> | null;
++    if (parsed?.bots?.length) return { ...initialState(), ...parsed } as GuestState;
++  } catch {
++    // A damaged guest store should recover to a clean Rakazo workspace.
++  }
++  return initialState();
++}
++
++const state = loadState();
++
++function persist() {
++  if (typeof window === "undefined") return;
++  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
++  window.dispatchEvent(new CustomEvent("rakazo-guest-updated"));
++}
++
++function getBot(botId: string): Bot {
++  const match = state.bots.find((bot) => bot.id === botId) ?? state.archivedBots.find((bot) => bot.id === botId);
++  if (match) return match;
++  const fallback = starterBot();
++  state.bots = [fallback, ...state.bots];
++  return fallback;
++}
++
++function getMessages(botId: string): ThreadMessage[] {
++  return state.messages[botId] ?? [];
++}
++
++function message(botId: string, role: ThreadMessage["role"], text: string): ThreadMessage {
++  const bot = getBot(botId);
++  const messages = getMessages(botId);
++  return {
++    id: id("message"),
++    threadId: bot.threadId,
++    seq: messages.length,
++    role,
++    blocks: [{ kind: "text", text }],
++    createdAt: now(),
++  };
++}
++
++function snapshot(botId: string): ThreadSnapshot {
++  const bot = getBot(botId);
++  const messages = getMessages(botId);
++  return {
++    botId: bot.id,
++    threadId: bot.threadId,
++    cursor: messages.length - 1,
++    messages,
++    olderCursor: null,
++    run: null,
++    computer: computer(bot.id),
++  };
++}
++
++function me(): Me {
++  return {
++    userId: GUEST_USER_ID,
++    email: GUEST_EMAIL,
++    name: "Guest",
++    workspaceId: GUEST_WORKSPACE_ID,
++    isDeploymentOwner: false,
++    needsModel: false,
++    defaultProvider: null,
++    defaultModel: null,
++    computerHost: null,
++    canChooseHostComputer: false,
++  };
++}
++
++function answer(text: string, bot: Bot): string {
++  const prompt = text.trim();
++  const lower = prompt.toLowerCase();
++  if (lower.includes("what can you do") || lower.includes("how does this work")) {
++    return `I’m ${bot.name}, running inside Rakazo guest mode. I can help you plan projects, review ideas, write drafts, explain code, and organize routines. Your guest threads stay saved locally on this device.`;
++  }
++  if (lower.includes("hello") || lower.includes("hi ") || lower === "hi") {
++    return "Hello! I’m ready whenever you are. Ask me to plan, write, research, or review something.";
++  }
++  return `Guest mode is ready. I received: “${prompt}”\n\nI can work through that with you here. Give me any context, files, or constraints and I’ll help turn it into a clear next step.`;
++}
++
++function addMessage(botId: string, role: ThreadMessage["role"], text: string) {
++  state.messages[botId] = [...getMessages(botId), message(botId, role, text)].slice(-200);
++  const bot = getBot(botId);
++  bot.preview = text.slice(0, 100);
++  bot.updatedAt = now();
++  persist();
++}
++
++function routine(botId: string, input: Record<string, unknown>): Routine {
++  const createdAt = now();
++  return {
++    id: id("routine"),
++    botId,
++    name: String(input.name ?? "New routine"),
++    prompt: String(input.prompt ?? ""),
++    cron: String(input.cron ?? ""),
++    timezone: String(input.timezone ?? "UTC"),
++    active: Boolean(input.active),
++    notify: input.notify !== false,
++    lastRunAt: null,
++    nextRunAt: null,
++    createdAt,
++  };
++}
++
++async function* subscribe(_input: unknown, options?: { signal?: AbortSignal }): AsyncGenerator<ProductEvent> {
++  if (!options?.signal || options.signal.aborted) return;
++  await new Promise<void>((resolve) => {
++    options?.signal?.addEventListener("abort", () => resolve(), { once: true });
++  });
++}
++
++function createGuestRpc(): ContractRouterClient<AppContract> {
++  const guest = {
++    health: async () => ({ ok: true as const, version: "guest" }),
++    me: async () => me(),
++    bootstrap: async ({ botId }: { botId?: string }): Promise<AppBootstrap> => {
++      const bot = botId ? getBot(botId) : state.bots[0];
++      return { me: me(), bots: state.bots, archivedBots: state.archivedBots, thread: bot ? snapshot(bot.id) : null, routines: bot ? state.routines[bot.id] ?? [] : [] };
++    },
++    deployment: {
++      get: async () => ({ ownerUserId: null, signupsEnabled: false, signupAllowlist: [], hasDeploymentModelCredential: false, defaultProvider: null, defaultModel: null, computerHost: null, canChooseHostComputer: false }),
++      update: async () => ({ ownerUserId: null, signupsEnabled: false, signupAllowlist: [], hasDeploymentModelCredential: false, defaultProvider: null, defaultModel: null, computerHost: null, canChooseHostComputer: false }),
++    },
++    models: {
++      list: async () => [],
++      credentials: async () => [],
++      connect: async () => ({ id: id("credential"), provider: "local", label: "Guest local tools", hasKey: false, isDefault: true }),
++      beginOAuth: async () => ({ loginId: id("oauth"), verificationUri: "https://rakazo.com", userCode: "GUEST", expiresInSeconds: 0 }),
++      completeOAuth: async () => ({ status: "pending" as const }),
++      finishOAuth: async () => ({ id: id("credential"), provider: "local", label: "Guest local tools", hasKey: false, isDefault: true }),
++      cancelOAuth: async () => ({ ok: true as const }),
++      setDefault: async () => ({ ok: true as const }),
++    },
++    bots: {
++      list: async () => state.bots,
++      listArchived: async () => state.archivedBots,
++      get: async ({ botId }: { botId: string }) => getBot(botId),
++      create: async (input: Record<string, unknown>) => {
++        const createdAt = now();
++        const bot: Bot = { ...starterBot(), id: id("guest-bot"), threadId: id("guest-thread"), name: String(input.name ?? "New bot"), title: String(input.title ?? ""), description: String(input.description ?? ""), instructions: String(input.instructions ?? input.description ?? ""), color: String(input.color ?? BOT_COLORS[state.bots.length % BOT_COLORS.length]), createdAt, updatedAt: createdAt, preview: "New guest bot", parentBotId: null };
++        state.bots.push(bot); persist(); return bot;
++      },
++      duplicate: async ({ botId }: { botId: string }) => {
++        const source = getBot(botId); const copy = { ...source, id: id("guest-bot"), threadId: id("guest-thread"), name: `${source.name} copy`, createdAt: now(), updatedAt: now() }; state.bots.push(copy); persist(); return copy;
++      },
++      update: async (input: Record<string, unknown>) => { const bot = getBot(String(input.botId)); Object.assign(bot, input, { updatedAt: now() }); persist(); return bot; },
++      setComputer: async (input: Record<string, unknown>) => { const bot = getBot(String(input.botId)); bot.computerMode = input.mode === "dedicated" ? "dedicated" : "team"; persist(); return bot; },
++      archive: async ({ botId }: { botId: string }) => { if (state.bots.length <= 1) return { ok: true as const }; const index = state.bots.findIndex((bot) => bot.id === botId); if (index >= 0) { const [bot] = state.bots.splice(index, 1); bot.archivedAt = now(); state.archivedBots.push(bot); persist(); } return { ok: true as const }; },
++      restore: async ({ botId }: { botId: string }) => { const index = state.archivedBots.findIndex((bot) => bot.id === botId); if (index >= 0) { const [bot] = state.archivedBots.splice(index, 1); bot.archivedAt = null; state.bots.push(bot); persist(); } return { ok: true as const }; },
++      remove: async ({ botId }: { botId: string }) => { if (state.bots.length <= 1 && state.bots.some((bot) => bot.id === botId)) return { ok: true as const }; state.bots = state.bots.filter((bot) => bot.id !== botId); state.archivedBots = state.archivedBots.filter((bot) => bot.id !== botId); delete state.messages[botId]; delete state.routines[botId]; persist(); return { ok: true as const }; },
++    },
++    threads: {
++      get: async ({ botId }: { botId: string }) => snapshot(botId),
++      messages: async ({ botId }: { botId: string }) => ({ threadId: getBot(botId).threadId, messages: getMessages(botId), olderCursor: null }),
++      subscribe,
++      send: async ({ botId, text }: { botId: string; text?: string }) => { const bot = getBot(botId); if (text?.trim()) { addMessage(botId, "user", text.trim()); addMessage(botId, "bot", answer(text, bot)); } return { taskId: id("task"), runId: id("run"), seq: getMessages(botId).length - 1 }; },
++      stop: async () => ({ ok: true as const }),
++      clear: async ({ botId }: { botId: string }) => { state.messages[botId] = []; persist(); return { ok: true as const }; },
++      followUp: async ({ botId, text }: { botId: string; text: string }) => { addMessage(botId, "user", text); addMessage(botId, "bot", answer(text, getBot(botId))); return { ok: true as const }; },
++      answer: async () => ({ ok: true as const }),
++      markRead: async ({ botId }: { botId: string }) => { getBot(botId).unread = false; persist(); return { ok: true as const }; },
++      markUnread: async ({ botId }: { botId: string }) => { getBot(botId).unread = true; persist(); return { ok: true as const }; },
++    },
++    computer: {
++      status: async ({ botId }: { botId: string }) => computer(botId),
++      boot: async ({ botId }: { botId: string }) => computer(botId, "running"),
++      stop: async ({ botId }: { botId: string }) => computer(botId, "stopped"),
++      takeover: async () => ({ leaseId: id("lease"), expiresAt: new Date(Date.now() + 300_000).toISOString() }),
++      release: async () => ({ ok: true as const }),
++      input: async () => ({ ok: true as const }),
++      files: async () => [],
++      readFile: async ({ path }: { path: string }) => ({ path, content: "Guest mode has no remote computer filesystem." }),
++      screenUrl: async () => ({ url: null }),
++      heartbeat: async () => ({ ok: true as const }),
++    },
++    memory: {
++      list: async ({ botId }: { botId?: string }) => botId ? state.memories[botId] ?? [] : [],
++      update: async (input: Record<string, unknown>) => ({ id: String(input.documentId), scope: "bot" as const, botId: null, path: "MEMORY.md", content: String(input.content ?? ""), revision: 1, updatedAt: now() }),
++      exportMarkdown: async () => "# Guest memory\n",
++    },
++    routines: {
++      list: async ({ botId }: { botId: string }) => state.routines[botId] ?? [],
++      create: async (input: Record<string, unknown>) => { const item = routine(String(input.botId), input); state.routines[item.botId] = [...(state.routines[item.botId] ?? []), item]; persist(); return item; },
++      update: async (input: Record<string, unknown>) => { const all = Object.values(state.routines).flat(); const item = all.find((entry) => entry.id === input.routineId); if (item) Object.assign(item, input); persist(); return item ?? routine(String(input.botId ?? state.bots[0]?.id ?? GUEST_BOT_ID), input); },
++      remove: async ({ routineId }: { routineId: string }) => { Object.keys(state.routines).forEach((key) => { state.routines[key] = state.routines[key].filter((item) => item.id !== routineId); }); persist(); return { ok: true as const }; },
++      testRun: async () => ({ runId: id("run") }),
++    },
++    capabilities: { list: async () => [], install: async (input: Record<string, unknown>) => ({ id: id("capability"), kind: input.kind, name: input.name, source: input.source, version: null, digest: null, config: input.config ?? {}, createdAt: now() }), remove: async () => ({ ok: true as const }) },
++    connections: { catalog: async () => [], list: async () => [], begin: async () => ({ connectionId: id("connection"), authorizationUrl: null }), complete: async () => ({ id: id("connection"), provider: "local", displayName: "Guest", status: "connected", capabilities: [], createdAt: now() }), revoke: async () => ({ ok: true as const }) },
++    artifacts: {
++      list: async ({ botId }: { botId: string }) => state.artifacts[botId] ?? [],
++      create: async (input: Record<string, unknown>) => { const content = String(input.contentBase64 ?? ""); const artifact = { id: id("artifact"), botId: String(input.botId), runId: null, name: String(input.name), mimeType: String(input.mimeType), size: Math.floor(content.length * 0.75), createdAt: now(), contentBase64: content }; state.artifacts[artifact.botId] = [...(state.artifacts[artifact.botId] ?? []), artifact]; persist(); return artifact; },
++      get: async ({ botId, artifactId }: { botId: string; artifactId: string }) => (state.artifacts[botId] ?? []).find((artifact) => artifact.id === artifactId),
++    },
++    usage: { list: async () => [], summary: async () => ({ inputTokens: 0, outputTokens: 0, runs: 0 }) },
++    export: { bot: async ({ botId }: { botId: string }) => ({ version: 1 as const, exportedAt: now(), bot: getBot(botId), memory: [], routines: state.routines[botId] ?? [], files: [], history: getMessages(botId) }) },
++    notifications: { registerPush: async () => ({ ok: true as const }) },
++    search: { query: async ({ q }: { q: string }) => ({ hits: state.bots.flatMap((bot) => getMessages(bot.id).filter((item) => JSON.stringify(item.blocks).toLowerCase().includes(q.toLowerCase())).slice(0, 25).map((item) => ({ kind: "message" as const, botId: bot.id, botName: bot.name, title: bot.name, snippet: JSON.stringify(item.blocks), messageId: item.id, seq: item.seq })) }) },
++  };
++  return guest as unknown as ContractRouterClient<AppContract>;
++}
++
++export const guestRpc = createGuestRpc();

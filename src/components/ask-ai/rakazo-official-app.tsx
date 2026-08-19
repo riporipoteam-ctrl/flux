@@ -1,20 +1,19 @@
-const RAKAZO_APP_URL = "https://app.rakazo.com/app";
+const RAKAZO_GUEST_PATH = "/flux/rakazo/";
 
 /**
- * AskAI uses the real Rakazo web client published from
- * https://github.com/elie222/rakazo. Flux does not recreate Rakazo's UI here.
- * Flux Pages is a static frontend deployment, so the running Rakazo web app
- * is embedded directly instead of being rebuilt as a Flux mock.
+ * AskAI renders the actual Rakazo web client from https://github.com/elie222/rakazo.
+ * The Pages workflow builds that source at a pinned commit with Rakazo's own
+ * guest adapter and publishes it at /flux/rakazo/. Flux owns only this route
+ * bridge; the workspace UI remains Rakazo's source UI.
  */
 export default function RakazoOfficialApp() {
   return (
-    <main className="h-full w-full overflow-hidden bg-black">
+    <main className="h-full w-full overflow-hidden bg-[#050506]">
       <iframe
         title="Rakazo"
-        src={RAKAZO_APP_URL}
+        src={RAKAZO_GUEST_PATH}
         className="block h-full w-full border-0"
         allow="clipboard-read; clipboard-write; microphone; camera; display-capture; fullscreen"
-        referrerPolicy="strict-origin-when-cross-origin"
       />
     </main>
   );

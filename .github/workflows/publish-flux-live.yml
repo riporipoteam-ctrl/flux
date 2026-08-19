@@ -62,6 +62,22 @@ jobs:
           NEXT_PUBLIC_RECROOM_BROKER_URL: ${{ vars.NEXT_PUBLIC_RECROOM_BROKER_URL }}
         run: npm run build
 
+      - name: Build Rakazo guest client from open source
+        env:
+          RAKAZO_COMMIT: "07404f63c4ae209e9eb08b5eb004870c9f724407"
+        run: |
+          set -euo pipefail
+          rakazo_dir="$(mktemp -d)/rakazo"
+          git clone --depth 1 https://github.com/elie222/rakazo.git "$rakazo_dir"
+          test "$(git -C "$rakazo_dir" rev-parse HEAD)" = "$RAKAZO_COMMIT"
+          git -C "$rakazo_dir" apply "$GITHUB_WORKSPACE/patches/rakazo-guest-mode.patch"
+          corepack enable
+          cd "$rakazo_dir"
+          pnpm install --frozen-lockfile
+          VITE_GUEST_MODE=true VITE_BASE_PATH="/flux/rakazo/" pnpm --filter @rakazo/web build
+          mkdir -p "$GITHUB_WORKSPACE/out/rakazo"
+          cp -R apps/web/dist/. "$GITHUB_WORKSPACE/out/rakazo/"
+
       - name: Verify X4, public Live and game routes
         run: |
           test -f out/index.html
@@ -82,6 +98,10 @@ jobs:
           grep -R -q 'echoxr-ripoteam-cloud-pc.hf.space' out/_next/static
           grep -q 'createPortal' src/components/layout/mobile-nav.tsx
           grep -R -q 'flux-mobile-dock-portal' out/_next/static
+          test -f out/rakazo/index.html
+          grep -R -q 'Guest mode is ready' out/rakazo
+          grep -R -q 'Ask me anything' out/rakazo
+          ! grep -R -q 'https://app.rakazo.com/app' out/rakazo
 
       - name: Add release proof and no-cache fallbacks
         run: |
