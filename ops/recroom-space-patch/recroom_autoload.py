@@ -58,7 +58,7 @@ def install_into_live_app(application: Any, data_dir: Path | None = None) -> dic
 
         # Free ZeroGPU/Gradio Spaces do not expose Debian i386 multilib. Use the
         # SHA256-pinned Wine amd64-wow64 build so the archived 64-bit Rec Room
-        # client can launch directly without a streamed desktop launcher.
+        # client launches directly with the official Steamworks runtime hidden from the streamed desktop.
         import recroom_portable_wow64  # noqa: F401
         import recroom_wine_prefix_fix  # noqa: F401
         import recroom_wine_runtime_fix  # noqa: F401
