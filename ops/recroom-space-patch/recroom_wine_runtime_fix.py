@@ -583,7 +583,7 @@ def _provision_render_checked(
             # The archived Windows build reads its app id from this file when
             # started outside a desktop launcher. This is metadata only and
             # does not start Steam or expose a launcher window.
-            (instance.client_dir / "steam_appid.txt").unlink(missing_ok=True)
+            (instance.client_dir / "steam_appid.txt").write_text("471710\\n", encoding="ascii")
 
             profiles: list[tuple[str, list[str]]] = [
                 (
