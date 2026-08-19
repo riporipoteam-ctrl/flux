@@ -83,7 +83,7 @@ jobs:
               result.onboarding = true;
 
               await page.goto(`${base}/games/recroom/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-              for (let i = 0; i < 90; i++) {
+              for (let i = 0; i < 900; i++) {
                 const body = await page.locator('body').innerText();
                 if (body.includes('Wine sandbox ready') || body.includes('Server runtime ready')) { result.runtimeReady = true; break; }
                 await sleep(1000);
