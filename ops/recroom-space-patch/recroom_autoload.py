@@ -38,6 +38,10 @@ def install_into_live_app(application: Any, data_dir: Path | None = None) -> dic
         # after every Space restart.
         os.environ["RECROOM_WINE_CLIENT_ARCHIVE_URL"] = _DEFAULT_RECROOM_ARCHIVE
         os.environ.pop("RECROOM_WINE_CLIENT_ARCHIVE_SHA256", None)
+        # The Space previously carried a May-2022 client-dir variable. Force the
+        # exact Aug-25-2021 archive into its own directory so a restart cannot
+        # report the wrong build or auto-install into the stale path.
+        os.environ["RECROOM_WINE_CLIENT_DIR"] = str(root / "recroom-client-2021")
         os.environ.setdefault("RECROOM_STARTING_TTL_SECONDS", "900")
         os.environ.setdefault("RECROOM_CLIENT_WAIT_SECONDS", "720")
         os.environ.setdefault("RECROOM_PHOTON_APP_VERSION", "20210827_prod")
