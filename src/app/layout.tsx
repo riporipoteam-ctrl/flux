@@ -18,7 +18,6 @@ import "@/styles/flux-performance-x4.css";
 import "@/styles/flux-v10.css";
 import "@/styles/askai-v10.css";
 import "@/styles/maus-agents-v10.css";
-import "@/styles/rakazo-askai.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const release = process.env.NEXT_PUBLIC_RELEASE_SHA || "local";
