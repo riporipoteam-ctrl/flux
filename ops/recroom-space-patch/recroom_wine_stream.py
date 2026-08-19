@@ -296,6 +296,10 @@ class Handler(BaseHTTPRequestHandler):
                     dy = max(-4000, min(4000, int(data.get("dy") or 0)))
                     if dx or dy:
                         self.server.xdotool("mousemove_relative", "--", str(dx), str(dy))
+                elif kind == "position":
+                    x = max(0, min(self.server.width - 1, int(data.get("x") or 0)))
+                    y = max(0, min(self.server.height - 1, int(data.get("y") or 0)))
+                    self.server.xdotool("mousemove", "--sync", str(x), str(y))
                 elif kind == "button":
                     button = str(data.get("button") or "left")
                     number = {"left": "1", "middle": "2", "right": "3"}.get(button, "1")
