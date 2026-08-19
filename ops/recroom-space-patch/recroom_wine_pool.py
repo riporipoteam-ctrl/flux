@@ -71,6 +71,7 @@ class WineInstance:
     xvfb_process: subprocess.Popen[Any] | None = None
     wm_process: subprocess.Popen[Any] | None = None
     stream_process: subprocess.Popen[Any] | None = None
+    steam_process: subprocess.Popen[Any] | None = None
     game_process: subprocess.Popen[Any] | None = None
 
 
@@ -621,6 +622,7 @@ class RecRoomWinePool:
                     pass
 
         def worker() -> None:
+            kill_process(instance.steam_process)
             kill_process(instance.game_process)
             if self.wineserver:
                 try:
