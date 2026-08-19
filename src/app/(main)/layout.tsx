@@ -19,9 +19,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const [stickyResolved, setStickyResolved] = useState(false);
   const [stickyComplete, setStickyComplete] = useState(false);
-  const isPublicLiveViewer = pathname?.startsWith("/live/view");
-  const isAskAI = pathname?.startsWith("/ask-ai");
-  const isPublicAskAI = pathname === "/ask-ai";
+  // Next's static GitHub Pages build can expose the repository base path
+  // through usePathname(). Keep public routes base-path agnostic so the
+  // AskAI iframe is not sent through Flux authentication first.
+  const routePath = pathname?.replace(/\/+$/, "") || "/";
+  const isPublicLiveViewer = routePath === "/live/view" || routePath.endsWith("/live/view");
+  const isAskAI = routePath === "/ask-ai" || routePath.endsWith("/ask-ai");
+  const isPublicAskAI = isAskAI;
   const isMessages = pathname?.startsWith("/messages");
   const isCall = pathname?.startsWith("/messages/call");
   const isGames = pathname?.startsWith("/games");

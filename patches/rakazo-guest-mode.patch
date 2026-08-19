@@ -84,7 +84,7 @@ index 19bd469..c11cd91 100644
      </BrowserRouter>
    </StrictMode>,
 diff --git a/apps/web/src/pages/Shell.tsx b/apps/web/src/pages/Shell.tsx
-index f63096e..bd5c16f 100644
+index f63096e..0801601 100644
 --- a/apps/web/src/pages/Shell.tsx
 +++ b/apps/web/src/pages/Shell.tsx
 @@ -89,6 +89,7 @@ export function ShellPage() {
@@ -95,16 +95,63 @@ index f63096e..bd5c16f 100644
    const [bots, setBots] = useState<Bot[]>([]);
    const [archivedBots, setArchivedBots] = useState<Bot[]>([]);
    const [archivedOpen, setArchivedOpen] = useState(false);
-@@ -800,7 +801,7 @@ export function ShellPage() {
+@@ -108,6 +109,7 @@ export function ShellPage() {
+   const [pluginsOpen, setPluginsOpen] = useState(false);
+   const [modelsOpen, setModelsOpen] = useState(false);
+   const [menuOpen, setMenuOpen] = useState(false);
++  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+   const [botMenu, setBotMenu] = useState<{
+     botId: string;
+     position: ContextMenuPosition;
+@@ -800,7 +802,11 @@ export function ShellPage() {
  
    const embeddedScreenUrl = embeddableScreenUrl(screenUrl);
  
 -  const userName = session.data?.user.name ?? "You";
++  useEffect(() => {
++    setMobileSidebarOpen(false);
++  }, [botId]);
++
 +  const userName = guestMode ? "Guest" : session.data?.user.name ?? "You";
    const initials = userName
      .split(" ")
      .map((p) => p[0])
-@@ -984,14 +985,20 @@ export function ShellPage() {
+@@ -817,7 +823,21 @@ export function ShellPage() {
+       {bootstrapMe !== undefined ? (
+         <HostComputerPrompt initialMe={bootstrapMe ?? undefined} />
+       ) : null}
+-      <aside className="flex w-[316px] shrink-0 flex-col border-r border-[#171719] bg-[#0B0B0C]">
++      {mobileSidebarOpen ? (
++        <button
++          type="button"
++          aria-label="Close workspace menu"
++          className="fixed inset-0 z-30 bg-black/60 md:hidden"
++          onClick={() => setMobileSidebarOpen(false)}
++        />
++      ) : null}
++      <aside
++        className={`shrink-0 flex-col border-r border-[#171719] bg-[#0B0B0C] ${
++          mobileSidebarOpen
++            ? "fixed inset-y-0 left-0 z-40 flex w-[min(316px,calc(100vw-24px))] shadow-2xl"
++            : "hidden md:flex md:w-[316px]"
++        }`}
++      >
+         <div className="app-drag flex items-center justify-between px-[18px] pb-3 pt-4">
+           <WindowChrome />
+           <button
+@@ -850,7 +870,10 @@ export function ShellPage() {
+               <button
+                 key={bot.id}
+                 type="button"
+-                onClick={() => navigate(`/app/${bot.id}`)}
++                onClick={() => {
++                  setMobileSidebarOpen(false);
++                  navigate(`/app/${bot.id}`);
++                }}
+                 onContextMenu={(event) => {
+                   event.preventDefault();
+                   setBotMenu({ botId: bot.id, position: { x: event.clientX, y: event.clientY } });
+@@ -984,14 +1007,20 @@ export function ShellPage() {
                    {usage.runs} runs · {usage.inputTokens + usage.outputTokens} tokens
                  </p>
                ) : null}
@@ -133,6 +180,97 @@ index f63096e..bd5c16f 100644
              </div>
            ) : null}
            <button
+@@ -1007,21 +1036,42 @@ export function ShellPage() {
+         </div>
+       </aside>
+ 
+-      <main className="flex min-w-0 flex-1 flex-col bg-[#0D0D0E]">
++      <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col bg-[#0D0D0E]">
+         <div className="flex items-center justify-between border-b border-[#141416] px-[22px] py-[17px]">
+-          <button
+-            type="button"
+-            data-testid="bot-settings-trigger"
+-            onClick={() => setPanel("settings")}
+-            className="flex min-w-0 items-center gap-3"
+-          >
+-            {active ? <BotAvatar color={active.color} size={26} /> : null}
+-            <span className="min-w-0">
+-              <span className="block truncate text-[16px] font-medium text-[#ECECEE]">
+-                {active?.name ?? "Select a bot"}
++          <div className="flex min-w-0 items-center gap-2">
++            <button
++              type="button"
++              aria-label="Open workspace menu"
++              onClick={() => setMobileSidebarOpen(true)}
++              className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] text-[#A8A8AD] hover:bg-[#1B1B1E] md:hidden"
++            >
++              <svg
++                width="19"
++                height="19"
++                viewBox="0 0 24 24"
++                fill="none"
++                stroke="currentColor"
++                strokeWidth="1.8"
++                strokeLinecap="round"
++                aria-hidden="true"
++              >
++                <path d="M4 6h16M4 12h16M4 18h16" />
++              </svg>
++            </button>
++            <button
++              type="button"
++              data-testid="bot-settings-trigger"
++              onClick={() => setPanel("settings")}
++              className="flex min-w-0 items-center gap-3"
++            >
++              {active ? <BotAvatar color={active.color} size={26} /> : null}
++              <span className="min-w-0">
++                <span className="block truncate text-[16px] font-medium text-[#ECECEE]">
++                  {active?.name ?? "Select a bot"}
++                </span>
+               </span>
+-            </span>
+-          </button>
++            </button>
++          </div>
+           <button
+             type="button"
+             title="Agent computer"
+@@ -1075,11 +1125,13 @@ export function ShellPage() {
+         data-testid="side-panel"
+         data-panel={panel ?? "closed"}
+         className={`relative z-20 flex min-h-0 shrink-0 flex-col overflow-hidden bg-[#0A0A0B] transition-[width] duration-150 ease-out ${
+-          panel && active ? "w-[384px] border-l border-[#141416]" : "pointer-events-none w-0"
++          panel && active
++            ? "fixed inset-y-0 right-0 z-50 w-[min(384px,calc(100vw-16px))] border-l border-[#141416] shadow-2xl md:relative md:inset-auto md:z-20 md:w-[384px] md:shadow-none"
++            : "pointer-events-none w-0"
+         }`}
+       >
+         {panel && active ? (
+-          <div className="rk-scroll h-full w-[384px] overflow-y-auto px-5 py-[17px]">
++          <div className="rk-scroll h-full w-[min(384px,calc(100vw-16px))] overflow-y-auto px-5 py-[17px] md:w-[384px]">
+             {panel !== "routine" && panel !== "create" ? (
+               <div className="mb-4 flex items-center justify-between">
+                 <span className="text-[13.5px] text-[#85858A]">
+diff --git a/apps/web/src/styles.css b/apps/web/src/styles.css
+index a9e1c2d..52a0a0d 100644
+--- a/apps/web/src/styles.css
++++ b/apps/web/src/styles.css
+@@ -15,6 +15,14 @@ body,
+   font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+ }
+ 
++button,
++a,
++input,
++textarea,
++select {
++  touch-action: manipulation;
++}
++
+ .rk-scroll::-webkit-scrollbar {
+   width: 6px;
+ }
 diff --git a/apps/web/vite.config.ts b/apps/web/vite.config.ts
 index cfaf9b0..15cdbfb 100644
 --- a/apps/web/vite.config.ts
@@ -147,7 +285,7 @@ index cfaf9b0..15cdbfb 100644
        tailwindcss(),
 diff --git a/apps/web/src/lib/guest-rpc.ts b/apps/web/src/lib/guest-rpc.ts
 new file mode 100644
-index 0000000..3226381
+index 0000000..054c76a
 --- /dev/null
 +++ b/apps/web/src/lib/guest-rpc.ts
 @@ -0,0 +1,306 @@

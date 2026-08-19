@@ -49,7 +49,7 @@ for (const marker of [
 forbidText(gateway, "gsk_", "AskAI Firebase gateway");
 
 const mainLayout = read("src/app/(main)/layout.tsx");
-requireText(mainLayout, "const isPublicAskAI = pathname === \"/ask-ai\"", "Public AskAI route");
+requireText(mainLayout, "const isPublicAskAI = isAskAI", "Public AskAI route");
 requireText(mainLayout, "if (isPublicAskAI)", "Public AskAI shell");
 requireText(mainLayout, "if (isStudio)", "Immersive Studio shell");
 requireText(mainLayout, "if (isImmersive)", "Immersive AskAI shell");
