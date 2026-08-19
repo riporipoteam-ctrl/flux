@@ -32,7 +32,12 @@ def install_into_live_app(application: Any, data_dir: Path | None = None) -> dic
         root.mkdir(parents=True, exist_ok=True)
         public_url = os.environ.get("RECROOM_PUBLIC_BASE_URL", "https://echoxr-ripoteam-cloud-pc.hf.space").rstrip("/")
         os.environ.setdefault("RECROOM_GATEWAY_URL", public_url)
-        os.environ.setdefault("RECROOM_WINE_CLIENT_ARCHIVE_URL", _DEFAULT_RECROOM_ARCHIVE)
+        # Always pin auto-restore to the active Aug-25-2021 archive. A stale
+        # May-2022 Space variable would otherwise make the trusted attestation
+        # hook reject the install and leave the runtime looking unplayable
+        # after every Space restart.
+        os.environ["RECROOM_WINE_CLIENT_ARCHIVE_URL"] = _DEFAULT_RECROOM_ARCHIVE
+        os.environ.pop("RECROOM_WINE_CLIENT_ARCHIVE_SHA256", None)
         os.environ.setdefault("RECROOM_STARTING_TTL_SECONDS", "900")
         os.environ.setdefault("RECROOM_CLIENT_WAIT_SECONDS", "720")
         os.environ.setdefault("RECROOM_PHOTON_APP_VERSION", "20210827_prod")
@@ -58,7 +63,7 @@ def install_into_live_app(application: Any, data_dir: Path | None = None) -> dic
 
         # Free ZeroGPU/Gradio Spaces do not expose Debian i386 multilib. Use the
         # SHA256-pinned Wine amd64-wow64 build so the archived 64-bit Rec Room
-        # client launches directly with the official Steamworks runtime hidden from the streamed desktop.
+        # client can launch directly without a streamed desktop launcher.
         import recroom_portable_wow64  # noqa: F401
         import recroom_wine_prefix_fix  # noqa: F401
         import recroom_wine_runtime_fix  # noqa: F401
