@@ -1,3 +1,4 @@
+// Direct-launch backend verification marker: the server selects the real screen-mode executable.
 "use client";
 
 import { useEffect, useState } from "react";
