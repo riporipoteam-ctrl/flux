@@ -74,6 +74,11 @@ def install_into_live_app(application: Any, data_dir: Path | None = None) -> dic
         import recroom_nameserver_fix  # noqa: F401
         import recroom_2021_nameserver_contract  # noqa: F401
         import recroom_black_viewport_fix  # noqa: F401
+        # Temporary owner-only setup mode: stream the official Steam login once
+        # so the server-owned account can be remembered in the persistent prefix.
+        # Leave disabled during normal player sessions.
+        if os.environ.get("RECROOM_STEAM_INTERACTIVE_SETUP", "0").strip().lower() not in {"0", "false", "no"}:
+            import recroom_2021_steam_runtime  # noqa: F401
         import recroom_https_recnet_fix as recroom_recnet_transport
         import recroom_2021_metadata_locator  # noqa: F401
         import recroom_live_failure_diagnostics  # noqa: F401
