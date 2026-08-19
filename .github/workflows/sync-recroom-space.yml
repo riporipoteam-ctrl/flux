@@ -37,6 +37,7 @@ jobs:
           cp ops/recroom-space-patch/recroom_vm_bridge.py "$STAGING_DIR/recroom_vm_bridge.py"
           cp ops/recroom-space-patch/recroom_wine_pool.py "$STAGING_DIR/recroom_wine_pool.py"
           cp ops/recroom-space-patch/recroom_wine_runtime_fix.py "$STAGING_DIR/recroom_wine_runtime_fix.py"
+          cp ops/recroom-space-patch/recroom_wine_stream.py "$STAGING_DIR/recroom_wine_stream.py"
           echo "HF_STAGING_DIR=$STAGING_DIR" >> "$GITHUB_ENV"
 
       - name: Upload direct-launch backend patch
