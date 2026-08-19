@@ -150,7 +150,7 @@ new file mode 100644
 index 0000000..3226381
 --- /dev/null
 +++ b/apps/web/src/lib/guest-rpc.ts
-@@ -0,0 +1,289 @@
+@@ -0,0 +1,306 @@
 +import type {
 +  AppBootstrap,
 +  AppContract,
@@ -434,7 +434,24 @@ index 0000000..3226381
 +    usage: { list: async () => [], summary: async () => ({ inputTokens: 0, outputTokens: 0, runs: 0 }) },
 +    export: { bot: async ({ botId }: { botId: string }) => ({ version: 1 as const, exportedAt: now(), bot: getBot(botId), memory: [], routines: state.routines[botId] ?? [], files: [], history: getMessages(botId) }) },
 +    notifications: { registerPush: async () => ({ ok: true as const }) },
-+    search: { query: async ({ q }: { q: string }) => ({ hits: state.bots.flatMap((bot) => getMessages(bot.id).filter((item) => JSON.stringify(item.blocks).toLowerCase().includes(q.toLowerCase())).slice(0, 25).map((item) => ({ kind: "message" as const, botId: bot.id, botName: bot.name, title: bot.name, snippet: JSON.stringify(item.blocks), messageId: item.id, seq: item.seq })) }) },
++    search: {
++      query: async ({ q }: { q: string }) => ({
++        hits: state.bots.flatMap((bot) =>
++          getMessages(bot.id)
++            .filter((item) => JSON.stringify(item.blocks).toLowerCase().includes(q.toLowerCase()))
++            .slice(0, 25)
++            .map((item) => ({
++              kind: "message" as const,
++              botId: bot.id,
++              botName: bot.name,
++              title: bot.name,
++              snippet: JSON.stringify(item.blocks),
++              messageId: item.id,
++              seq: item.seq,
++            })),
++        ),
++      }),
++    },
 +  };
 +  return guest as unknown as ContractRouterClient<AppContract>;
 +}
