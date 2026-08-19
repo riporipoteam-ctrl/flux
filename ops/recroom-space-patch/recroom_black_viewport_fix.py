@@ -345,8 +345,8 @@ def _provision_visible(
                 raise RuntimeError("Rec Room executable was not cloned into the Wine sandbox.")
 
             # The archived Windows build reads its app id from this file when
-            # started outside a desktop launcher. This is metadata only; the
-            # server launches RecRoom.exe directly and never starts Steam.
+            # started outside a desktop launcher. The official Steam client is
+            # started separately in the background; its UI is never streamed.
             (instance.client_dir / "steam_appid.txt").write_text("471710\n", encoding="ascii")
 
             profiles: list[tuple[str, list[str], dict[str, str], int]] = [
@@ -396,6 +396,8 @@ def _provision_visible(
             base_env = self._wine_env(instance)
             base_env.setdefault("SteamAppId", "471710")
             base_env.setdefault("SteamGameId", "471710")
+            progress("starting-game-platform", 62)
+            runtime_fix._start_headless_steam(self, instance)
             progress("launching-game", 68)
             selected = False
 
@@ -479,6 +481,12 @@ def _provision_visible(
                         break
                     rendered, last_metrics = runtime_fix._has_rendered_content(instance)
                     setattr(instance, "render_metrics", last_metrics)
+                    if last_metrics == "steam-platform-initialization-failed":
+                        raise RuntimeError(
+                            "Rec Room requires an authenticated official Steam client. "
+                            "The hidden Steam runtime started, but SteamAPI_Init still failed; "
+                            "no Steam UI was exposed to the browser."
+                        )
                     if rendered:
                         stable = True
                         stable_metrics = [last_metrics]
@@ -579,6 +587,8 @@ def _capability(self: RecRoomWinePool) -> dict[str, Any]:
     payload["recNetTraceFile"] = _TRACE_NAME
     payload["recNetRedirectPatch"] = nameserver_fix._PATCH_REVISION
     payload["recNetDirectUrlScan"] = False
+    payload["steamRuntime"] = "official-headless-required-by-client"
+    payload["steamUiStreamed"] = False
     return payload
 
 
