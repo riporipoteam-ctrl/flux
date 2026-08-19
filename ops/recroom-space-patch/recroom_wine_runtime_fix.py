@@ -105,7 +105,7 @@ def _ensure_base_prefix_with_steam(self: RecRoomWinePool, display: int) -> None:
     of the browser controls or stream, and no Steam UI is shown to the player.
     """
     _ORIGINAL_ENSURE_BASE_PREFIX(self, display)
-    if os.environ.get("RECROOM_HEADLESS_STEAM", "1").strip().lower() in {"0", "false", "no"}:
+    if os.environ.get("RECROOM_HEADLESS_STEAM", "0").strip().lower() in {"0", "false", "no"}:
         return
 
     installed = _steam_exe(self.base_prefix)
@@ -176,7 +176,7 @@ def _hide_steam_windows(self: RecRoomWinePool, instance: WineInstance) -> None:
 
 
 def _start_headless_steam(self: RecRoomWinePool, instance: WineInstance) -> None:
-    if os.environ.get("RECROOM_HEADLESS_STEAM", "1").strip().lower() in {"0", "false", "no"}:
+    if os.environ.get("RECROOM_HEADLESS_STEAM", "0").strip().lower() in {"0", "false", "no"}:
         return
     steam = _steam_exe(instance.prefix_dir)
     if not steam.is_file():
@@ -633,7 +633,7 @@ def _provision_render_checked(
                 command = [
                     str(self.wine),
                     str(exe),
-                    "-screen-fullscreen",
+                    "+forcemode:screen",\n                    "-screen-fullscreen",
                     "0",
                     "-screen-width",
                     str(self.width),
