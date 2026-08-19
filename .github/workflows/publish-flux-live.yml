@@ -65,6 +65,8 @@ jobs:
       - name: Build Rakazo guest client from open source
         env:
           RAKAZO_COMMIT: "07404f63c4ae209e9eb08b5eb004870c9f724407"
+          BETTER_AUTH_SECRET: "flux-static-rakazo-build-secret-please-do-not-use-at-runtime-2026"
+          ENCRYPTION_KEY: "flux-static-rakazo-encryption-key-build-only-2026"
         run: |
           set -euo pipefail
           rakazo_dir="$(mktemp -d)/rakazo"
