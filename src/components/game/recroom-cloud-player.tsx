@@ -71,6 +71,7 @@ function phaseIndex(phase: string) {
 }
 
 // Keep the exact-build platform dependency explicit in the browser recovery state.
+// The server diagnostic also preserves the dependency when a launch fails after session allocation.
 function isSteamAuthenticationError(error: string | undefined) {
   return Boolean(error && /steamapi|steam platform|official steam client|steam authentication/i.test(error));
 }
