@@ -70,7 +70,9 @@ jobs:
         run: |
           set -euo pipefail
           rakazo_dir="$(mktemp -d)/rakazo"
-          git clone --depth 1 https://github.com/elie222/rakazo.git "$rakazo_dir"
+          git clone --filter=blob:none --no-checkout https://github.com/elie222/rakazo.git "$rakazo_dir"
+          git -C "$rakazo_dir" fetch --depth 1 origin "$RAKAZO_COMMIT"
+          git -C "$rakazo_dir" checkout --detach "$RAKAZO_COMMIT"
           test "$(git -C "$rakazo_dir" rev-parse HEAD)" = "$RAKAZO_COMMIT"
           git -C "$rakazo_dir" apply "$GITHUB_WORKSPACE/patches/rakazo-guest-mode.patch"
           corepack enable
