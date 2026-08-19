@@ -57,6 +57,7 @@ const PHASES = [
   { key: "booting-windows", label: "Starting Windows runtime" },
   { key: "waiting-for-windows-agent", label: "Connecting game runtime" },
   { key: "starting-browser-stream", label: "Opening browser player" },
+  { key: "starting-game-platform", label: "Starting game platform in background" },
   { key: "launching-game", label: "Launching Rec Room directly" },
   { key: "ready", label: "Connecting video, sound & controls" },
 ] as const;
@@ -490,7 +491,7 @@ function GameProvisioningScreen({ play, onCancel }: { play: RecRoomPlayResponse 
         </div>
 
         <div className="mt-8 grid w-full max-w-xl gap-2 text-left sm:grid-cols-2">
-          {PHASES.filter((item) => ["requesting", "creating-sandbox", "preparing-audio", "preparing-windows-runtime", "linking-game-image", "connecting-flux-account", "starting-browser-stream", "launching-game"].includes(item.key)).map((item) => {
+          {PHASES.filter((item) => ["requesting", "creating-sandbox", "preparing-audio", "preparing-windows-runtime", "linking-game-image", "connecting-flux-account", "starting-browser-stream", "starting-game-platform", "launching-game"].includes(item.key)).map((item) => {
             const index = phaseIndex(item.key);
             const done = index < current;
             const active = item.key === visiblePhase;
