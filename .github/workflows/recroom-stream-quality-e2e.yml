@@ -1,4 +1,4 @@
-# Manual post-deploy verification trigger for MP3 audio, serialized input, and rendered frames.\nname: Rec Room Stream Quality E2E
+# Final post-deploy verification for MP3 audio, serialized input, and rendered frames.\nname: Rec Room Stream Quality E2E
 
 on:
   push:
