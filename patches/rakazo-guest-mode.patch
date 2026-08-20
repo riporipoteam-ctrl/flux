@@ -462,8 +462,26 @@ index 0000000..054c76a
 +  if (lower.includes("hello") || lower.includes("hi ") || lower === "hi") {
 +    return "Hello! I’m ready. Ask me to plan, write, debug, compare, summarize, or turn a goal into steps.";
 +  }
++  const arithmetic = lower.match(/(?:what is|calculate|solve)\s+(-?\d+(?:\.\d+)?)\s*([+\-*\/])\s*(-?\d+(?:\.\d+)?)/i)
++    || lower.match(/(-?\d+(?:\.\d+)?)\s*([+\-*\/])\s*(-?\d+(?:\.\d+)?)/i);
++  if (arithmetic) {
++    const left = Number(arithmetic[1]);
++    const operator = arithmetic[2].trim();
++    const right = Number(arithmetic[3]);
++    const result = operator === "+" ? left + right : operator === "-" ? left - right : operator === "*" ? left * right : right === 0 ? null : left / right;
++    return result === null ? "That division is undefined because the divisor is zero." : String(left) + " " + operator + " " + String(right) + " = " + String(result) + ".";
++  }
 +  if (/(computer|desktop|mouse|click|screen|browser automation)/i.test(prompt)) {
 +    return "This public guest build has no remote desktop host attached, so I won’t pretend I clicked or opened anything. I can still give you exact browser steps, write a checklist, or prepare the commands and files for a connected host.";
++  }
++  if (/(write|draft|caption|post|email|announcement)/i.test(prompt)) {
++    return "Here’s a clean first draft for \"" + prompt + "\":\n\nSubject: A clear next step\n\nHi — I’m sharing a concise update on this project. The goal is to make the experience easier to use, especially on smaller screens. I’ll validate the main path, collect feedback, and follow up with the next milestone.\n\nTell me the audience and tone and I’ll rewrite it.";
++  }
++  if (/(summarize|summary|tl;dr)/i.test(prompt)) {
++    return "I can summarize it into a one-line takeaway, key decisions, risks, and next actions. Paste the text or link you want summarized and tell me whether you prefer a brief or detailed version.";
++  }
++  if (/(compare|versus|\bvs\.?\b|trade-?off)/i.test(prompt)) {
++    return "Use this comparison frame for \"" + prompt + "\":\n\n- Best for speed: choose the option with fewer dependencies.\n- Best for control: choose the option you can inspect and change.\n- Best for reliability: choose the option with the clearest fallback.\n- Decision rule: pick the smallest option that meets the real constraint.\n\nGive me the two options and your constraint and I’ll make the trade-off explicit.";
 +  }
 +  if (/(plan|roadmap|steps|checklist|launch|build)/i.test(prompt)) {
 +    return `Here’s a practical starting plan for “${prompt}”:\n\n1. Define the smallest outcome and who it is for.\n2. List the inputs, constraints, and what “done” means.\n3. Build one thin end-to-end version.\n4. Test the risky path on phone and desktop.\n5. Ship, measure, then iterate.\n\nTell me the deadline or constraint and I’ll turn this into a detailed checklist.`;
