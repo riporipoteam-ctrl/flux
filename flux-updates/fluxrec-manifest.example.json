@@ -1,0 +1,11 @@
+{
+  "version": "1.2.0",
+  "channel": "stable",
+  "appName": "Flux Rec",
+  "releasedAt": "2026-07-17",
+  "notes": "Example auto-update manifest. Host this JSON at a public HTTPS URL.",
+  "packageUrl": "https://YOUR-CDN-OR-DRIVE-DIRECT-LINK/FluxRec-update-1.2.0.zip",
+  "gameZipUrl": "https://YOUR-CDN-OR-DRIVE-DIRECT-LINK/FluxRec-game.zip",
+  "sha256": "OPTIONAL_SHA256_OF_PACKAGE_ZIP_LOWERCASE",
+  "minLauncher": "1.0.0"
+}

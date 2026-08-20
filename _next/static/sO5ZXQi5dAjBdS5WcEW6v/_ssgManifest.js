@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002F[username]","\u002Fevents\u002F[eventId]","\u002Fgroups\u002F[groupId]","\u002Fpost\u002F[postId]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
