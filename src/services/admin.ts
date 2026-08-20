@@ -11,13 +11,16 @@ import {
   increment,
   addDoc,
   arrayUnion,
+  runTransaction,
   type DocumentData,
   setDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { app, db } from "@/lib/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import type { Report, UserProfile } from "@/types";
 import { getUser } from "./users";
 import { createNotification } from "./notifications";
+import { formatUsername } from "@/lib/utils";
 
 /** Only this email is owner/admin for Flux Rec — never grant others. */
 const OWNER_EMAIL = "ripo.ripoteam@gmail.com";
@@ -255,6 +258,95 @@ export async function listUsers(max = 80): Promise<UserProfile[]> {
   const snap = await getDocs(query(collection(db, "users"), limit(max)));
   const users = await Promise.all(snap.docs.map((d) => getUser(d.id)));
   return users.filter(Boolean) as UserProfile[];
+}
+
+function normalizeAdminUsername(value: string): string {
+  const username = formatUsername(value).replace(/^@+/, "");
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+    throw new Error("Username must be 3–20 characters (letters, numbers, _)");
+  }
+  return username;
+}
+
+/** Transfer a username atomically. The owner may take a name from another account. */
+export async function adminRenameUsername(
+  adminId: string,
+  targetUid: string,
+  nextUsername: string
+): Promise<void> {
+  await requireAdmin(adminId);
+  const username = normalizeAdminUsername(nextUsername);
+
+  await runTransaction(db, async (transaction) => {
+    const targetRef = doc(db, "users", targetUid);
+    const nameRef = doc(db, "usernames", username);
+    const [targetSnap, nameSnap] = await Promise.all([
+      transaction.get(targetRef),
+      transaction.get(nameRef),
+    ]);
+    if (!targetSnap.exists()) throw new Error("User profile not found");
+
+    const targetData = targetSnap.data() || {};
+    const oldUsername = String(targetData.username || "").trim();
+    const previousUid = nameSnap.exists() ? String(nameSnap.data()?.uid || "") : "";
+    if (previousUid && previousUid !== targetUid) {
+      const previousRef = doc(db, "users", previousUid);
+      const previousSnap = await transaction.get(previousRef);
+      if (previousSnap.exists()) {
+        transaction.update(previousRef, {
+          username: "",
+          onboardingComplete: true,
+          onboardingRequired: false,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+    if (oldUsername && oldUsername !== username) {
+      transaction.delete(doc(db, "usernames", oldUsername));
+    }
+    transaction.set(nameRef, { uid: targetUid, updatedAt: serverTimestamp() });
+    transaction.update(targetRef, {
+      username,
+      onboardingComplete: true,
+      onboardingRequired: false,
+      updatedAt: serverTimestamp(),
+    });
+  });
+
+  await logAdmin(adminId, "rename_username", targetUid, { username });
+}
+
+/** Remove a user's public username without resetting their account setup. */
+export async function adminRemoveUsername(adminId: string, targetUid: string): Promise<void> {
+  await requireAdmin(adminId);
+  await runTransaction(db, async (transaction) => {
+    const targetRef = doc(db, "users", targetUid);
+    const targetSnap = await transaction.get(targetRef);
+    if (!targetSnap.exists()) throw new Error("User profile not found");
+    const oldUsername = String(targetSnap.data()?.username || "").trim();
+    if (oldUsername) {
+      const nameRef = doc(db, "usernames", oldUsername);
+      const nameSnap = await transaction.get(nameRef);
+      if (nameSnap.exists() && nameSnap.data()?.uid === targetUid) transaction.delete(nameRef);
+    }
+    transaction.update(targetRef, {
+      username: "",
+      onboardingComplete: true,
+      onboardingRequired: false,
+      updatedAt: serverTimestamp(),
+    });
+  });
+  await logAdmin(adminId, "remove_username", targetUid);
+}
+
+/** Delete Firebase Auth + the user's profile through a server-authorized callable. */
+export async function adminDeleteAccount(adminId: string, targetUid: string): Promise<void> {
+  await requireAdmin(adminId);
+  if (targetUid === adminId) throw new Error("The owner account cannot be deleted here");
+  const functions = getFunctions(app, "europe-west1");
+  const callable = httpsCallable<{ targetUid: string }, { ok: true }>(functions, "adminDeleteAccount");
+  await callable({ targetUid });
+  await logAdmin(adminId, "delete_account", targetUid);
 }
 
 export async function claimFirstAdmin(uid: string): Promise<boolean> {

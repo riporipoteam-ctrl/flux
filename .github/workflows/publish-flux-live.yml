@@ -105,6 +105,9 @@ jobs:
           test -f out/rakazo/index.html
           grep -R -q 'Guest mode is ready' out/rakazo
           grep -R -q 'Ask me anything' out/rakazo
+          grep -R -q 'rakazo-auth' out/rakazo
+          grep -R -q 'remoteAnswer' out/rakazo
+          ! grep -R -q 'Sign in to Rakazo\|Sign up to Rakazo' out/rakazo
           ! grep -R -q 'https://app.rakazo.com/app' out/rakazo
 
       - name: Add release proof and no-cache fallbacks

@@ -25,7 +25,7 @@ const BACKGROUNDS: Array<{
   ink: string;
   line: string;
 }> = [
-  { id: "light", label: "Default", surface: "#ffffff", ink: "#0f1419", line: "#cfd9de" },
+  { id: "light", label: "Light", surface: "#ffffff", ink: "#0f1419", line: "#cfd9de" },
   { id: "dim", label: "Dim", surface: "#15202b", ink: "#f7f9f9", line: "#38444d" },
   { id: "dark", label: "Lights out", surface: "#000000", ink: "#e7e9ea", line: "#2f3336" },
 ];

@@ -32,6 +32,7 @@ import { followUser } from "@/services/follows";
 import type { UserProfile } from "@/types";
 import { cn, formatUsername } from "@/lib/utils";
 import { assetUrl } from "@/lib/asset-url";
+import { clearOnboardingPending, hasOnboardingPending } from "@/lib/onboarding-state";
 
 const STEPS = [
   "Username",
@@ -64,6 +65,9 @@ export default function OnboardingPage() {
     if (loading) return;
     if (!user) router.replace("/login");
     else if (profile?.onboardingComplete || String(profile?.username || "").trim()) router.replace("/home");
+    // Deep-linking to onboarding must not be able to reset an existing account.
+    // Only the signup/first-time OAuth flow can set this local intent marker.
+    else if (profile && !hasOnboardingPending(user.uid)) router.replace("/home");
     else if (profile) {
       setDisplayName(profile.displayName || "");
       setAvatarPreview(profile.avatarUrl || DEFAULT_AVATARS[0].src);
@@ -141,6 +145,7 @@ export default function OnboardingPage() {
       }
 
       await refreshProfile();
+      clearOnboardingPending(user.uid);
       toast.success("You're in. Welcome to Flux!");
       router.replace("/home");
     } catch (e) {

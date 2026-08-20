@@ -29,7 +29,7 @@ import { formatCount } from "@/lib/utils";
 import { profilePath } from "@/lib/routes";
 
 const BACKGROUND_LABEL: Record<"light" | "dim" | "dark", string> = {
-  light: "Default",
+  light: "Light",
   dim: "Dim",
   dark: "Lights out",
 };

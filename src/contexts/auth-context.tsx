@@ -13,13 +13,18 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  getAdditionalUserInfo,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
 } from "firebase/auth";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
-import { markStickyOnboardingComplete } from "@/lib/onboarding-state";
+import {
+  clearOnboardingPending,
+  markOnboardingPending,
+  markStickyOnboardingComplete,
+} from "@/lib/onboarding-state";
 import { ensureUserDocument, touchUserPresence } from "@/services/users";
 import type { UserProfile } from "@/types";
 
@@ -123,6 +128,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const unsub = onAuthStateChanged(auth, async (u) => {
+      // Rakazo's public workspace may use an invisible anonymous Firebase
+      // token for rate-limited AskAI calls. It is not a Flux account and must
+      // never create a profile or trigger onboarding.
+      if (u?.isAnonymous) {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
       setUser(u);
       if (!u) {
         setProfile(null);
@@ -143,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const ensured = await loadProfile(u);
         applyProfile(ensured);
+        if (isCompletedProfile(ensured)) clearOnboardingPending(u.uid);
       } catch (error) {
         console.error("Failed to load profile", error);
         if (cachedCompleted && cached) applyProfile(cached);
@@ -180,6 +195,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     if (!isFirebaseConfigured) throw new Error("Firebase authentication is not configured yet.");
     const cred = await createUserWithEmailAndPassword(auth, email, password);
+    // This is the only email flow allowed to opt an account into onboarding.
+    // A missing Firestore document on a later sign-in must never recreate this
+    // intent for an existing user.
+    markOnboardingPending(cred.user.uid);
     await updateProfile(cred.user, { displayName });
     await ensureUserDocument(cred.user.uid, email, displayName, null);
   }, []);
@@ -187,6 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     if (!isFirebaseConfigured) throw new Error("Firebase authentication is not configured yet.");
     const result = await signInWithPopup(auth, googleProvider);
+    if (getAdditionalUserInfo(result)?.isNewUser) markOnboardingPending(result.user.uid);
     await ensureUserDocument(result.user.uid, result.user.email || "", result.user.displayName, result.user.photoURL);
   }, []);
 

@@ -8,6 +8,7 @@ on:
     paths:
       - "functions/**"
       - "firebase.json"
+      - "firestore.rules"
       - ".github/workflows/deploy-askai-firebase.yml"
 
 permissions:
@@ -28,13 +29,17 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FLUX_544A6 }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ] && [ -n "$GROQ_API_KEY" ]; then
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "AskAI deployment cannot run yet."
-            echo "Add FIREBASE_SERVICE_ACCOUNT_FLUX_544A6 and a NEW GROQ_API_KEY as GitHub Actions secrets."
-            echo "Never reuse a key exposed in chat, source, logs, issues or screenshots."
+            echo "Firebase deployment cannot run yet."
+            echo "Add FIREBASE_SERVICE_ACCOUNT_FLUX_544A6 as a GitHub Actions secret."
+          fi
+          if [ -n "$GROQ_API_KEY" ]; then
+            echo "groq=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "groq=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout
@@ -56,7 +61,7 @@ jobs:
 
       - name: Install function dependencies
         if: steps.credentials.outputs.ready == 'true'
-        run: npm ci --prefix functions
+        run: npm install --prefix functions
 
       - name: Build Firebase Functions
         if: steps.credentials.outputs.ready == 'true'
@@ -71,6 +76,10 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "GROQ_API_KEY is not configured; keeping the existing AskAI secret and deploying account controls only."
+            exit 0
+          fi
           echo "::add-mask::$GROQ_API_KEY"
           printf '%s' "$GROQ_API_KEY" > "$RUNNER_TEMP/groq-key.txt"
           firebase functions:secrets:set GROQ_API_KEY \
@@ -79,12 +88,16 @@ jobs:
             --force
           rm -f "$RUNNER_TEMP/groq-key.txt"
 
-      - name: Deploy authenticated AskAI proxy
-        if: steps.credentials.outputs.ready == 'true'
-        run: firebase deploy --only functions:askaiGroq --project flux-544a6 --non-interactive
+      - name: Deploy owner account controls without optional provider secret
+        if: steps.credentials.outputs.ready == 'true' && steps.credentials.outputs.groq == 'false'
+        run: firebase deploy --only functions:adminDeleteAccount,firestore:rules --project flux-544a6 --non-interactive
+
+      - name: Deploy AskAI, account controls and rules when provider is configured
+        if: steps.credentials.outputs.ready == 'true' && steps.credentials.outputs.groq == 'true'
+        run: firebase deploy --only functions:askaiGroq,functions:adminDeleteAccount,firestore:rules --project flux-544a6 --non-interactive
 
       - name: Verify deployed health endpoint
-        if: steps.credentials.outputs.ready == 'true'
+        if: steps.credentials.outputs.ready == 'true' && steps.credentials.outputs.groq == 'true'
         run: |
           sleep 8
           curl --fail --retry 6 --retry-delay 5 \
@@ -93,5 +106,5 @@ jobs:
       - name: Fail clearly when secrets are absent
         if: steps.credentials.outputs.ready != 'true'
         run: |
-          echo "Secure backend secrets are missing; AskAI was not deployed."
+          echo "Firebase service-account credentials are missing; backend was not deployed."
           exit 1

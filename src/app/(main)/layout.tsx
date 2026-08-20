@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { hasStickyOnboardingComplete, markStickyOnboardingComplete } from "@/lib/onboarding-state";
+import {
+  hasOnboardingPending,
+  hasStickyOnboardingComplete,
+  markStickyOnboardingComplete,
+} from "@/lib/onboarding-state";
 import { LoadingScreen } from "@/components/shared/loading-screen";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -51,6 +55,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const needsOnboarding = Boolean(
     stickyResolved &&
     profile &&
+    hasOnboardingPending(user?.uid || "") &&
     !stickyComplete &&
     !profile.onboardingComplete &&
     !String(profile.username || "").trim()

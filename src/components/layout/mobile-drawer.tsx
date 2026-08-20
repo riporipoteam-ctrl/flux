@@ -138,7 +138,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
               ))}
               {profile?.isAdmin ? <section className="mt-5"><p className="px-4 pb-2 text-[10px] font-black uppercase tracking-[.16em] text-muted-foreground">Owner</p><DrawerLink href="/admin" label="Admin" icon={Shield} description="Moderation and platform controls" active={isNavPathActive(pathname, "/admin")} onClose={onClose} /></section> : null}
             </nav>
-            <footer className="border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">Flux X2 · {release}</footer>
+            <footer className="border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">Flux Aurora · {release}</footer>
           </motion.aside>
         </div>
       ) : null}

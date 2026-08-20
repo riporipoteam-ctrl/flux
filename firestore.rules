@@ -60,7 +60,16 @@ service cloud.firestore {
         )
         || isOwner()
         || (isAdmin() && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['isVerified', 'verifiedType', 'coins', 'isAdmin', 'updatedAt']));
+            .hasOnly([
+              'isVerified',
+              'verifiedType',
+              'coins',
+              'isAdmin',
+              'updatedAt',
+              'username',
+              'onboardingComplete',
+              'onboardingRequired'
+            ]));
       allow delete: if isAdmin();
 
       match /following/{targetId} {
@@ -85,11 +94,11 @@ service cloud.firestore {
 
     match /usernames/{username} {
       allow read: if true;
-      allow create: if signedIn()
+      allow create: if isAdmin() || (signedIn()
         && request.resource.data.uid == request.auth.uid
-        && !exists(/databases/$(database)/documents/usernames/$(username));
-      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
-      allow update: if false;
+        && !exists(/databases/$(database)/documents/usernames/$(username)));
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin();
     }
 
     match /posts/{postId} {

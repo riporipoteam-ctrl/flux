@@ -2,7 +2,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
-import { onRequest } from "firebase-functions/v2/https";
+import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 
 initializeApp();
 
@@ -13,6 +13,7 @@ const LOCAL_MODEL = "qwen3:4b-instruct";
 const INSTANT_MODEL = "openai/gpt-oss-20b";
 const PRO_MODEL = "openai/gpt-oss-120b";
 const FUNCTION_VERSION = "askai-ripo-hybrid-v5";
+const OWNER_EMAIL = "ripo.ripoteam@gmail.com";
 
 type Mode = "instant" | "pro";
 type ClientMessage = { role: "user" | "assistant"; content: string };
@@ -379,4 +380,72 @@ export const askaiGroq = onRequest({
     code: "ASKAI_UPSTREAM_FAILED",
     details: failures.slice(0, 3),
   });
+});
+
+/**
+ * Owner-only account cleanup. Auth deletion is intentionally server-side: a
+ * browser admin can request it, but cannot mint its own elevated Auth token.
+ */
+export const adminDeleteAccount = onCall({
+  region: "europe-west1",
+  timeoutSeconds: 120,
+}, async (request) => {
+  const callerEmail = String(request.auth?.token.email || "").toLowerCase().trim();
+  if (!request.auth || callerEmail !== OWNER_EMAIL) {
+    throw new HttpsError("permission-denied", "Owner access required.");
+  }
+
+  const targetUid = typeof request.data?.targetUid === "string"
+    ? request.data.targetUid.trim()
+    : "";
+  if (!targetUid) throw new HttpsError("invalid-argument", "A target user is required.");
+  if (targetUid === request.auth.uid) {
+    throw new HttpsError("failed-precondition", "The owner account cannot be deleted here.");
+  }
+
+  const adminAuth = getAuth();
+  let targetEmail = "";
+  try {
+    const targetRecord = await adminAuth.getUser(targetUid);
+    targetEmail = String(targetRecord.email || "").toLowerCase().trim();
+  } catch (error) {
+    const code = String((error as { code?: string }).code || "");
+    if (code !== "auth/user-not-found") {
+      throw new HttpsError("not-found", "The target account could not be found.");
+    }
+  }
+  if (targetEmail === OWNER_EMAIL) {
+    throw new HttpsError("failed-precondition", "The owner account cannot be deleted here.");
+  }
+
+  const firestore = getFirestore();
+  const userRef = firestore.collection("users").doc(targetUid);
+  const profile = await userRef.get();
+  const username = String(profile.data()?.username || "").trim().toLowerCase();
+
+  try {
+    await adminAuth.deleteUser(targetUid);
+  } catch (error) {
+    const code = String((error as { code?: string }).code || "");
+    if (code !== "auth/user-not-found") {
+      throw new HttpsError("internal", "Firebase could not delete the authentication account.");
+    }
+  }
+
+  if (username) {
+    const usernameRef = firestore.collection("usernames").doc(username);
+    const usernameSnap = await usernameRef.get();
+    if (usernameSnap.exists && usernameSnap.data()?.uid === targetUid) await usernameRef.delete();
+  }
+  // Remove the profile and any user-owned subcollections without touching
+  // public posts or other users' content.
+  await firestore.recursiveDelete(userRef);
+  await firestore.collection("adminLogs").add({
+    adminId: request.auth.uid,
+    action: "delete_account",
+    targetUid,
+    createdAt: Timestamp.now(),
+  });
+
+  return { ok: true as const };
 });

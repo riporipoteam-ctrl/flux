@@ -1,0 +1,361 @@
+/* Flux Aurora — the shared visual system for the social shell.
+   It is intentionally token-led so light, dim and dark are the same product,
+   not three unrelated collections of hard-coded colors. */
+
+:root[data-flux-ui="v10"] {
+  --aurora-canvas: #edf3fb;
+  --aurora-panel: rgba(255, 255, 255, 0.88);
+  --aurora-panel-solid: #ffffff;
+  --aurora-line: rgba(20, 38, 65, 0.1);
+  --aurora-ink: #101827;
+  --aurora-muted: #64748b;
+  --aurora-shadow: 0 18px 55px rgba(38, 73, 122, 0.1);
+  --aurora-shadow-soft: 0 8px 24px rgba(38, 73, 122, 0.08);
+  --aurora-blue: #2563eb;
+  --aurora-blue-soft: rgba(37, 99, 235, 0.1);
+  --aurora-violet: #7c3aed;
+  --aurora-header: 68px;
+}
+
+:root.dark[data-flux-ui="v10"],
+:root.dim[data-flux-ui="v10"] {
+  --aurora-canvas: #070b12;
+  --aurora-panel: rgba(15, 23, 36, 0.88);
+  --aurora-panel-solid: #0f1724;
+  --aurora-line: rgba(226, 232, 240, 0.12);
+  --aurora-ink: #f1f5f9;
+  --aurora-muted: #94a3b8;
+  --aurora-shadow: 0 22px 65px rgba(0, 0, 0, 0.36);
+  --aurora-shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.24);
+  --aurora-blue-soft: rgba(96, 165, 250, 0.14);
+}
+
+html[data-flux-ui="v10"] body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 10% -10%, color-mix(in srgb, var(--aurora-blue) 13%, transparent), transparent 28rem),
+    radial-gradient(circle at 94% 0%, color-mix(in srgb, var(--aurora-violet) 9%, transparent), transparent 25rem),
+    var(--aurora-canvas);
+  color: var(--aurora-ink);
+}
+
+html[data-flux-ui="v10"] .flux8-app-shell {
+  width: min(1480px, 100%);
+  grid-template-columns: minmax(208px, 236px) minmax(0, 680px) minmax(280px, 336px);
+  gap: 18px;
+  padding: 0 18px 34px;
+}
+
+html[data-flux-ui="v10"] .flux8-app-shell[data-rail="off"] {
+  grid-template-columns: minmax(208px, 236px) minmax(0, 980px);
+}
+
+html[data-flux-ui="v10"] .flux9-topbar {
+  grid-column: 1 / -1;
+  height: var(--aurora-header);
+  margin: 0 -2px;
+  border: 0;
+  border-bottom: 1px solid var(--aurora-line);
+  background: color-mix(in srgb, var(--aurora-panel-solid) 78%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--aurora-blue) 6%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux9-topbar-brand {
+  width: 44px;
+  height: 44px;
+  background: var(--aurora-blue-soft);
+}
+
+html[data-flux-ui="v10"] .flux9-topbar-search {
+  max-width: 300px;
+  height: 44px;
+  border-color: var(--aurora-line);
+  background: color-mix(in srgb, var(--aurora-panel-solid) 82%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux9-topbar-tab {
+  width: 74px;
+  height: 48px;
+  border-radius: 16px;
+}
+
+html[data-flux-ui="v10"] .flux9-topbar-tab:hover,
+html[data-flux-ui="v10"] .flux9-topbar-action:hover,
+html[data-flux-ui="v10"] .flux8-sidebar-link:hover {
+  background: var(--aurora-blue-soft);
+}
+
+html[data-flux-ui="v10"] .flux9-topbar-action {
+  height: 44px;
+  min-width: 44px;
+  border: 1px solid var(--aurora-line);
+  background: color-mix(in srgb, var(--aurora-panel-solid) 76%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux9-topbar-action.is-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--aurora-blue), #4f46e5);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--aurora-blue) 24%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux8-sidebar {
+  position: sticky;
+  top: calc(var(--aurora-header) + 18px);
+  width: auto;
+  min-height: calc(100dvh - var(--aurora-header) - 36px);
+  padding: 16px 8px 12px;
+  border: 1px solid var(--aurora-line);
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--aurora-panel) 88%, transparent);
+  box-shadow: var(--aurora-shadow-soft);
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+}
+
+html[data-flux-ui="v10"] .flux8-sidebar-nav {
+  gap: 3px;
+  padding-top: 8px;
+}
+
+html[data-flux-ui="v10"] .flux8-sidebar-link {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 16px;
+  gap: 13px;
+  color: var(--aurora-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+html[data-flux-ui="v10"] .flux8-sidebar-link.is-active {
+  background: linear-gradient(90deg, var(--aurora-blue-soft), color-mix(in srgb, var(--aurora-violet) 6%, transparent));
+  color: var(--aurora-blue);
+  font-weight: 850;
+}
+
+html[data-flux-ui="v10"] .flux8-sidebar-link.is-active .flux8-sidebar-icon {
+  color: var(--aurora-blue);
+}
+
+html[data-flux-ui="v10"] .flux8-sidebar-create {
+  width: calc(100% - 16px);
+  min-height: 50px;
+  margin: 12px 8px 4px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--aurora-blue), #4f46e5);
+  box-shadow: 0 12px 25px color-mix(in srgb, var(--aurora-blue) 23%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux8-sidebar-profile {
+  margin-top: auto;
+  border: 1px solid var(--aurora-line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--aurora-panel-solid) 72%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux8-main-column {
+  min-height: calc(100dvh - var(--aurora-header) - 18px);
+  overflow: clip;
+  border: 1px solid var(--aurora-line);
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--aurora-panel) 86%, transparent);
+  box-shadow: var(--aurora-shadow);
+  backdrop-filter: blur(12px) saturate(1.08);
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+}
+
+html[data-flux-ui="v10"] .flux8-timeline-header,
+html[data-flux-ui="v10"] .social-page-header,
+html[data-flux-ui="v10"] .flux10-page-head {
+  border-color: var(--aurora-line);
+  background: color-mix(in srgb, var(--aurora-panel-solid) 80%, transparent);
+  backdrop-filter: blur(20px) saturate(1.25);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+}
+
+html[data-flux-ui="v10"] .flux8-composer-card,
+html[data-flux-ui="v10"] .flux8-story-card,
+html[data-flux-ui="v10"] .flux8-post-wrap {
+  border-color: var(--aurora-line);
+  background: transparent;
+}
+
+html[data-flux-ui="v10"] .flux8-post-wrap:hover {
+  background: color-mix(in srgb, var(--aurora-blue) 3%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux8-right-rail {
+  padding-top: 0;
+}
+
+html[data-flux-ui="v10"] .flux8-right-rail > * {
+  border: 1px solid var(--aurora-line) !important;
+  background: color-mix(in srgb, var(--aurora-panel) 88%, transparent) !important;
+  box-shadow: var(--aurora-shadow-soft);
+}
+
+html[data-flux-ui="v10"] .flux8-rail-search {
+  border-color: var(--aurora-line);
+  background: color-mix(in srgb, var(--aurora-panel-solid) 76%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux8-mobile-header {
+  height: 62px;
+  border-bottom: 1px solid var(--aurora-line);
+  background: color-mix(in srgb, var(--aurora-panel-solid) 82%, transparent);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+}
+
+html[data-flux-ui="v10"] .flux8-mobile-header-row {
+  height: 62px;
+  padding: 0 14px;
+}
+
+html[data-flux-ui="v10"] .flux8-mobile-avatar,
+html[data-flux-ui="v10"] .flux8-mobile-header-action {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--aurora-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--aurora-panel-solid) 74%, transparent);
+}
+
+html[data-flux-ui="v10"] .flux8-mobile-title strong {
+  font-size: 18px;
+  letter-spacing: -.03em;
+}
+
+html[data-flux-ui="v10"] .flux-mobile-dock-portal.flux8-mobile-nav {
+  right: 12px;
+  bottom: calc(12px + var(--v8-safe-bottom));
+  left: 12px;
+  overflow: hidden;
+  border: 1px solid var(--aurora-line) !important;
+  border-radius: 22px !important;
+  background: color-mix(in srgb, var(--aurora-panel-solid) 86%, transparent) !important;
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--aurora-blue) 16%, transparent) !important;
+  backdrop-filter: blur(24px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.35) !important;
+  touch-action: manipulation;
+}
+
+html[data-flux-ui="v10"] .flux-mobile-dock-portal .flux8-mobile-tab {
+  min-height: 60px !important;
+  border-radius: 16px !important;
+  color: var(--aurora-muted) !important;
+  touch-action: manipulation;
+}
+
+html[data-flux-ui="v10"] .flux-mobile-dock-portal .flux8-mobile-tab.is-active {
+  background: var(--aurora-blue-soft) !important;
+  color: var(--aurora-blue) !important;
+}
+
+html[data-flux-ui="v10"] .flux-mobile-dock-portal .flux8-mobile-tab-create {
+  color: var(--aurora-blue) !important;
+}
+
+html[data-flux-ui="v10"] .flux-mobile-dock-label {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+html[data-flux-ui="v10"] button,
+html[data-flux-ui="v10"] a,
+html[data-flux-ui="v10"] input,
+html[data-flux-ui="v10"] textarea,
+html[data-flux-ui="v10"] select {
+  touch-action: manipulation;
+}
+
+@media (max-width: 1199px) and (min-width: 1000px) {
+  html[data-flux-ui="v10"] .flux8-app-shell {
+    grid-template-columns: 82px minmax(0, 680px) minmax(260px, 1fr);
+  }
+  html[data-flux-ui="v10"] .flux8-sidebar {
+    padding-inline: 10px;
+  }
+  html[data-flux-ui="v10"] .flux8-sidebar-link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  html[data-flux-ui="v10"] .flux8-sidebar-link > strong,
+  html[data-flux-ui="v10"] .flux8-sidebar-profile > div,
+  html[data-flux-ui="v10"] .flux8-sidebar-profile > svg {
+    display: none;
+  }
+  html[data-flux-ui="v10"] .flux8-sidebar-create span {
+    display: none;
+  }
+  html[data-flux-ui="v10"] .flux8-sidebar-create {
+    width: 50px;
+    margin-inline: auto;
+    padding: 0;
+  }
+}
+
+@media (max-width: 999px) {
+  html[data-flux-ui="v10"] body {
+    background: var(--aurora-canvas);
+  }
+  html[data-flux-ui="v10"] .flux8-app-shell,
+  html[data-flux-ui="v10"] .flux8-app-shell[data-rail="off"] {
+    display: block;
+    width: 100%;
+    padding: 0 0 calc(88px + var(--v8-safe-bottom));
+  }
+  html[data-flux-ui="v10"] .flux8-main-column {
+    min-height: 100dvh;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  html[data-flux-ui="v10"] .flux8-post-wrap,
+  html[data-flux-ui="v10"] .flux8-post-skeleton,
+  html[data-flux-ui="v10"] .flux8-composer-card,
+  html[data-flux-ui="v10"] .flux8-story-card {
+    margin: 8px 10px;
+    border: 1px solid var(--aurora-line) !important;
+    border-radius: 22px !important;
+    background: var(--aurora-panel) !important;
+    box-shadow: var(--aurora-shadow-soft);
+  }
+  html[data-flux-ui="v10"] .flux8-composer-card {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 639px) {
+  html[data-flux-ui="v10"] .flux8-post-wrap,
+  html[data-flux-ui="v10"] .flux8-post-skeleton,
+  html[data-flux-ui="v10"] .flux8-composer-card,
+  html[data-flux-ui="v10"] .flux8-story-card {
+    margin-inline: 8px;
+    border-radius: 20px !important;
+  }
+  html[data-flux-ui="v10"] .flux8-mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: 55;
+  }
+  html[data-flux-ui="v10"] .flux8-feed-tabs {
+    top: 62px;
+  }
+  html[data-flux-ui="v10"] .flux10-page-head {
+    padding-inline: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-flux-ui="v10"] *,
+  html[data-flux-ui="v10"] *::before,
+  html[data-flux-ui="v10"] *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
+}

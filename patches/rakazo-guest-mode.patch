@@ -288,7 +288,7 @@ new file mode 100644
 index 0000000..054c76a
 --- /dev/null
 +++ b/apps/web/src/lib/guest-rpc.ts
-@@ -0,0 +1,306 @@
+@@ -0,0 +1,358 @@
 +import type {
 +  AppBootstrap,
 +  AppContract,
@@ -317,10 +317,21 @@ index 0000000..054c76a
 +const GUEST_WORKSPACE_ID = "guest-workspace";
 +const GUEST_BOT_ID = "guest-bot-askai";
 +const GUEST_EMAIL = "guest@local.rakazo";
++let fluxAuthToken: string | null = null;
++let fluxAskAIEndpoint: string | null = null;
++if (typeof window !== "undefined") {
++  window.addEventListener("message", (event) => {
++    if (event.origin !== window.location.origin) return;
++    const data = event.data as { source?: string; type?: string; token?: unknown; endpoint?: unknown } | null;
++    if (data?.source !== "flux" || data.type !== "rakazo-auth") return;
++    fluxAuthToken = typeof data.token === "string" ? data.token : null;
++    fluxAskAIEndpoint = typeof data.endpoint === "string" ? data.endpoint : null;
++  });
++}
 +const now = () => new Date().toISOString();
 +const id = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 +
-+function computer(botId: string, state: ComputerStatus["state"] = "stopped"): ComputerStatus {
++function computer(botId: string, state: ComputerStatus["state"] = "error"): ComputerStatus {
 +  return {
 +    botId,
 +    mode: "team",
@@ -446,12 +457,53 @@ index 0000000..054c76a
 +  const prompt = text.trim();
 +  const lower = prompt.toLowerCase();
 +  if (lower.includes("what can you do") || lower.includes("how does this work")) {
-+    return `I’m ${bot.name}, running inside Rakazo guest mode. I can help you plan projects, review ideas, write drafts, explain code, and organize routines. Your guest threads stay saved locally on this device.`;
++    return `I’m ${bot.name}, running inside Rakazo guest mode. I can plan projects, write drafts, explain code, turn ideas into checklists, and organize routines. Your guest threads stay saved locally on this device. When Flux AI is available, I’ll use it automatically.`;
 +  }
 +  if (lower.includes("hello") || lower.includes("hi ") || lower === "hi") {
-+    return "Hello! I’m ready whenever you are. Ask me to plan, write, research, or review something.";
++    return "Hello! I’m ready. Ask me to plan, write, debug, compare, summarize, or turn a goal into steps.";
 +  }
-+  return `Guest mode is ready. I received: “${prompt}”\n\nI can work through that with you here. Give me any context, files, or constraints and I’ll help turn it into a clear next step.`;
++  if (/(computer|desktop|mouse|click|screen|browser automation)/i.test(prompt)) {
++    return "This public guest build has no remote desktop host attached, so I won’t pretend I clicked or opened anything. I can still give you exact browser steps, write a checklist, or prepare the commands and files for a connected host.";
++  }
++  if (/(plan|roadmap|steps|checklist|launch|build)/i.test(prompt)) {
++    return `Here’s a practical starting plan for “${prompt}”:\n\n1. Define the smallest outcome and who it is for.\n2. List the inputs, constraints, and what “done” means.\n3. Build one thin end-to-end version.\n4. Test the risky path on phone and desktop.\n5. Ship, measure, then iterate.\n\nTell me the deadline or constraint and I’ll turn this into a detailed checklist.`;
++  }
++  if (/(code|bug|error|debug|typescript|javascript|react|swift|sql)/i.test(prompt)) {
++    return `Let’s debug “${prompt}” methodically:\n\n- Reproduce it with the smallest input.\n- Capture the exact error and the first failing file/line.\n- Check state, network, and permissions before changing UI code.\n- Make one narrow fix, then test the original path plus a mobile path.\n\nPaste the error or the relevant file and I’ll propose the smallest safe patch.`;
++  }
++  return `Guest mode is ready. I received: “${prompt}”\n\nI can work through that with you here. Give me context, constraints, or the result you want and I’ll turn it into a useful next step.`;
++}
++
++function messageText(item: ThreadMessage): string {
++  return item.blocks
++    .map((block) => {
++      const value = block as { text?: unknown };
++      return typeof value.text === "string" ? value.text : "";
++    })
++    .filter(Boolean)
++    .join("\n");
++}
++
++async function remoteAnswer(botId: string, prompt: string): Promise<string | null> {
++  if (!fluxAuthToken || !fluxAskAIEndpoint) return null;
++  const messages = [
++    ...getMessages(botId).slice(-15).map((item) => ({
++      role: item.role === "bot" ? "assistant" as const : "user" as const,
++      content: messageText(item),
++    })),
++    { role: "user" as const, content: prompt },
++  ].filter((item) => item.content);
++  try {
++    const response = await fetch(fluxAskAIEndpoint, {
++      method: "POST",
++      headers: { Authorization: `Bearer ${fluxAuthToken}`, "Content-Type": "application/json" },
++      body: JSON.stringify({ mode: "instant", messages, workspaceContext: "Rakazo official open-source guest workspace inside Flux. Do not claim computer actions unless tool output proves them." }),
++    });
++    const data = await response.json().catch(() => ({})) as { answer?: unknown };
++    return response.ok && typeof data.answer === "string" && data.answer.trim() ? data.answer.trim() : null;
++  } catch {
++    return null;
++  }
 +}
 +
 +function addMessage(botId: string, role: ThreadMessage["role"], text: string) {
@@ -530,19 +582,19 @@ index 0000000..054c76a
 +      get: async ({ botId }: { botId: string }) => snapshot(botId),
 +      messages: async ({ botId }: { botId: string }) => ({ threadId: getBot(botId).threadId, messages: getMessages(botId), olderCursor: null }),
 +      subscribe,
-+      send: async ({ botId, text }: { botId: string; text?: string }) => { const bot = getBot(botId); if (text?.trim()) { addMessage(botId, "user", text.trim()); addMessage(botId, "bot", answer(text, bot)); } return { taskId: id("task"), runId: id("run"), seq: getMessages(botId).length - 1 }; },
++      send: async ({ botId, text }: { botId: string; text?: string }) => { const bot = getBot(botId); const prompt = text?.trim(); if (prompt) { const reply = await remoteAnswer(botId, prompt) || answer(prompt, bot); addMessage(botId, "user", prompt); addMessage(botId, "bot", reply); } return { taskId: id("task"), runId: id("run"), seq: getMessages(botId).length - 1 }; },
 +      stop: async () => ({ ok: true as const }),
 +      clear: async ({ botId }: { botId: string }) => { state.messages[botId] = []; persist(); return { ok: true as const }; },
-+      followUp: async ({ botId, text }: { botId: string; text: string }) => { addMessage(botId, "user", text); addMessage(botId, "bot", answer(text, getBot(botId))); return { ok: true as const }; },
++      followUp: async ({ botId, text }: { botId: string; text: string }) => { const prompt = text.trim(); const reply = await remoteAnswer(botId, prompt) || answer(prompt, getBot(botId)); addMessage(botId, "user", prompt); addMessage(botId, "bot", reply); return { ok: true as const }; },
 +      answer: async () => ({ ok: true as const }),
 +      markRead: async ({ botId }: { botId: string }) => { getBot(botId).unread = false; persist(); return { ok: true as const }; },
 +      markUnread: async ({ botId }: { botId: string }) => { getBot(botId).unread = true; persist(); return { ok: true as const }; },
 +    },
 +    computer: {
 +      status: async ({ botId }: { botId: string }) => computer(botId),
-+      boot: async ({ botId }: { botId: string }) => computer(botId, "running"),
++      boot: async ({ botId }: { botId: string }) => computer(botId, "error"),
 +      stop: async ({ botId }: { botId: string }) => computer(botId, "stopped"),
-+      takeover: async () => ({ leaseId: id("lease"), expiresAt: new Date(Date.now() + 300_000).toISOString() }),
++      takeover: async () => { throw new Error("Computer control needs a connected Rakazo host; it is not available in the public guest build."); },
 +      release: async () => ({ ok: true as const }),
 +      input: async () => ({ ok: true as const }),
 +      files: async () => [],

@@ -16,6 +16,7 @@ import "@/styles/flux-x-ultimate.css";
 import "@/styles/flux-mobile-dock.css";
 import "@/styles/flux-performance-x4.css";
 import "@/styles/flux-v10.css";
+import "@/styles/flux-aurora.css";
 import "@/styles/askai-v10.css";
 import "@/styles/maus-agents-v10.css";
 
