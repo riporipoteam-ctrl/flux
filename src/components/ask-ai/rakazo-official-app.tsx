@@ -6,7 +6,7 @@ import { auth, isFirebaseConfigured } from "@/lib/firebase";
 import { useAuth } from "@/contexts/auth-context";
 
 const RAKAZO_GUEST_PATH = "/flux/rakazo/";
-const ASK_AI_ENDPOINT = process.env.NEXT_PUBLIC_ASK_AI_ENDPOINT || "https://europe-west1-flux-544a6.cloudfunctions.net/askaiGroq";
+const ASK_AI_ENDPOINT = process.env.NEXT_PUBLIC_ASK_AI_ENDPOINT || "https://echoxr-ripoteam-cloud-pc.hf.space/api/flux/askai/chat";
 
 /**
  * AskAI renders the actual Rakazo web client from https://github.com/elie222/rakazo.
