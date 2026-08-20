@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Plus, Search, Sparkles, UserRound } from "lucide-react";
+import { Gamepad2, Home, Plus, Search, Sparkles, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isNavPathActive, profilePath } from "@/lib/routes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +40,7 @@ export function MobileNav() {
     { href: "/explore", icon: Search, label: "Explore" },
     { href: "#compose", icon: Plus, label: "Create", create: true },
     { href: "/ask-ai", icon: Sparkles, label: "AskAI" },
+    { href: "/games", icon: Gamepad2, label: "Games" },
     { href: profileHref, icon: UserRound, label: "Profile" },
   ], [profileHref]);
 
