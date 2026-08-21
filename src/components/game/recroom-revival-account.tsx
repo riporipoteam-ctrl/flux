@@ -58,8 +58,8 @@ export function RecRoomRevivalAccount() {
   };
 
   const copyLink = async () => {
-    if (!pairing) return;
-    await navigator.clipboard.writeText(recRoomPairingUrl(window.location.origin, pairing.code));
+    if (!pairing || !identity) return;
+    await navigator.clipboard.writeText(recRoomPairingUrl(window.location.origin, pairing.code, user.uid, identity.revivalUserId));
     toast.success("Pairing link copied");
   };
 
@@ -91,15 +91,15 @@ export function RecRoomRevivalAccount() {
         </button>
       </div>
 
-      {pairing ? (
+      {pairing && identity ? (
         <div className="grid gap-5 border-t border-white/8 bg-black/15 p-5 sm:p-6 md:grid-cols-[220px_1fr] md:items-center">
           <div className="mx-auto w-full max-w-[220px] rounded-3xl bg-white p-3 shadow-xl">
-            <img src={recRoomQrUrl(window.location.origin, pairing.code)} alt="Rec Room revival device-link QR code" className="aspect-square w-full rounded-2xl" />
+            <img src={recRoomQrUrl(window.location.origin, pairing.code, user.uid, identity.revivalUserId)} alt="Rec Room revival device-link QR code" className="aspect-square w-full rounded-2xl" />
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[.16em] text-white/35">Scan on another device</p>
             <p className="mt-1 text-2xl font-black tracking-tight text-white">{pairing.code}</p>
-            <p className="mt-2 text-xs leading-5 text-white/45">The code expires in about 10 minutes and is single-use. The QR opens Flux directly on the Rec Room pairing page.</p>
+            <p className="mt-2 text-xs leading-5 text-white/45">The link is valid for about 10 minutes. Scan it on a device where the intended Flux account is signed in, then confirm the link.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button type="button" onClick={() => void copyLink()} className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-xs font-bold text-white hover:bg-white/10"><Copy className="h-3.5 w-3.5" /> Copy link</button>
               <button type="button" onClick={() => setPairing(null)} className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-xs font-bold text-white/60 hover:bg-white/10 hover:text-white"><RefreshCw className="h-3.5 w-3.5" /> Hide</button>
