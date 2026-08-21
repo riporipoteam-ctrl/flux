@@ -16,15 +16,7 @@ from recroom_wine_pool import RecRoomWinePool, install_recroom_wine_routes
 
 
 def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPool:
-    """Attach RipoTeamServer-owned disposable game runtimes.
-
-    Prefer a real KVM Windows VM when the host supports it. Managed Linux
-    platforms such as Hugging Face Spaces usually do not expose /dev/kvm, so the
-    production fallback is an isolated per-player Wine sandbox. In both cases
-    the browser contract is the same: Play allocates a private server runtime,
-    Rec Room is streamed into Flux, and leaving destroys the disposable runtime.
-    """
-
+    """Attach RipoTeamServer-owned disposable game runtimes."""
     public_base = os.environ.get("RECROOM_PUBLIC_BASE_URL", "https://echoxr-ripoteam-cloud-pc.hf.space").rstrip("/")
     kvm_pool = RecRoomVmPool(data_dir / "recroom-vms", public_base, broker.host_key)
     wine_pool = RecRoomWinePool(data_dir / "recroom-wine", public_base, broker.gateway_url)
@@ -48,10 +40,6 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
     def touch_runtime_browser(host_id: str) -> None:
         now = time.time()
         browser_seen[host_id] = now
-        # Server-owned runtimes do not have a separate host agent sending
-        # heartbeats while the player is waiting for the game window. Treat
-        # actual browser stream traffic as a heartbeat so the 35-second
-        # host-stale guard cannot falsely mark an active Wine session offline.
         with broker.lock:
             host = broker.hosts.get(host_id)
             if host and host.metadata.get("runtimePool"):
@@ -83,22 +71,17 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
         return None, None
 
     def choose_runtime() -> tuple[str | None, Any | None, str | None]:
-        choices: list[tuple[str, Any]]
         if runtime_preference == "wine":
             choices = [("wine", wine_pool)]
         elif runtime_preference == "kvm":
             choices = [("kvm", kvm_pool)]
         else:
-            # Prefer a true VM only when it is game-ready. Otherwise Wine is the
-            # KVM-free path that can run inside a normal Linux Space.
             choices = [("kvm", kvm_pool), ("wine", wine_pool)]
-
         reasons: list[str] = []
         for provider, pool in choices:
             capability = pool.capability()
             if not capability.get("readyForGame"):
-                reason = str(capability.get("reason") or "runtime is not game-ready")
-                reasons.append(f"{provider}: {reason}")
+                reasons.append(f"{provider}: {capability.get('reason') or 'runtime is not game-ready'}")
                 continue
             can_start, reason = pool.can_provision()
             if can_start:
@@ -109,7 +92,7 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
     def friendly_runtime_error() -> str:
         wine = wine_pool.capability()
         if not wine.get("checks", {}).get("client"):
-            return "RipoTeamServer is ready to stream browser sessions, but the May 19 2022 Rec Room server game image has not been installed on the server yet."
+            return "RipoTeamServer is ready to stream browser sessions, but the Aug 25 2021 Rec Room server game image has not been installed on the server yet."
         if runtime_preference == "kvm":
             return "The configured Windows VM runtime is unavailable on this server."
         return "RipoTeamServer does not currently have a game-ready Rec Room runtime slot."
@@ -130,7 +113,10 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
         if not provider or pool is None:
             raise HTTPException(status_code=503, detail=friendly_runtime_error())
 
-        account = identity_payload["account"]
+        account = dict(identity_payload["account"])
+        revival_user_id = str(identity_payload.get("revivalUserId") or account.get("revivalUserId") or "")
+        if revival_user_id:
+            account["revivalUserId"] = revival_user_id
         recnet_session_token = str(identity_payload["sessionToken"])
         uid = str(account.get("uid") or identity_payload.get("uid") or "")
         if not uid:
@@ -153,6 +139,7 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
                 "provider": provider,
                 "phase": "queued",
                 "progress": 1,
+                "revivalUserId": revival_user_id or None,
             },
         )
         session = SessionRecord(
@@ -169,26 +156,25 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
                 "provider": f"ripoteam-{provider}",
                 "phase": "queued",
                 "progress": 1,
+                "revivalUserId": revival_user_id or None,
             },
         )
         host.active_sessions.add(session_id)
         if provider == "kvm":
-            # The Windows guest agent consumes this after the KVM VM boots.
-            host.jobs.append(
-                {
-                    "type": "start-session",
-                    "sessionId": session_id,
-                    "buildId": build_id,
-                    "gatewayUrl": self.gateway_url,
-                    "recnetSessionToken": recnet_session_token,
-                    "account": {
-                        "accountId": account.get("accountId"),
-                        "username": account.get("username"),
-                        "displayName": account.get("displayName"),
-                        "isAdmin": bool(account.get("isAdmin")),
-                    },
-                }
-            )
+            host.jobs.append({
+                "type": "start-session",
+                "sessionId": session_id,
+                "buildId": build_id,
+                "gatewayUrl": self.gateway_url,
+                "recnetSessionToken": recnet_session_token,
+                "account": {
+                    "accountId": account.get("accountId"),
+                    "username": account.get("username"),
+                    "displayName": account.get("displayName"),
+                    "isAdmin": bool(account.get("isAdmin")),
+                    "revivalUserId": revival_user_id or None,
+                },
+            })
         with self.lock:
             self.hosts[host_id] = host
             self.sessions[session_id] = session
@@ -212,27 +198,16 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
 
         def on_ready(stream_url: str) -> None:
             try:
-                self.mark_ready(
-                    host_id,
-                    session_id,
-                    {
-                        "streamUrl": stream_url,
-                        "resolution": "1280x720",
-                        "streamer": "ripo-wine-browser" if provider == "wine" else "ripo-vm-browser",
-                    },
-                )
+                self.mark_ready(host_id, session_id, {
+                    "streamUrl": stream_url,
+                    "resolution": "1280x720",
+                    "streamer": "ripo-wine-browser" if provider == "wine" else "ripo-vm-browser",
+                })
             except Exception as exc:
                 on_failed(f"Could not publish the browser stream: {exc}")
 
         if provider == "wine":
-            started, start_error = wine_pool.provision(
-                host_id,
-                session_id,
-                recnet_session_token,
-                on_progress,
-                on_ready,
-                on_failed,
-            )
+            started, start_error = wine_pool.provision(host_id, session_id, recnet_session_token, on_progress, on_ready, on_failed)
         else:
             started, start_error = kvm_pool.provision(host_id, on_progress, on_failed)
 
@@ -243,13 +218,7 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
             browser_seen.pop(host_id, None)
             raise HTTPException(status_code=503, detail=start_error or "RipoTeamServer could not start the game runtime.")
 
-        self._audit(
-            "session.runtime.allocate",
-            session_id=session_id,
-            host_id=host_id,
-            build_id=build_id,
-            provider=provider,
-        )
+        self._audit("session.runtime.allocate", session_id=session_id, host_id=host_id, build_id=build_id, provider=provider, revival_user_id=revival_user_id or None)
         return session, access_token
 
     def release_locked(self: Any, session_id: str, reason: str) -> None:
@@ -299,11 +268,9 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
         payload["provider"] = details.get("provider") or (f"ripoteam-{provider_name}" if provider_name else "remote")
         payload["phase"] = "ready" if session.state == "ready" else details.get("phase") or (runtime_progress or {}).get("phase") or session.state
         payload["progress"] = 100 if session.state == "ready" else int(details.get("progress") or (runtime_progress or {}).get("progress") or 0)
-        # Flux must not mount the browser player until the Wine/KVM runtime has
-        # produced the real Rec Room window. The old Steam phase adapter used
-        # to provide this flag; direct launch owns it here instead.
         payload["streamReady"] = bool(session.state == "ready" and session.stream_url)
         payload["gameReady"] = bool(session.state == "ready" and session.stream_url)
+        payload["revivalUserId"] = details.get("revivalUserId")
         return payload
 
     def status(self: Any) -> dict[str, Any]:
@@ -316,7 +283,7 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
             selected = wine
         else:
             selected = kvm if kvm.get("readyForGame") else wine
-        payload["vmRuntime"] = selected  # retained for older Flux clients
+        payload["vmRuntime"] = selected
         payload["serverRuntime"] = selected
         payload["kvmRuntime"] = kvm
         payload["wineRuntime"] = wine
@@ -351,12 +318,7 @@ def attach_recroom_vm_pool(app: Any, broker: Any, data_dir: Any) -> RecRoomVmPoo
             for session_id in stale:
                 broker._audit("session.runtime.browser-timeout", session_id=session_id, idle_seconds=browser_idle_seconds)
 
-    threading.Thread(
-        target=reap_disconnected_browsers,
-        name="recroom-runtime-browser-reaper",
-        daemon=True,
-    ).start()
-
+    threading.Thread(target=reap_disconnected_browsers, name="recroom-runtime-browser-reaper", daemon=True).start()
     install_recroom_vm_routes(app, kvm_pool)
     install_recroom_wine_routes(app, wine_pool)
     return kvm_pool
