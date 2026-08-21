@@ -1,0 +1,41 @@
+name: Rec Room revival auth check
+
+on:
+  pull_request:
+    paths:
+      - "src/services/recroom-browser.ts"
+      - "src/services/recroom-revival.ts"
+      - "src/components/game/recroom-revival-account.tsx"
+      - "src/app/games/recroom/link/**"
+      - "ops/recroom-space-patch/**"
+      - ".github/workflows/recroom-revival-auth-check.yml"
+  push:
+    branches:
+      - "feat/recroom-revival-auth-ready"
+    paths:
+      - "src/services/recroom-browser.ts"
+      - "src/services/recroom-revival.ts"
+      - "src/components/game/recroom-revival-account.tsx"
+      - "src/app/games/recroom/link/**"
+      - "ops/recroom-space-patch/**"
+      - ".github/workflows/recroom-revival-auth-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck-and-python-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m py_compile ops/recroom-space-patch/recroom_autoload.py ops/recroom-space-patch/recroom_vm_bridge.py ops/recroom-space-patch/recroom_wine_pool.py
