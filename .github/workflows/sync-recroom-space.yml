@@ -41,8 +41,8 @@ jobs:
           cp ops/recroom-space-patch/recroom_wine_stream.py "$STAGING_DIR/recroom_wine_stream.py"
           cp ops/recroom-space-patch/recroom_live_failure_diagnostics.py "$STAGING_DIR/recroom_live_failure_diagnostics.py"
 
-          # The live Space is pinned to the Aug 25, 2021 client. Keep the Wine
-          # pool's historical 2022 constants from advertising a different build.
+          # The live Space is pinned to the archived Aug 25, 2021 client.
+          # Keep the historical Wine-pool constants from advertising the later 2022 build.
           python - "$STAGING_DIR/recroom_wine_pool.py" <<'PY'
           from pathlib import Path
           import sys
@@ -50,8 +50,8 @@ jobs:
           text = path.read_text()
           replacements = {
               'TARGET_BUILD_ID = "recroom-2022-05-19"': 'TARGET_BUILD_ID = "recroom-2021-08-25"',
-              'TARGET_MANIFEST = "6337851004861751095"': 'TARGET_MANIFEST = os.environ.get("RECROOM_WINE_TARGET_MANIFEST", "")',
-              'TARGET_DEPOT = "471711"': 'TARGET_DEPOT = os.environ.get("RECROOM_WINE_TARGET_DEPOT", "")',
+              'TARGET_MANIFEST = "6337851004861751095"': 'TARGET_MANIFEST = "7611535694620830622"',
+              'TARGET_DEPOT = "471711"': 'TARGET_DEPOT = "471711"',
               'recroom-client-2022': 'recroom-client-2021',
               'May 19 2022': 'Aug 25 2021',
               'May 19, 2022': 'Aug 25, 2021',
@@ -70,4 +70,4 @@ jobs:
         run: |
           hf upload "$HF_SPACE" "$HF_STAGING_DIR" . \
             --repo-type space \
-            --commit-message "Align Rec Room runtime with Aug 2021 revival build"
+            --commit-message "Align Rec Room runtime with Aug 25 2021 build"
