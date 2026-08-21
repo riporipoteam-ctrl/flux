@@ -77,14 +77,7 @@ export async function createRecRoomPairing(user: User): Promise<RecRoomPairing> 
   const identity = await ensureRecRoomRevivalIdentity(user);
   const code = toHex(randomBytes(10)).toUpperCase();
   const now = Date.now();
-  return {
-    code,
-    ownerUid: user.uid,
-    ownerRevivalUserId: identity.revivalUserId,
-    createdAtMs: now,
-    expiresAtMs: now + PAIRING_TTL_MS,
-    status: "open",
-  };
+  return { code, ownerUid: user.uid, ownerRevivalUserId: identity.revivalUserId, createdAtMs: now, expiresAtMs: now + PAIRING_TTL_MS, status: "open" };
 }
 
 export async function claimRecRoomPairing(user: User, ownerUid: string, ownerRevivalUserId: string, code: string): Promise<RecRoomPairing> {
