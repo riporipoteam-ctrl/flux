@@ -63,9 +63,7 @@ export async function ensureRecRoomRevivalIdentity(user: User): Promise<RecRoomR
     linkedFromUid: existing?.linkedFromUid ?? null,
     linkedAtMs: existing?.linkedAtMs ?? null,
   };
-  if (!existing || existing.revivalUserId !== revivalUserId) {
-    await updateDoc(ref, { recRoomRevival: next, updatedAt: new Date() });
-  }
+  if (!existing || existing.revivalUserId !== revivalUserId) await updateDoc(ref, { recRoomRevival: next, updatedAt: new Date() });
   return next;
 }
 
@@ -92,7 +90,6 @@ export async function createRecRoomPairing(user: User): Promise<RecRoomPairing> 
 export async function claimRecRoomPairing(user: User, ownerUid: string, ownerRevivalUserId: string, code: string): Promise<RecRoomPairing> {
   const normalized = code.trim().toUpperCase();
   if (!normalized || !ownerUid || !ownerRevivalUserId) throw new Error("Invalid Rec Room device link.");
-
   const identity = await ensureRecRoomRevivalIdentity(user);
   const now = Date.now();
   const next: RecRoomRevivalIdentity = {
@@ -103,7 +100,6 @@ export async function claimRecRoomPairing(user: User, ownerUid: string, ownerRev
     updatedAtMs: now,
   };
   await updateDoc(doc(db, "users", user.uid), { recRoomRevival: next, updatedAt: new Date() });
-
   return {
     code: normalized,
     ownerUid,
