@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
 
@@ -14,6 +14,8 @@ export interface RecRoomRevivalIdentity {
   createdAtMs: number;
   updatedAtMs: number;
   linked: boolean;
+  linkedFromUid?: string | null;
+  linkedAtMs?: number | null;
 }
 
 export interface RecRoomPairing {
@@ -56,10 +58,14 @@ export async function ensureRecRoomRevivalIdentity(user: User): Promise<RecRoomR
     userUid: user.uid,
     revivalUserId,
     createdAtMs: existing?.createdAtMs || now,
-    updatedAtMs: existing?.updatedAtMs || now,
+    updatedAtMs: now,
     linked: existing?.linked === true,
+    linkedFromUid: existing?.linkedFromUid ?? null,
+    linkedAtMs: existing?.linkedAtMs ?? null,
   };
-  if (!existing || existing.revivalUserId !== revivalUserId) await updateDoc(ref, { recRoomRevival: next, updatedAt: new Date() });
+  if (!existing || existing.revivalUserId !== revivalUserId) {
+    await updateDoc(ref, { recRoomRevival: next, updatedAt: new Date() });
+  }
   return next;
 }
 
@@ -71,9 +77,9 @@ export async function loadRecRoomRevivalIdentity(uid: string): Promise<RecRoomRe
 
 export async function createRecRoomPairing(user: User): Promise<RecRoomPairing> {
   const identity = await ensureRecRoomRevivalIdentity(user);
-  const code = toHex(randomBytes(5)).toUpperCase();
+  const code = toHex(randomBytes(10)).toUpperCase();
   const now = Date.now();
-  const pairing: RecRoomPairing = {
+  return {
     code,
     ownerUid: user.uid,
     ownerRevivalUserId: identity.revivalUserId,
@@ -81,44 +87,43 @@ export async function createRecRoomPairing(user: User): Promise<RecRoomPairing> 
     expiresAtMs: now + PAIRING_TTL_MS,
     status: "open",
   };
-  await setDoc(doc(db, "recroomPairings", code), pairing);
-  return pairing;
 }
 
-export async function getRecRoomPairing(code: string): Promise<RecRoomPairing | null> {
+export async function claimRecRoomPairing(user: User, ownerUid: string, ownerRevivalUserId: string, code: string): Promise<RecRoomPairing> {
   const normalized = code.trim().toUpperCase();
-  if (!normalized) return null;
-  const snapshot = await getDoc(doc(db, "recroomPairings", normalized));
-  if (!snapshot.exists()) return null;
-  return snapshot.data() as RecRoomPairing;
-}
+  if (!normalized || !ownerUid || !ownerRevivalUserId) throw new Error("Invalid Rec Room device link.");
 
-export async function claimRecRoomPairing(user: User, code: string): Promise<RecRoomPairing> {
-  const normalized = code.trim().toUpperCase();
-  const pairingRef = doc(db, "recroomPairings", normalized);
-  const snapshot = await getDoc(pairingRef);
-  if (!snapshot.exists()) throw new Error("This Rec Room link code does not exist.");
-  const pairing = snapshot.data() as RecRoomPairing;
-  if (pairing.status !== "open") throw new Error("This Rec Room link has already been used.");
-  if (pairing.expiresAtMs <= Date.now()) throw new Error("This Rec Room link has expired. Generate a new code.");
   const identity = await ensureRecRoomRevivalIdentity(user);
   const now = Date.now();
-  const next: RecRoomPairing = { ...pairing, status: "claimed", claimedUid: user.uid, claimedAtMs: now };
-  await updateDoc(doc(db, "users", user.uid), { recRoomRevival: { ...identity, linked: true, updatedAtMs: now } });
-  await updateDoc(pairingRef, next as unknown as Record<string, unknown>);
-  return next;
+  const next: RecRoomRevivalIdentity = {
+    ...identity,
+    linked: true,
+    linkedFromUid: ownerUid,
+    linkedAtMs: now,
+    updatedAtMs: now,
+  };
+  await updateDoc(doc(db, "users", user.uid), { recRoomRevival: next, updatedAt: new Date() });
+
+  return {
+    code: normalized,
+    ownerUid,
+    ownerRevivalUserId,
+    createdAtMs: now,
+    expiresAtMs: now + PAIRING_TTL_MS,
+    status: "claimed",
+    claimedUid: user.uid,
+    claimedAtMs: now,
+  };
 }
 
-export async function discardRecRoomPairing(code: string): Promise<void> {
-  const normalized = code.trim().toUpperCase();
-  if (normalized) await deleteDoc(doc(db, "recroomPairings", normalized));
+export function recRoomPairingUrl(origin: string, code: string, ownerUid = "", ownerRevivalUserId = ""): string {
+  const query = new URLSearchParams({ code });
+  if (ownerUid) query.set("owner", ownerUid);
+  if (ownerRevivalUserId) query.set("revival", ownerRevivalUserId);
+  return `${origin.replace(/\/$/, "")}/games/recroom/link?${query.toString()}`;
 }
 
-export function recRoomPairingUrl(origin: string, code: string): string {
-  return `${origin.replace(/\/$/, "")}/games/recroom/link?code=${encodeURIComponent(code)}`;
-}
-
-export function recRoomQrUrl(origin: string, code: string): string {
-  const target = encodeURIComponent(recRoomPairingUrl(origin, code));
+export function recRoomQrUrl(origin: string, code: string, ownerUid = "", ownerRevivalUserId = ""): string {
+  const target = encodeURIComponent(recRoomPairingUrl(origin, code, ownerUid, ownerRevivalUserId));
   return `https://quickchart.io/qr?size=360&margin=2&text=${target}`;
 }
