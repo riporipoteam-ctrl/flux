@@ -92,24 +92,9 @@ export async function claimRecRoomPairing(user: User, ownerUid: string, ownerRev
   if (!normalized || !ownerUid || !ownerRevivalUserId) throw new Error("Invalid Rec Room device link.");
   const identity = await ensureRecRoomRevivalIdentity(user);
   const now = Date.now();
-  const next: RecRoomRevivalIdentity = {
-    ...identity,
-    linked: true,
-    linkedFromUid: ownerUid,
-    linkedAtMs: now,
-    updatedAtMs: now,
-  };
+  const next: RecRoomRevivalIdentity = { ...identity, linked: true, linkedFromUid: ownerUid, linkedAtMs: now, updatedAtMs: now };
   await updateDoc(doc(db, "users", user.uid), { recRoomRevival: next, updatedAt: new Date() });
-  return {
-    code: normalized,
-    ownerUid,
-    ownerRevivalUserId,
-    createdAtMs: now,
-    expiresAtMs: now + PAIRING_TTL_MS,
-    status: "claimed",
-    claimedUid: user.uid,
-    claimedAtMs: now,
-  };
+  return { code: normalized, ownerUid, ownerRevivalUserId, createdAtMs: now, expiresAtMs: now + PAIRING_TTL_MS, status: "claimed", claimedUid: user.uid, claimedAtMs: now };
 }
 
 export function recRoomPairingUrl(origin: string, code: string, ownerUid = "", ownerRevivalUserId = ""): string {
