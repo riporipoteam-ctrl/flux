@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
 
@@ -36,9 +29,7 @@ export interface RecRoomPairing {
 
 function randomBytes(length: number): Uint8Array {
   const bytes = new Uint8Array(length);
-  if (typeof crypto?.getRandomValues !== "function") {
-    throw new Error("Secure random number generation is unavailable in this browser.");
-  }
+  if (typeof crypto?.getRandomValues !== "function") throw new Error("Secure random number generation is unavailable in this browser.");
   crypto.getRandomValues(bytes);
   return bytes;
 }
@@ -57,7 +48,7 @@ async function stableRevivalId(uid: string): Promise<string> {
 export async function ensureRecRoomRevivalIdentity(user: User): Promise<RecRoomRevivalIdentity> {
   const ref = doc(db, "users", user.uid);
   const snapshot = await getDoc(ref);
-  const existing = snapshot.exists() ? snapshot.data().recRoomRevival as RecRoomRevivalIdentity | undefined : undefined;
+  const existing = snapshot.exists() ? (snapshot.data().recRoomRevival as RecRoomRevivalIdentity | undefined) : undefined;
   const now = Date.now();
   const revivalUserId = existing?.revivalUserId || await stableRevivalId(user.uid);
   const next: RecRoomRevivalIdentity = {
@@ -65,13 +56,10 @@ export async function ensureRecRoomRevivalIdentity(user: User): Promise<RecRoomR
     userUid: user.uid,
     revivalUserId,
     createdAtMs: existing?.createdAtMs || now,
-    updatedAtMs: now,
+    updatedAtMs: existing?.updatedAtMs || now,
     linked: existing?.linked === true,
   };
-
-  if (!existing || existing.revivalUserId !== revivalUserId || existing.updatedAtMs !== now) {
-    await updateDoc(ref, { recRoomRevival: next, updatedAt: new Date() });
-  }
+  if (!existing || existing.revivalUserId !== revivalUserId) await updateDoc(ref, { recRoomRevival: next, updatedAt: new Date() });
   return next;
 }
 
@@ -83,7 +71,7 @@ export async function loadRecRoomRevivalIdentity(uid: string): Promise<RecRoomRe
 
 export async function createRecRoomPairing(user: User): Promise<RecRoomPairing> {
   const identity = await ensureRecRoomRevivalIdentity(user);
-  const code = `${toHex(randomBytes(5))}`.toUpperCase();
+  const code = toHex(randomBytes(5)).toUpperCase();
   const now = Date.now();
   const pairing: RecRoomPairing = {
     code,
@@ -93,7 +81,7 @@ export async function createRecRoomPairing(user: User): Promise<RecRoomPairing> 
     expiresAtMs: now + PAIRING_TTL_MS,
     status: "open",
   };
-  await setDoc(doc(collection(db, "recroomPairings"), code), pairing);
+  await setDoc(doc(db, "recroomPairings", code), pairing);
   return pairing;
 }
 
@@ -113,34 +101,17 @@ export async function claimRecRoomPairing(user: User, code: string): Promise<Rec
   const pairing = snapshot.data() as RecRoomPairing;
   if (pairing.status !== "open") throw new Error("This Rec Room link has already been used.");
   if (pairing.expiresAtMs <= Date.now()) throw new Error("This Rec Room link has expired. Generate a new code.");
-
   const identity = await ensureRecRoomRevivalIdentity(user);
-  const next: RecRoomPairing = {
-    ...pairing,
-    status: "claimed",
-    claimedUid: user.uid,
-    claimedAtMs: Date.now(),
-  };
-
-  await updateDoc(doc(db, "users", pairing.ownerUid), {
-    "recRoomRevival.linked": true,
-    "recRoomRevival.updatedAtMs": Date.now(),
-  });
-  await updateDoc(doc(db, "users", user.uid), {
-    "recRoomRevival": {
-      ...identity,
-      linked: true,
-      updatedAtMs: Date.now(),
-    },
-  });
+  const now = Date.now();
+  const next: RecRoomPairing = { ...pairing, status: "claimed", claimedUid: user.uid, claimedAtMs: now };
+  await updateDoc(doc(db, "users", user.uid), { recRoomRevival: { ...identity, linked: true, updatedAtMs: now } });
   await updateDoc(pairingRef, next as unknown as Record<string, unknown>);
   return next;
 }
 
 export async function discardRecRoomPairing(code: string): Promise<void> {
   const normalized = code.trim().toUpperCase();
-  if (!normalized) return;
-  await deleteDoc(doc(db, "recroomPairings", normalized));
+  if (normalized) await deleteDoc(doc(db, "recroomPairings", normalized));
 }
 
 export function recRoomPairingUrl(origin: string, code: string): string {
