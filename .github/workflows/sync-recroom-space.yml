@@ -30,6 +30,7 @@ jobs:
         env:
           STAGING_DIR: ${{ runner.temp }}/recroom-space-patch
         run: |
+          set -euo pipefail
           mkdir -p "$STAGING_DIR"
           cp ops/recroom-space-patch/README.md "$STAGING_DIR/README.md"
           cp ops/recroom-space-patch/recroom_autoload.py "$STAGING_DIR/recroom_autoload.py"
@@ -39,6 +40,27 @@ jobs:
           cp ops/recroom-space-patch/recroom_wine_runtime_fix.py "$STAGING_DIR/recroom_wine_runtime_fix.py"
           cp ops/recroom-space-patch/recroom_wine_stream.py "$STAGING_DIR/recroom_wine_stream.py"
           cp ops/recroom-space-patch/recroom_live_failure_diagnostics.py "$STAGING_DIR/recroom_live_failure_diagnostics.py"
+
+          # The live Space is pinned to the archived Aug 25, 2021 client.
+          # Keep the historical Wine-pool constants from advertising the later 2022 build.
+          python - "$STAGING_DIR/recroom_wine_pool.py" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          text = path.read_text()
+          replacements = {
+              'TARGET_BUILD_ID = "recroom-2022-05-19"': 'TARGET_BUILD_ID = "recroom-2021-08-25"',
+              'TARGET_MANIFEST = "6337851004861751095"': 'TARGET_MANIFEST = "7611535694620830622"',
+              'TARGET_DEPOT = "471711"': 'TARGET_DEPOT = "471711"',
+              'recroom-client-2022': 'recroom-client-2021',
+              'May 19 2022': 'Aug 25 2021',
+              'May 19, 2022': 'Aug 25, 2021',
+          }
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+          path.write_text(text)
+          PY
+
           echo "HF_STAGING_DIR=$STAGING_DIR" >> "$GITHUB_ENV"
 
       - name: Upload direct-launch backend patch
@@ -48,4 +70,4 @@ jobs:
         run: |
           hf upload "$HF_SPACE" "$HF_STAGING_DIR" . \
             --repo-type space \
-            --commit-message "Launch Rec Room directly without Steam"
+            --commit-message "Align Rec Room runtime with Aug 25 2021 build"

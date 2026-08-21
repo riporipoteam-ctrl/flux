@@ -1,3 +1,6 @@
+import { auth } from "@/lib/firebase";
+import { loadRecRoomRevivalIdentity } from "@/services/recroom-revival";
+
 const DEFAULT_RECROOM_BROKER_URL = "https://echoxr-ripoteam-cloud-pc.hf.space";
 const TARGET_BUILD_ID = "recroom-2021-08-25";
 const SESSION_CREATE_WAIT_MS = 10 * 60_000;
@@ -127,8 +130,11 @@ async function parseJson<T>(response: Response): Promise<T> {
   return payload;
 }
 
-function authHeaders(firebaseIdToken: string): HeadersInit {
-  return { authorization: `Bearer ${firebaseIdToken}` };
+function authHeaders(firebaseIdToken: string, revivalUserId?: string): HeadersInit {
+  return {
+    authorization: `Bearer ${firebaseIdToken}`,
+    ...(revivalUserId ? { "x-flux-revival-user-id": revivalUserId } : {}),
+  };
 }
 
 function sessionPath(sessionId: string, accessToken?: string) {
@@ -148,8 +154,6 @@ function runtimeFromStatus(status: RecRoomBrokerStatus): RecRoomVmRuntimeStatus 
 function runtimeReady(status: RecRoomBrokerStatus) {
   const runtime = runtimeFromStatus(status);
   const ready = Boolean(runtime?.readyForGame || status.runtimeReadyForGame || status.vmReadyForGame);
-  // If the server advertises exact-build state, require it. Older compatible
-  // status responses may omit exactBuild, so only an explicit false blocks Play.
   return Boolean(status.ok && ready && runtime?.exactBuild !== false);
 }
 
@@ -185,40 +189,25 @@ function isTransientRuntimeMessage(message: string) {
 }
 
 export async function getRecRoomBrokerStatus(): Promise<RecRoomBrokerStatus> {
-  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/status`, {
-    cache: "no-store",
-  });
+  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/status`, { cache: "no-store" });
   return parseJson<RecRoomBrokerStatus>(response);
 }
 
-export async function startRecRoomClientInstall(
-  firebaseIdToken: string,
-  url: string,
-  sha256?: string,
-): Promise<RecRoomClientInstallStatus> {
+export async function startRecRoomClientInstall(firebaseIdToken: string, url: string, sha256?: string): Promise<RecRoomClientInstallStatus> {
   const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/client-install`, {
     method: "POST",
     cache: "no-store",
-    headers: {
-      ...authHeaders(firebaseIdToken),
-      "content-type": "application/json",
-    },
+    headers: { ...authHeaders(firebaseIdToken), "content-type": "application/json" },
     body: JSON.stringify({ url, sha256: sha256?.trim() || "" }),
   });
   return parseJson<RecRoomClientInstallStatus>(response);
 }
 
-export async function getRecRoomClientInstall(
-  firebaseIdToken: string,
-  jobId: string,
-): Promise<RecRoomClientInstallStatus> {
-  const response = await fetch(
-    `${getRecRoomBrokerUrl()}/api/recroom-public/client-install/${encodeURIComponent(jobId)}`,
-    {
-      cache: "no-store",
-      headers: authHeaders(firebaseIdToken),
-    },
-  );
+export async function getRecRoomClientInstall(firebaseIdToken: string, jobId: string): Promise<RecRoomClientInstallStatus> {
+  const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/client-install/${encodeURIComponent(jobId)}`, {
+    cache: "no-store",
+    headers: authHeaders(firebaseIdToken),
+  });
   return parseJson<RecRoomClientInstallStatus>(response);
 }
 
@@ -226,23 +215,18 @@ export async function createRecRoomHostPairing(firebaseIdToken: string): Promise
   const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/host-pairing`, {
     method: "POST",
     cache: "no-store",
-    headers: {
-      authorization: `Bearer ${firebaseIdToken}`,
-      "content-type": "application/json",
-    },
+    headers: { ...authHeaders(firebaseIdToken), "content-type": "application/json" },
     body: "{}",
   });
   return parseJson<RecRoomHostPairingResponse>(response);
 }
 
 export async function createRecRoomSession(firebaseIdToken: string): Promise<RecRoomPlayResponse> {
-  // Hugging Face Space restarts use ephemeral local storage. RipoTeamServer
-  // automatically restores and verifies the pinned Aug 25, 2021 client, but the
-  // restore can take a few minutes. Never turn that temporary state into a
-  // permanent "game image not installed" Play failure. Wait until the exact
-  // runtime is ready, and retry if a restart races the session POST.
   const deadline = Date.now() + SESSION_CREATE_WAIT_MS;
   let lastTransient = "RipoTeamServer is restoring the Aug 25, 2021 Rec Room server image.";
+  const currentUser = auth.currentUser;
+  const revivalIdentity = currentUser ? await loadRecRoomRevivalIdentity(currentUser.uid).catch(() => null) : null;
+  const revivalUserId = revivalIdentity?.revivalUserId || null;
 
   while (Date.now() < deadline) {
     try {
@@ -258,10 +242,15 @@ export async function createRecRoomSession(firebaseIdToken: string): Promise<Rec
           method: "POST",
           cache: "no-store",
           headers: {
-            authorization: `Bearer ${firebaseIdToken}`,
+            ...authHeaders(firebaseIdToken, revivalUserId || undefined),
             "content-type": "application/json",
           },
-          body: JSON.stringify({ buildId: TARGET_BUILD_ID }),
+          body: JSON.stringify({
+            buildId: TARGET_BUILD_ID,
+            fluxUserId: currentUser?.uid || null,
+            revivalUserId,
+            identityVersion: revivalIdentity?.version || 1,
+          }),
         });
         return await parseJson<RecRoomPlayResponse>(response);
       } catch (error) {
@@ -274,86 +263,47 @@ export async function createRecRoomSession(firebaseIdToken: string): Promise<Rec
       if (!isTransientRuntimeMessage(message)) throw error;
       lastTransient = message;
     }
-
     await delay(SESSION_CREATE_POLL_MS);
   }
 
-  throw new Error(
-    `RipoTeamServer did not finish restoring the Aug 25, 2021 Rec Room server image in time. ${lastTransient}`,
-  );
+  throw new Error(`RipoTeamServer did not finish restoring the Aug 25, 2021 Rec Room server image in time. ${lastTransient}`);
 }
 
-export async function getRecRoomSession(
-  sessionId: string,
-  accessToken: string,
-): Promise<RecRoomPlayResponse> {
+export async function getRecRoomSession(sessionId: string, accessToken: string): Promise<RecRoomPlayResponse> {
   const response = await fetch(sessionPath(sessionId, accessToken), { cache: "no-store" });
   return parseJson<RecRoomPlayResponse>(response);
 }
 
 export async function releaseRecRoomSession(sessionId: string, accessToken: string): Promise<void> {
-  const response = await fetch(
-    `${sessionPath(sessionId)}/release?accessToken=${encodeURIComponent(accessToken)}`,
-    {
-      method: "POST",
-      cache: "no-store",
-      keepalive: true,
-    },
-  );
-  if (!response.ok && response.status !== 404) {
-    await parseJson(response);
-  }
+  const response = await fetch(`${sessionPath(sessionId)}/release?accessToken=${encodeURIComponent(accessToken)}`, {
+    method: "POST",
+    cache: "no-store",
+    keepalive: true,
+  });
+  if (!response.ok && response.status !== 404) await parseJson(response);
 }
 
-/** Best-effort disposable runtime teardown for page close / navigation. */
 export function releaseRecRoomSessionOnPageExit(sessionId: string, accessToken: string) {
   const url = `${sessionPath(sessionId)}/release?accessToken=${encodeURIComponent(accessToken)}`;
   try {
-    void fetch(url, {
-      method: "POST",
-      cache: "no-store",
-      keepalive: true,
-      mode: "cors",
-    });
+    void fetch(url, { method: "POST", cache: "no-store", keepalive: true, mode: "cors" });
   } catch {
-    // The backend also expires abandoned sessions as a final safety net.
+    // Backend expiry remains the safety net.
   }
 }
 
-export async function requestRecRoomCapture(
-  sessionId: string,
-  accessToken: string,
-): Promise<RecRoomCaptureResponse> {
-  const response = await fetch(`${sessionPath(sessionId)}/captures?accessToken=${encodeURIComponent(accessToken)}`, {
-    method: "POST",
-    cache: "no-store",
-  });
+export async function requestRecRoomCapture(sessionId: string, accessToken: string): Promise<RecRoomCaptureResponse> {
+  const response = await fetch(`${sessionPath(sessionId)}/captures?accessToken=${encodeURIComponent(accessToken)}`, { method: "POST", cache: "no-store" });
   return parseJson<RecRoomCaptureResponse>(response);
 }
 
-export async function getRecRoomCapture(
-  sessionId: string,
-  accessToken: string,
-  captureId: string,
-): Promise<RecRoomCaptureResponse> {
-  const response = await fetch(
-    `${sessionPath(sessionId)}/captures/${encodeURIComponent(captureId)}?accessToken=${encodeURIComponent(accessToken)}`,
-    { cache: "no-store" },
-  );
+export async function getRecRoomCapture(sessionId: string, accessToken: string, captureId: string): Promise<RecRoomCaptureResponse> {
+  const response = await fetch(`${sessionPath(sessionId)}/captures/${encodeURIComponent(captureId)}?accessToken=${encodeURIComponent(accessToken)}`, { cache: "no-store" });
   return parseJson<RecRoomCaptureResponse>(response);
 }
 
-export async function downloadRecRoomCapture(
-  sessionId: string,
-  accessToken: string,
-  captureId: string,
-): Promise<Blob> {
-  const response = await fetch(
-    `${sessionPath(sessionId)}/captures/${encodeURIComponent(captureId)}/image?accessToken=${encodeURIComponent(accessToken)}`,
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    await parseJson(response);
-  }
+export async function downloadRecRoomCapture(sessionId: string, accessToken: string, captureId: string): Promise<Blob> {
+  const response = await fetch(`${sessionPath(sessionId)}/captures/${encodeURIComponent(captureId)}/image?accessToken=${encodeURIComponent(accessToken)}`, { cache: "no-store" });
+  if (!response.ok) await parseJson(response);
   return response.blob();
 }

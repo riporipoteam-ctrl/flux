@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Wrench } from "lucide-react";
 import { RecRoomCloudPlayer } from "@/components/game/recroom-cloud-player";
+import { RecRoomRevivalAccount } from "@/components/game/recroom-revival-account";
 
 export const metadata: Metadata = {
   title: "Rec Room · Flux Games",
@@ -12,6 +13,7 @@ export default function RecRoomPage() {
   return (
     <>
       <RecRoomCloudPlayer />
+      <RecRoomRevivalAccount />
       <Link
         href="/games/recroom/recovery"
         className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-[260] inline-flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-4 text-xs font-black text-white shadow-2xl backdrop-blur-xl sm:bottom-5 sm:right-5"
