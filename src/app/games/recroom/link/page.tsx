@@ -2,42 +2,43 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
-import { claimRecRoomPairing, getRecRoomPairing, type RecRoomPairing } from "@/services/recroom-revival";
+import { claimRecRoomPairing, type RecRoomPairing } from "@/services/recroom-revival";
 
 export default function RecRoomLinkPage() {
   const params = useSearchParams();
   const code = params.get("code") || "";
+  const ownerUid = params.get("owner") || "";
+  const ownerRevivalUserId = params.get("revival") || "";
   const { user, loading: authLoading } = useAuth();
-  const [pairing, setPairing] = useState<RecRoomPairing | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RecRoomPairing | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!code) {
-      setError("No Rec Room pairing code was supplied.");
-      return;
-    }
-    void getRecRoomPairing(code)
-      .then((next) => {
-        if (!next) throw new Error("This Rec Room pairing code is invalid or expired.");
-        setPairing(next);
-      })
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "Could not load this pairing link."));
-  }, [code]);
+  const pairing = useMemo<RecRoomPairing | null>(() => {
+    if (!code || !ownerUid || !ownerRevivalUserId) return null;
+    const now = Date.now();
+    return {
+      code: code.toUpperCase(),
+      ownerUid,
+      ownerRevivalUserId,
+      createdAtMs: now,
+      expiresAtMs: now + 10 * 60_000,
+      status: "open",
+    };
+  }, [code, ownerUid, ownerRevivalUserId]);
 
   const claim = async () => {
-    if (!user || !code || busy) return;
+    if (!user || !pairing || busy) return;
     setBusy(true);
     setError("");
     try {
-      const next = await claimRecRoomPairing(user, code);
+      const next = await claimRecRoomPairing(user, pairing.ownerUid, pairing.ownerRevivalUserId, pairing.code);
       setResult(next);
-      toast.success("Rec Room revival account linked");
+      toast.success("Rec Room revival identity linked");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not link the Rec Room revival account.");
     } finally {
@@ -57,31 +58,32 @@ export default function RecRoomLinkPage() {
           </div>
 
           <div className="p-6 sm:p-8">
-            {error ? (
-              <div className="rounded-2xl border border-amber-300/15 bg-amber-300/8 p-4 text-sm text-amber-50">{error}</div>
+            {!pairing ? (
+              <div className="rounded-2xl border border-amber-300/15 bg-amber-300/8 p-4 text-sm text-amber-50">This Rec Room device link is incomplete or invalid.</div>
             ) : result ? (
               <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/8 p-5">
                 <CheckCircle2 className="h-7 w-7 text-emerald-200" />
                 <p className="mt-3 text-lg font-black">Device linked successfully.</p>
-                <p className="mt-2 text-sm leading-6 text-emerald-50/65">This Flux account can now reuse its persistent Rec Room revival identity on future launches.</p>
+                <p className="mt-2 text-sm leading-6 text-emerald-50/65">This Flux account now has a persistent Rec Room revival identity and the browser can reuse it on future launches.</p>
                 <Link href="/games/recroom" className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-black">Open Rec Room</Link>
               </div>
-            ) : authLoading || !pairing ? (
-              <div className="flex items-center justify-center gap-3 py-10 text-sm font-bold text-white/55"><Loader2 className="h-5 w-5 animate-spin" /> Checking pairing…</div>
+            ) : authLoading ? (
+              <div className="flex items-center justify-center gap-3 py-10 text-sm font-bold text-white/55"><Loader2 className="h-5 w-5 animate-spin" /> Checking Flux session…</div>
             ) : !user ? (
               <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                 <Smartphone className="h-6 w-6 text-white/70" />
                 <p className="mt-3 text-base font-black">Sign in to Flux first</p>
                 <p className="mt-2 text-sm leading-6 text-white/45">After signing in, open this link again to finish the one-time device pairing.</p>
-                <Link href={`/login?next=${encodeURIComponent(`/games/recroom/link?code=${code}`)}`} className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-black">Sign in to Flux</Link>
+                <Link href={`/login?next=${encodeURIComponent(`/games/recroom/link?code=${encodeURIComponent(code)}&owner=${encodeURIComponent(ownerUid)}&revival=${encodeURIComponent(ownerRevivalUserId)}`)}`} className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-black text-black">Sign in to Flux</Link>
               </div>
             ) : (
               <>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                   <p className="text-[10px] font-black uppercase tracking-[.16em] text-white/30">Pairing code</p>
                   <p className="mt-2 text-3xl font-black tracking-[.12em]">{pairing.code}</p>
-                  <p className="mt-2 text-xs text-white/40">This code expires soon and can only be used once.</p>
+                  <p className="mt-2 text-xs text-white/40">This is a device link for the Flux-backed Rec Room revival identity.</p>
                 </div>
+                {error ? <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/8 p-4 text-sm text-amber-50">{error}</div> : null}
                 <button type="button" onClick={() => void claim()} disabled={busy} className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-black text-black disabled:cursor-wait disabled:opacity-55">
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   {busy ? "Linking…" : "Link Rec Room to this Flux account"}
