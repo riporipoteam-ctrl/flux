@@ -208,7 +208,7 @@ export default function GrokPanel() {
           <label>Model<input value={config.model} onChange={(event) => persist({ ...config, model: event.target.value })} placeholder="grok-4.20-auto" /></label>
           <div className="askai-v11-settings-note">
             <Sparkles className="h-4 w-4" />
-            <span>Flux uses the community bridge's OpenAI-compatible Grok endpoint. It does not send your cookie or session token to the browser.</span>
+            <span>Flux uses the community bridge&apos;s OpenAI-compatible Grok endpoint. It does not send your cookie or session token to the browser.</span>
             <a href="https://github.com/2noScript/unofficial-api" target="_blank" rel="noreferrer" aria-label="Open the community Grok bridge on GitHub"><ExternalLink className="h-4 w-4" /></a>
           </div>
         </div>
