@@ -5,11 +5,32 @@
 :root {
   --font-geist-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --background: var(--flux-bg);
+  --foreground: var(--flux-text);
+  --card: var(--flux-surface);
+  --card-foreground: var(--flux-text);
+  --popover: var(--flux-surface);
+  --popover-foreground: var(--flux-text);
+  --primary: var(--flux-brand);
+  --primary-foreground: #ffffff;
+  --secondary: var(--flux-surface-2);
+  --secondary-foreground: var(--flux-text);
+  --muted: var(--flux-surface-2);
+  --muted-foreground: var(--flux-muted);
+  --accent: var(--flux-brand-soft);
+  --accent-foreground: var(--flux-text);
+  --destructive: var(--flux-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--flux-line);
+  --input: var(--flux-line-strong);
+  --ring: var(--flux-brand);
+  --success: var(--flux-success);
+  --like: #f91880;
+  --repost: var(--flux-success);
+  --sidebar: var(--flux-surface);
+  --link: var(--flux-brand);
 }
 
-/* Tailwind's colour/radius scale is bridged onto the X design tokens defined
-   in styles/flux-v8.css so `bg-card`, `text-muted-foreground`, `rounded-lg`
-   and friends resolve to the same values the raw CSS primitives use. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -37,114 +58,46 @@
   --color-link: var(--link);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
 }
 
-* { border-color: var(--border); box-sizing: border-box; }
-
-html {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
-}
-
-body {
-  width: 100%;
-  max-width: 100%;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  overscroll-behavior-x: none;
-}
-
-/* --- Utilities kept for components that predate the design system --------- */
+* { box-sizing: border-box; border-color: var(--flux-line); }
+html { width: 100%; max-width: 100%; overflow-x: hidden; scroll-behavior: smooth; background: var(--flux-bg); }
+body { width: 100%; max-width: 100%; min-height: 100dvh; overflow-x: clip; overscroll-behavior-x: none; }
 
 @utility shadow-soft { box-shadow: var(--v8-shadow-sm); }
-@utility shadow-glow { box-shadow: 0 8px 30px var(--v8-accent-soft); }
-
+@utility shadow-glow { box-shadow: 0 8px 30px var(--flux-brand-soft); }
 @utility glass {
-  background: color-mix(in srgb, var(--v8-panel) 86%, transparent);
+  background: color-mix(in srgb, var(--flux-surface) 86%, transparent);
   backdrop-filter: blur(16px) saturate(1.35);
   -webkit-backdrop-filter: blur(16px) saturate(1.35);
 }
 @utility glass-strong {
-  background: color-mix(in srgb, var(--v8-panel) 93%, transparent);
+  background: color-mix(in srgb, var(--flux-surface) 94%, transparent);
   backdrop-filter: blur(22px) saturate(1.4);
   -webkit-backdrop-filter: blur(22px) saturate(1.4);
 }
 
 .text-gradient,
 .text-gradient-brand {
-  background: linear-gradient(100deg, var(--v8-accent) 0%, #7856ff 55%, #00ba7c 100%);
+  background: linear-gradient(100deg, var(--flux-brand) 0%, #7856ff 55%, #00b87a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
+.bg-gradient-brand { background: linear-gradient(135deg, var(--flux-brand) 0%, #4f7dff 55%, #7856ff 100%); }
 
-.bg-gradient-brand { background: linear-gradient(135deg, var(--v8-accent) 0%, #4f7dff 55%, #7856ff 100%); }
-
-.surface-card {
-  border: 1px solid var(--v8-line);
-  border-radius: var(--v8-radius-md);
-  background: var(--v8-panel);
-  transition: border-color var(--v8-base) ease, background var(--v8-base) ease;
-}
-.surface-card:hover { border-color: var(--v8-line-strong); }
-
-.post-row { border-bottom: 1px solid var(--v8-line); background: var(--v8-panel); transition: background var(--v8-fast) ease; }
-.post-row:hover { background: color-mix(in srgb, var(--v8-text) 3%, transparent); }
-
-.nav-item { transition: background var(--v8-fast) ease, color var(--v8-fast) ease; }
-.pressable { transition: transform var(--v8-fast) var(--v8-ease), opacity var(--v8-fast) ease; }
-.pressable:active { transform: scale(0.96); }
-
-.avatar-ring { box-shadow: 0 0 0 2px var(--v8-panel), 0 0 0 4px var(--v8-accent); }
-.text-link { color: var(--v8-accent); }
+.nav-item { transition: background var(--flux-fast) ease, color var(--flux-fast) ease; }
+.pressable { transition: transform var(--flux-fast) var(--flux-ease), opacity var(--flux-fast) ease; }
+.pressable:active { transform: scale(.96); }
+.avatar-ring { box-shadow: 0 0 0 2px var(--flux-surface), 0 0 0 4px var(--flux-brand); }
+.text-link { color: var(--flux-brand); }
 .text-link:hover { text-decoration: underline; }
 
-.like-burst { animation: x-burst 420ms var(--v8-spring); }
-.animate-fade-up { animation: x-rise 420ms var(--v8-ease) both; }
-.animate-float { animation: x-float 4s ease-in-out infinite; }
-.animate-pulse-ring { animation: x-pulse-ring 1.8s ease-out infinite; }
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: 1px solid var(--v8-line);
-  border-radius: 999px;
-  background: var(--v8-panel-2);
-  padding: 0.35rem 0.75rem;
-  color: var(--v8-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-.status-pill[data-active="true"] {
-  border-color: color-mix(in srgb, var(--v8-accent) 40%, transparent);
-  background: var(--v8-accent-soft);
-  color: var(--v8-accent);
-}
-
-.game-hud-button {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(6, 10, 20, 0.5);
-  color: #fff;
-  backdrop-filter: blur(18px) saturate(1.3);
-  -webkit-backdrop-filter: blur(18px) saturate(1.3);
-  transition: transform var(--v8-fast) var(--v8-ease), background var(--v8-fast) ease;
-}
-.game-hud-button:hover { background: rgba(255, 255, 255, 0.14); }
-.game-hud-button:active { transform: scale(0.92); }
-
-@media (max-width: 1023px) {
-  button, [role="button"] { -webkit-tap-highlight-color: transparent; }
-}
+button, input, textarea, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 1023px) { button, [role="button"] { -webkit-tap-highlight-color: transparent; } }
