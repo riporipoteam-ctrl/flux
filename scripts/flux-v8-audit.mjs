@@ -51,7 +51,7 @@ for (const marker of [
 forbidText(styles, "#7c3aed", "Flux v11 stylesheet");
 
 const askai = read("src/components/ask-ai/rakazo-official-app.tsx");
-for (const marker of ["GrokPanel", "askai-v11-shell", "AskAI_ENDPOINT", "/flux/rakazo/", "<iframe"]) requireText(askai, marker, "AskAI v11 shell");
+for (const marker of ["GrokPanel", "askai-v11-shell", "ASK_AI_ENDPOINT", "/flux/rakazo/", "<iframe"]) requireText(askai, marker, "AskAI v11 shell");
 
 const grok = read("src/components/ask-ai/grok-panel.tsx");
 for (const marker of ["/v1/grok/chat/completions", "Community bridge", "sessionStorage", "grok-4.20-auto", "2noScript/unofficial-api"]) requireText(grok, marker, "Community Grok integration");
