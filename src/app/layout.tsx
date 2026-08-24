@@ -10,6 +10,7 @@ import "@/styles/flux-engine.css";
 import "@/styles/flux-v11.css";
 import "@/styles/askai-v11.css";
 import "@/styles/flux-v11-deep.css";
+import "@/styles/flux-v11-posts.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const release = process.env.NEXT_PUBLIC_RELEASE_SHA || "local";
