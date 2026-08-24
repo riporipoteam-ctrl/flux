@@ -19,10 +19,6 @@ function backToTop(event: React.MouseEvent) {
   });
 }
 
-/**
- * Thumb-first mobile dock. Five actions keeps the bar readable and aligned
- * with the interaction density users expect from X-style social apps.
- */
 export function MobileNav() {
   const pathname = usePathname() || "/home";
   const { profile } = useAuth();
@@ -34,42 +30,29 @@ export function MobileNav() {
 
   const tabs = useMemo(() => [
     { href: "/home", icon: Home, label: "Home" },
-    { href: "/explore", icon: Search, label: "Explore" },
+    { href: "/explore", icon: Search, label: "Discover" },
     { href: "#compose", icon: Plus, label: "Create", create: true },
     { href: "/ask-ai", icon: Sparkles, label: "AskAI" },
-    { href: profileHref, icon: UserRound, label: "Profile" },
+    { href: profileHref, icon: UserRound, label: "Me" },
   ], [profileHref]);
 
   const dock = (
-    <nav className="flux8-mobile-nav flux-mobile-dock-portal" aria-label="Primary navigation" data-flux-mobile-dock="v11">
+    <nav className="flux8-mobile-nav flux-mobile-dock-portal" aria-label="Primary navigation" data-flux-mobile-dock="v12">
       <div className="flux8-mobile-nav-grid">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = !tab.create && isNavPathActive(pathname, tab.href);
           if (tab.create) {
             return (
-              <button
-                key={tab.label}
-                type="button"
-                onClick={() => setComposeOpen(true)}
-                aria-label="Create post"
-                className="flux8-mobile-tab flux8-mobile-tab-create"
-              >
+              <button key={tab.label} type="button" onClick={() => setComposeOpen(true)} aria-label="Create post" className="flux8-mobile-tab flux8-mobile-tab-create">
                 <Icon className="h-[25px] w-[25px]" strokeWidth={2.7} />
                 <span className="flux-mobile-dock-label">Create</span>
               </button>
             );
           }
           return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              aria-label={tab.label}
-              aria-current={active ? "page" : undefined}
-              onClick={active ? backToTop : undefined}
-              className={cn("flux8-mobile-tab", active && "is-active")}
-            >
-              <Icon className="h-[24px] w-[24px]" strokeWidth={active ? 2.6 : 2.05} />
+            <Link key={tab.href} href={tab.href} aria-label={tab.label} aria-current={active ? "page" : undefined} onClick={active ? backToTop : undefined} className={cn("flux8-mobile-tab", active && "is-active")}>
+              <Icon className="h-[23px] w-[23px]" strokeWidth={active ? 2.7 : 2.05} />
               <span className="flux-mobile-dock-label">{tab.label}</span>
             </Link>
           );
@@ -83,12 +66,8 @@ export function MobileNav() {
       {mounted ? createPortal(dock, document.body) : null}
       <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
         <DialogContent className="flux8-dialog max-w-lg overflow-hidden p-0">
-          <DialogHeader className="border-b border-border px-4 py-3">
-            <DialogTitle>Create post</DialogTitle>
-          </DialogHeader>
-          <div className="p-4">
-            <ComposeBox onSuccess={() => setComposeOpen(false)} autofocus />
-          </div>
+          <DialogHeader className="border-b border-border px-4 py-3"><DialogTitle>Create post</DialogTitle></DialogHeader>
+          <div className="p-4"><ComposeBox onSuccess={() => setComposeOpen(false)} autofocus /></div>
         </DialogContent>
       </Dialog>
     </>
