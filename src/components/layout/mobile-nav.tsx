@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Home, Plus, Search, Sparkles, UserRound } from "lucide-react";
+import { Home, Plus, Search, Sparkles, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isNavPathActive, profilePath } from "@/lib/routes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,11 +20,8 @@ function backToTop(event: React.MouseEvent) {
 }
 
 /**
- * The phone dock is rendered through document.body on purpose.
- * RouteMotion animates the page with CSS transforms; Safari treats fixed
- * children inside a transformed ancestor as locally positioned and can clip
- * them behind the browser toolbar. A body portal keeps the dock in the real
- * visual viewport and outside every page overflow/transform context.
+ * Thumb-first mobile dock. Five actions keeps the bar readable and aligned
+ * with the interaction density users expect from X-style social apps.
  */
 export function MobileNav() {
   const pathname = usePathname() || "/home";
@@ -40,16 +37,11 @@ export function MobileNav() {
     { href: "/explore", icon: Search, label: "Explore" },
     { href: "#compose", icon: Plus, label: "Create", create: true },
     { href: "/ask-ai", icon: Sparkles, label: "AskAI" },
-    { href: "/games", icon: Gamepad2, label: "Games" },
     { href: profileHref, icon: UserRound, label: "Profile" },
   ], [profileHref]);
 
   const dock = (
-    <nav
-      className="flux8-mobile-nav flux-mobile-dock-portal"
-      aria-label="Primary navigation"
-      data-flux-mobile-dock="portal-v1"
-    >
+    <nav className="flux8-mobile-nav flux-mobile-dock-portal" aria-label="Primary navigation" data-flux-mobile-dock="v11">
       <div className="flux8-mobile-nav-grid">
         {tabs.map((tab) => {
           const Icon = tab.icon;
