@@ -1,14 +1,32 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { claimRecRoomPairing, type RecRoomPairing } from "@/services/recroom-revival";
 
 export default function RecRoomLinkPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-dvh bg-[#05080d] px-4 py-8 text-white sm:px-6">
+          <div className="mx-auto flex min-h-[80dvh] max-w-xl items-center justify-center">
+            <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-[#0a1019] px-6 py-5 text-sm font-bold text-white/60 shadow-2xl">
+              <Loader2 className="h-5 w-5 animate-spin" /> Loading device link…
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <RecRoomLinkContent />
+    </Suspense>
+  );
+}
+
+function RecRoomLinkContent() {
   const params = useSearchParams();
   const code = params.get("code") || "";
   const ownerUid = params.get("owner") || "";
