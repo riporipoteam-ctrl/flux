@@ -6,10 +6,12 @@ import { Bot, Check, Copy, ExternalLink, Loader2, Plus, Send, Settings2, Sparkle
 type Role = "user" | "assistant";
 type ChatMessage = { id: string; role: Role; content: string; createdAt: number };
 
-type GrokConfig = {
-  baseUrl: string;
-  apiKey: string;
-  model: string;
+type GrokConfig = { baseUrl: string; apiKey: string; model: string };
+type GrokResponse = {
+  error?: { message?: unknown } | string;
+  detail?: unknown;
+  choices?: Array<{ message?: { content?: unknown } }>;
+  output_text?: unknown;
 };
 
 const DEFAULT_URL = process.env.NEXT_PUBLIC_GROK_BRIDGE_URL || "";
@@ -113,7 +115,6 @@ export default function GrokPanel() {
   }
 
   function clearChat() { setMessages([]); setDraft(""); }
-
   function newChat() { clearChat(); setShowSettings(false); }
 
   async function copyMessage(message: ChatMessage) {
@@ -146,13 +147,15 @@ export default function GrokPanel() {
         }),
       });
       const raw = await response.text();
-      let data: Record<string, any> = {};
-      try { data = JSON.parse(raw) as Record<string, any>; } catch { /* normalize below */ }
+      let data: GrokResponse = {};
+      try { data = JSON.parse(raw) as GrokResponse; } catch { /* normalize below */ }
       if (!response.ok) {
-        const detail = String(data?.error?.message || data?.detail || data?.error || `Grok bridge returned ${response.status}.`).slice(0, 420);
+        const detail = String(
+          typeof data.error === "object" ? data.error?.message : data.error || data.detail || `Grok bridge returned ${response.status}.`
+        ).slice(0, 420);
         throw new Error(detail);
       }
-      const answer = String(data?.choices?.[0]?.message?.content || data?.output_text || "").trim();
+      const answer = String(data.choices?.[0]?.message?.content || data.output_text || "").trim();
       if (!answer) throw new Error("Grok returned an empty answer.");
       setMessages((current) => [...current, { id: messageId(), role: "assistant", content: answer, createdAt: Date.now() }]);
     } catch (error) {
@@ -160,7 +163,7 @@ export default function GrokPanel() {
       setMessages((current) => [...current, {
         id: messageId(),
         role: "assistant",
-        content: `I couldn't reach the Grok bridge. ${error instanceof Error ? error.message : "Check the endpoint and API key in Grok settings."}`,
+        content: `I couldn\'t reach the Grok bridge. ${error instanceof Error ? error.message : "Check the endpoint and API key in Grok settings."}`,
         createdAt: Date.now(),
       }]);
     } finally {
