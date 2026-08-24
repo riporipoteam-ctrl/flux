@@ -1,20 +1,23 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Bot, Check, ChevronDown, ExternalLink, Loader2, Plus, Send, Settings2, Sparkles, Trash2, Wifi, WifiOff } from "lucide-react";
+import { Bot, Check, Copy, ExternalLink, Loader2, Plus, Send, Settings2, Sparkles, Trash2, Wifi, WifiOff } from "lucide-react";
 
 type Role = "user" | "assistant";
 type ChatMessage = { id: string; role: Role; content: string; createdAt: number };
 
-type GrokConfig = {
-  baseUrl: string;
-  apiKey: string;
-  model: string;
+type GrokConfig = { baseUrl: string; apiKey: string; model: string };
+type GrokResponse = {
+  error?: { message?: unknown } | string;
+  detail?: unknown;
+  choices?: Array<{ message?: { content?: unknown } }>;
+  output_text?: unknown;
 };
 
 const DEFAULT_URL = process.env.NEXT_PUBLIC_GROK_BRIDGE_URL || "";
 const DEFAULT_MODEL = process.env.NEXT_PUBLIC_GROK_MODEL || "grok-4.20-auto";
 const STORAGE_KEY = "flux-grok-session-v1";
+const HISTORY_KEY = "flux-grok-history-v1";
 
 const starterPrompts = [
   "What is happening in the tech world today?",
@@ -37,8 +40,24 @@ function loadConfig(): GrokConfig {
   }
 }
 
+function loadHistory(): ChatMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(HISTORY_KEY) || "[]");
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is ChatMessage => Boolean(item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string" && typeof item.createdAt === "number")).slice(-80)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function saveConfig(config: GrokConfig) {
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch { /* privacy storage can be unavailable */ }
+}
+
+function saveHistory(messages: ChatMessage[]) {
+  try { sessionStorage.setItem(HISTORY_KEY, JSON.stringify(messages.slice(-80))); } catch { /* private browsing */ }
 }
 
 function endpoint(baseUrl: string) {
@@ -61,29 +80,29 @@ export default function GrokPanel() {
   const [busy, setBusy] = useState(false);
   const [online, setOnline] = useState<boolean | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  useEffect(() => setConfig(loadConfig()), []);
+  useEffect(() => {
+    setConfig(loadConfig());
+    setMessages(loadHistory());
+  }, []);
+
+  useEffect(() => { saveHistory(messages); }, [messages]);
 
   const configured = Boolean(config.baseUrl.trim() && config.apiKey.trim());
   const url = useMemo(() => endpoint(config.baseUrl), [config.baseUrl]);
 
   async function ping() {
-    if (!config.baseUrl.trim()) {
-      setOnline(false);
-      return;
-    }
+    if (!config.baseUrl.trim()) { setOnline(false); return; }
     try {
       const response = await fetch(healthEndpoint(config.baseUrl), { headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : undefined });
       setOnline(response.ok);
-    } catch {
-      setOnline(false);
-    }
+    } catch { setOnline(false); }
   }
 
   useEffect(() => {
     if (!config.baseUrl) return;
     void ping();
-    // The panel is an optional bridge, so a quiet periodic check is enough.
     const timer = window.setInterval(() => void ping(), 45_000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,6 +115,15 @@ export default function GrokPanel() {
   }
 
   function clearChat() { setMessages([]); setDraft(""); }
+  function newChat() { clearChat(); setShowSettings(false); }
+
+  async function copyMessage(message: ChatMessage) {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedId(message.id);
+      window.setTimeout(() => setCopiedId(null), 1200);
+    } catch { /* clipboard unavailable */ }
+  }
 
   async function send(prompt?: string) {
     const content = (prompt ?? draft).trim();
@@ -119,13 +147,15 @@ export default function GrokPanel() {
         }),
       });
       const raw = await response.text();
-      let data: any = {};
-      try { data = JSON.parse(raw); } catch { /* normalize below */ }
+      let data: GrokResponse = {};
+      try { data = JSON.parse(raw) as GrokResponse; } catch { /* normalize below */ }
       if (!response.ok) {
-        const detail = String(data?.error?.message || data?.detail || data?.error || `Grok bridge returned ${response.status}.`).slice(0, 420);
+        const detail = String(
+          typeof data.error === "object" ? data.error?.message : data.error || data.detail || `Grok bridge returned ${response.status}.`
+        ).slice(0, 420);
         throw new Error(detail);
       }
-      const answer = String(data?.choices?.[0]?.message?.content || data?.output_text || "").trim();
+      const answer = String(data.choices?.[0]?.message?.content || data.output_text || "").trim();
       if (!answer) throw new Error("Grok returned an empty answer.");
       setMessages((current) => [...current, { id: messageId(), role: "assistant", content: answer, createdAt: Date.now() }]);
     } catch (error) {
@@ -133,7 +163,7 @@ export default function GrokPanel() {
       setMessages((current) => [...current, {
         id: messageId(),
         role: "assistant",
-        content: `I couldn't reach the Grok bridge. ${error instanceof Error ? error.message : "Check the endpoint and API key in Grok settings."}`,
+        content: `I couldn\'t reach the Grok bridge. ${error instanceof Error ? error.message : "Check the endpoint and API key in Grok settings."}`,
         createdAt: Date.now(),
       }]);
     } finally {
@@ -141,10 +171,7 @@ export default function GrokPanel() {
     }
   }
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    void send();
-  }
+  function submit(event: FormEvent) { event.preventDefault(); void send(); }
 
   return (
     <section className="askai-v11-grok" aria-label="Grok workspace">
@@ -164,6 +191,7 @@ export default function GrokPanel() {
             {online === true ? <Wifi className="h-3.5 w-3.5" /> : online === false ? <WifiOff className="h-3.5 w-3.5" /> : <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             <span>{online === true ? "Live" : online === false ? "Offline" : "Checking"}</span>
           </span>
+          <button type="button" className="askai-v11-icon-button" aria-label="New Grok chat" onClick={newChat}><Plus className="h-4 w-4" /></button>
           <button type="button" className="askai-v11-icon-button" aria-label="Grok settings" onClick={() => setShowSettings((value) => !value)}><Settings2 className="h-4 w-4" /></button>
           <button type="button" className="askai-v11-icon-button" aria-label="Clear chat" onClick={clearChat}><Trash2 className="h-4 w-4" /></button>
         </div>
@@ -180,7 +208,7 @@ export default function GrokPanel() {
           <label>Model<input value={config.model} onChange={(event) => persist({ ...config, model: event.target.value })} placeholder="grok-4.20-auto" /></label>
           <div className="askai-v11-settings-note">
             <Sparkles className="h-4 w-4" />
-            <span>Flux uses the community bridge's OpenAI-compatible Grok endpoint. It does not send your cookie or session token to the browser.</span>
+            <span>Flux uses the community bridge&apos;s OpenAI-compatible Grok endpoint. It does not send your cookie or session token to the browser.</span>
             <a href="https://github.com/2noScript/unofficial-api" target="_blank" rel="noreferrer" aria-label="Open the community Grok bridge on GitHub"><ExternalLink className="h-4 w-4" /></a>
           </div>
         </div>
@@ -203,7 +231,7 @@ export default function GrokPanel() {
           <div className="askai-v11-message-list">
             {messages.map((message) => (
               <article key={message.id} className={`askai-v11-message ${message.role === "user" ? "is-user" : "is-assistant"}`}>
-                <div className="askai-v11-message-meta">{message.role === "user" ? "You" : "Grok"}</div>
+                <div className="askai-v11-message-meta"><span>{message.role === "user" ? "You" : "Grok"}</span>{message.role === "assistant" ? <button type="button" onClick={() => void copyMessage(message)} aria-label="Copy response" className="askai-v11-message-copy">{copiedId === message.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</button> : null}</div>
                 <div className="askai-v11-message-body">{message.content}</div>
               </article>
             ))}

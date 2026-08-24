@@ -1,0 +1,29 @@
+.askai-v11-grok-header { padding:12px 14px !important; border-bottom:1px solid var(--flux-line); background:color-mix(in srgb,var(--flux-surface) 92%,transparent); backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4); }
+.askai-v11-grok-mark { box-shadow:0 0 0 6px var(--flux-brand-soft),0 10px 24px rgba(29,155,240,.12); }
+.askai-v11-chip { border:1px solid var(--flux-line) !important; background:var(--flux-surface-2) !important; color:var(--flux-muted) !important; }
+.askai-v11-status { border:1px solid var(--flux-line); background:var(--flux-surface-2); }
+.askai-v11-status.is-online { border-color:color-mix(in srgb,var(--flux-success) 35%,var(--flux-line)); background:color-mix(in srgb,var(--flux-success) 9%,var(--flux-surface)); color:var(--flux-success); }
+.askai-v11-status.is-offline { border-color:color-mix(in srgb,var(--flux-danger) 30%,var(--flux-line)); background:color-mix(in srgb,var(--flux-danger) 8%,var(--flux-surface)); color:var(--flux-danger); }
+.askai-v11-icon-button { width:36px !important; height:36px !important; border:1px solid var(--flux-line) !important; background:var(--flux-surface) !important; transition:transform .14s var(--flux-ease),background .14s ease,border-color .14s ease; }
+.askai-v11-icon-button:hover { transform:translateY(-1px); background:var(--flux-surface-2) !important; border-color:var(--flux-line-strong) !important; }
+.askai-v11-icon-button:active { transform:scale(.93); }
+.askai-v11-settings { border-bottom:1px solid var(--flux-line); background:var(--flux-surface-2); }
+.askai-v11-settings label { color:var(--flux-text-2); }
+.askai-v11-settings input { min-height:42px; border:1px solid var(--flux-line) !important; border-radius:13px !important; background:var(--flux-surface) !important; }
+.askai-v11-settings input:focus { border-color:color-mix(in srgb,var(--flux-brand) 48%,var(--flux-line)) !important; box-shadow:0 0 0 4px var(--flux-brand-soft); outline:0; }
+.askai-v11-message { position:relative; max-width:86%; border:1px solid var(--flux-line) !important; box-shadow:0 1px 2px rgba(15,23,42,.035); transition:transform .16s var(--flux-ease),border-color .16s ease,background .16s ease; }
+.askai-v11-message:hover { transform:translateY(-1px); border-color:var(--flux-line-strong) !important; }
+.askai-v11-message.is-user { background:var(--flux-brand) !important; border-color:transparent !important; color:#fff; box-shadow:0 10px 24px rgba(29,155,240,.16); }
+.askai-v11-message.is-assistant { background:var(--flux-surface-2) !important; }
+.askai-v11-message-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.askai-v11-message-copy { display:grid; width:28px; height:28px; place-items:center; border-radius:999px; background:transparent; color:var(--flux-muted); transition:.14s ease; }
+.askai-v11-message-copy:hover { background:var(--flux-surface-3); color:var(--flux-text); }
+.askai-v11-message.is-user .askai-v11-message-copy { color:rgba(255,255,255,.8); }
+.askai-v11-message.is-user .askai-v11-message-copy:hover { background:rgba(255,255,255,.14); color:#fff; }
+.askai-v11-send { box-shadow:0 8px 22px rgba(29,155,240,.22); }
+.askai-v11-composer textarea { min-height:42px; max-height:140px; }
+@media (max-width:639px) {
+  .askai-v11-message { max-width:92% !important; }
+  .askai-v11-grok-title h2 { font-size:17px !important; }
+  .askai-v11-grok-title p { max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+}
