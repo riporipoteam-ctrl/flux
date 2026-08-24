@@ -23,9 +23,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const [stickyResolved, setStickyResolved] = useState(false);
   const [stickyComplete, setStickyComplete] = useState(false);
-  // Next's static GitHub Pages build can expose the repository base path
-  // through usePathname(). Keep public routes base-path agnostic so the
-  // AskAI iframe is not sent through Flux authentication first.
   const routePath = pathname?.replace(/\/+$/, "") || "/";
   const isPublicLiveViewer = routePath === "/live/view" || routePath.endsWith("/live/view");
   const isAskAI = routePath === "/ask-ai" || routePath.endsWith("/ask-ai");
@@ -67,14 +64,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     else if (needsOnboarding) router.replace("/onboarding");
   }, [user, needsOnboarding, loading, stickyResolved, router, isPublicLiveViewer, isPublicAskAI]);
 
-  // The viewer page must load before a full Flux profile exists. It creates a
-  // temporary anonymous Firebase identity for secure signaling when necessary.
   if (isPublicLiveViewer) {
     return <div className="h-[100dvh] w-full overflow-hidden bg-black">{children}</div>;
   }
 
-  // Rakazo AskAI is a public workspace. Guests can use its local runtime and
-  // keep local threads; signing in is only needed for Firebase sync.
   if (isPublicAskAI) {
     return <div className="h-[100dvh] w-full overflow-auto bg-background">{children}</div>;
   }
@@ -92,7 +85,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (isImmersive) return <div className="h-[100dvh] w-full overflow-auto bg-background"><RouteProgress /><IncomingCallBanner />{children}</div>;
 
   return (
-    <div className="flux8-app-shell min-h-[100dvh] overflow-x-clip" data-rail={hideRail ? "off" : "on"}>
+    <div className="flux8-app-shell flux-v12-shell min-h-[100dvh] overflow-x-clip" data-flux-shell="v12" data-rail={hideRail ? "off" : "on"}>
       <RouteProgress />
       <IncomingCallBanner />
       <TopBar />
