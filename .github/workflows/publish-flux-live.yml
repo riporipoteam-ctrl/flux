@@ -1,4 +1,4 @@
-name: Publish Flux Live X4
+name: Publish Flux Live X5
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: flux-live-x4
+  group: flux-live-x5
   cancel-in-progress: true
 
 jobs:
@@ -29,18 +29,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-
-      - name: Force Pages to use GitHub Actions
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set +e
-          gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
-          STATUS=$?
-          if [ "$STATUS" -ne 0 ]; then
-            gh api --method POST "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
-          fi
-          set -e
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -82,40 +70,72 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/out/rakazo"
           cp -R apps/web/dist/. "$GITHUB_WORKSPACE/out/rakazo/"
 
-      - name: Verify X4, public Live and game routes
+      - name: Verify X5, public Live and game routes
         run: |
-          test -f out/index.html
-          test -f out/home/index.html
-          test -f out/games/index.html
-          test -f out/games/recroom/index.html
-          test -f out/profile/games/index.html
-          test -f out/games/licenses/index.html
-          test -f out/live/view/index.html
-          test -f out/games-library/tux-racer/index.html
-          test -f out/games-library/xquest/index.html
-          test -f out/games-library/progress-knight/index.html
-          test -f out/games-library/anxiety/index.html
-          grep -R -q 'data-flux-ui="x4"' out
-          grep -R -q 'Guest viewing' out/_next/static
-          grep -R -q 'staticauth.openrelay.metered.ca' out/_next/static
-          grep -R -q 'Open source · hosted by Flux' out/_next/static
-          grep -R -q 'echoxr-ripoteam-cloud-pc.hf.space' out/_next/static
+          set -euo pipefail
+
+          verify_file() {
+            test -f "$1" || { echo "Missing required Pages file: $1"; exit 1; }
+          }
+
+          verify_text() {
+            local needle="$1"
+            local path="$2"
+            grep -R -q -- "$needle" "$path" || {
+              echo "Missing required Pages marker: $needle"
+              echo "Search path: $path"
+              exit 1
+            }
+          }
+
+          verify_absent() {
+            local needle="$1"
+            local path="$2"
+            if grep -R -q -- "$needle" "$path"; then
+              echo "Forbidden stale Pages marker still present: $needle"
+              echo "Search path: $path"
+              exit 1
+            fi
+          }
+
+          verify_file out/index.html
+          verify_file out/home/index.html
+          verify_file out/games/index.html
+          verify_file out/games/recroom/index.html
+          verify_file out/games/recroom/host-pair/index.html
+          verify_file out/profile/games/index.html
+          verify_file out/games/licenses/index.html
+          verify_file out/live/view/index.html
+          verify_file out/games-library/tux-racer/index.html
+          verify_file out/games-library/xquest/index.html
+          verify_file out/games-library/progress-knight/index.html
+          verify_file out/games-library/anxiety/index.html
+
+          verify_text 'data-flux-ui="x5"' out
+          verify_text 'Guest viewing' out/_next/static
+          verify_text 'staticauth.openrelay.metered.ca' out/_next/static
+          verify_text 'echoxr-ripoteam-cloud-pc.hf.space' out/_next/static
           grep -q 'createPortal' src/components/layout/mobile-nav.tsx
-          grep -R -q 'flux-mobile-dock-portal' out/_next/static
-          test -f out/rakazo/index.html
-          grep -R -q 'Guest mode is ready' out/rakazo
-          grep -R -q 'Ask me anything' out/rakazo
-          grep -R -q 'rakazo-auth' out/rakazo
-          grep -R -q 'Computer control needs a connected Rakazo host' out/rakazo
-          ! grep -R -q 'Sign in to Rakazo\|Sign up to Rakazo' out/rakazo
-          ! grep -R -q 'https://app.rakazo.com/app' out/rakazo
+          verify_text 'flux-mobile-dock-portal' out/_next/static
+
+          verify_text 'Set up host' out/games/recroom
+          verify_text 'Steam account isolation' out/games/recroom
+          verify_text 'One-time Flux pairing only' out/games/recroom
+
+          verify_file out/rakazo/index.html
+          verify_text 'Guest mode is ready' out/rakazo
+          verify_text 'Ask me anything' out/rakazo
+          verify_text 'rakazo-auth' out/rakazo
+          verify_text 'Computer control needs a connected Rakazo host' out/rakazo
+          verify_absent 'Sign in to Rakazo\|Sign up to Rakazo' out/rakazo
+          verify_absent 'https://app.rakazo.com/app' out/rakazo
 
       - name: Add release proof and no-cache fallbacks
         run: |
           touch out/.nojekyll
           cp out/index.html out/404.html
           printf '%s\n' '${{ github.sha }}' > out/version.txt
-          printf '{"release":"%s","ui":"x4","live":"guest-turn-attempt-isolation","games":"self-hosted-open-source-plus-recroom-stream","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
+          printf '{"release":"%s","ui":"x5","live":"guest-turn-attempt-isolation","games":"self-hosted-open-source-plus-recroom-stream","recroomHost":"qr-single-use-steam-isolated","builtAt":"%s"}\n' '${{ github.sha }}' "$(date -u +%FT%TZ)" > out/release.json
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
