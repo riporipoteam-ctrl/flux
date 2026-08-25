@@ -71,6 +71,7 @@ requireText(mainLayout, "if (isStudio)", "Immersive Studio layout");
 
 const rootLayout = read("src/app/layout.tsx");
 requireText(rootLayout, "flux-engine.css", "Engine stylesheet");
-requireText(rootLayout, "flux-v8.css", "Global Flux redesign");
+requireText(rootLayout, "@/styles/flux-v12-rebuild.css", "Current global Flux redesign stylesheet");
+requireText(rootLayout, 'data-flux-ui="x5"', "Current Flux UI release marker");
 
 console.log("Flux Engine 100-feature audit passed.");
