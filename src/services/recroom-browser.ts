@@ -151,12 +151,6 @@ function runtimeFromStatus(status: RecRoomBrokerStatus): RecRoomVmRuntimeStatus 
   return status.serverRuntime || status.vmRuntime || status.wineRuntime || status.kvmRuntime;
 }
 
-function runtimeReady(status: RecRoomBrokerStatus) {
-  const runtime = runtimeFromStatus(status);
-  const ready = Boolean(runtime?.readyForGame || status.runtimeReadyForGame || status.vmReadyForGame);
-  return Boolean(status.ok && ready && runtime?.exactBuild !== false);
-}
-
 function runtimeStatusDetail(status: RecRoomBrokerStatus) {
   const runtime = runtimeFromStatus(status);
   return (
@@ -179,6 +173,8 @@ function isTransientRuntimeMessage(message: string) {
     "game-ready runtime slot",
     "no free capacity",
     "sandbox slot",
+    "service returned http 409",
+    "service returned http 425",
     "service returned http 502",
     "service returned http 503",
     "service returned http 504",
@@ -230,43 +226,44 @@ export async function createRecRoomSession(firebaseIdToken: string): Promise<Rec
 
   while (Date.now() < deadline) {
     try {
-      const status = await getRecRoomBrokerStatus();
-      if (!runtimeReady(status)) {
-        lastTransient = runtimeStatusDetail(status);
-        await delay(SESSION_CREATE_POLL_MS);
-        continue;
-      }
-
-      try {
-        const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/sessions`, {
-          method: "POST",
-          cache: "no-store",
-          headers: {
-            ...authHeaders(firebaseIdToken, revivalUserId || undefined),
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            buildId: TARGET_BUILD_ID,
-            fluxUserId: currentUser?.uid || null,
-            revivalUserId,
-            identityVersion: revivalIdentity?.version || 1,
-          }),
-        });
-        return await parseJson<RecRoomPlayResponse>(response);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (!isTransientRuntimeMessage(message)) throw error;
-        lastTransient = message;
-      }
+      // Do not gate Start on a cached readiness flag. The broker is authoritative
+      // for allocation and may be able to provision the runtime between status
+      // polls. This also makes server-side diagnostics reach the player instead
+      // of hiding them behind a client pre-flight loop.
+      const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/sessions`, {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          ...authHeaders(firebaseIdToken, revivalUserId || undefined),
+          "content-type": "application/json",
+          "x-flux-recroom-client": "v12-session-direct",
+        },
+        body: JSON.stringify({
+          buildId: TARGET_BUILD_ID,
+          fluxUserId: currentUser?.uid || null,
+          revivalUserId,
+          identityVersion: revivalIdentity?.version || 1,
+        }),
+      });
+      return await parseJson<RecRoomPlayResponse>(response);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (!isTransientRuntimeMessage(message)) throw error;
       lastTransient = message;
     }
+
+    // Refresh the status only after an allocation attempt. This keeps status
+    // informative while ensuring Start always reaches the actual broker.
+    try {
+      const status = await getRecRoomBrokerStatus();
+      lastTransient = runtimeStatusDetail(status);
+    } catch {
+      // Keep the most recent broker error as the visible retry reason.
+    }
     await delay(SESSION_CREATE_POLL_MS);
   }
 
-  throw new Error(`RipoTeamServer did not finish restoring the Aug 25, 2021 Rec Room server image in time. ${lastTransient}`);
+  throw new Error(`RipoTeamServer could not start the Rec Room runtime within ten minutes. ${lastTransient}`);
 }
 
 export async function getRecRoomSession(sessionId: string, accessToken: string): Promise<RecRoomPlayResponse> {
