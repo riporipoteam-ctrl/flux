@@ -9,10 +9,10 @@ const forbidText = (source, marker, label) => {
 };
 
 const nav = read("src/components/layout/mobile-nav.tsx");
-for (const marker of ["createPortal", "document.body", "data-flux-mobile-dock=\"portal-v1\""]) requireText(nav, marker, "Mobile dock");
+for (const marker of ["createPortal", "document.body", "data-flux-mobile-dock=\"v12\""]) requireText(nav, marker, "Mobile dock");
 
 const root = read("src/app/layout.tsx");
-for (const marker of ["data-flux-ui=\"x4\"", "flux-performance-x4.css"]) requireText(root, marker, "X4 release");
+for (const marker of ["data-flux-ui=\"x5\"", "flux-v12-rebuild.css"]) requireText(root, marker, "Flux v12 release");
 
 const catalog = read("src/data/browser-games.ts");
 for (const marker of ["OPEN_SOURCE_GAMES", "TuxRacer.js", "XQuest JS", "Progress Knight", "Adventures With Anxiety"]) requireText(catalog, marker, "Open-source Games");
@@ -40,4 +40,4 @@ for (const marker of ["isPublicLiveViewer", "temporary anonymous Firebase identi
 const askai = read("src/lib/ai/askai-groq.ts");
 for (const marker of ["checkAskAIGroqHealth", "ASKAI_PROVIDER_MISSING", "ASKAI_UPSTREAM_FAILED", "Ripo Team AI server"]) requireText(askai, marker, "AskAI diagnostics");
 
-console.log("Flux X4 live release audit passed with public TURN-backed Live, hybrid AskAI, and bundled open-source games.");
+console.log("Flux v12 release audit passed with public TURN-backed Live, hybrid AskAI, and bundled open-source games.");
