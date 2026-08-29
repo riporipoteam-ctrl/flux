@@ -18,11 +18,12 @@ requireText(layout, "flux-v12-rebuild.css", "Global v12 stylesheet");
 
 const v12 = read("src/styles/flux-v12-rebuild.css");
 for (const marker of [
-  "prefers-reduced-motion",
-  "flux-v12-shell",
-  "flux-v12-mobile-dock",
-  "flux-v12-post",
-  "flux-v12-composer",
+  "--flux-v12-bg",
+  ".flux8-app-shell",
+  ".flux8-sidebar",
+  ".flux9-topbar",
+  ".flux8-post-wrap",
+  "@media (max-width: 1023px)",
 ]) requireText(v12, marker, "Flux UI v12");
 
 const studioRoute = read("src/app/(main)/studio/page.tsx");
