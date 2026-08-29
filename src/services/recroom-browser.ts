@@ -184,6 +184,32 @@ function isTransientRuntimeMessage(message: string) {
   ].some((part) => value.includes(part));
 }
 
+/**
+ * Normalize the provider-neutral broker payload for Flux's player contract.
+ * The server marks a session ready by publishing streamUrl/state, while older
+ * clients expected an explicit gameReady boolean. Treat an available live
+ * stream as ready and surface Steam authentication as an interaction hint.
+ */
+function normalizeRecRoomPlayResponse(payload: RecRoomPlayResponse): RecRoomPlayResponse {
+  const streamReady = Boolean(payload.streamUrl) && payload.state !== "failed" && payload.ok !== false;
+  const normalizedPhase = payload.phase || (payload.state === "ready" ? "ready" : undefined);
+  const interactionRequired = payload.interactionRequired ?? (
+    streamReady && /steam|launching/i.test(`${payload.phase || ""} ${payload.state || ""}`)
+      ? "steam-login"
+      : null
+  );
+
+  return {
+    ...payload,
+    phase: normalizedPhase,
+    streamReady,
+    // Flux must not wait for a nonexistent backend field once the browser
+    // stream has actually been published by the server runtime.
+    gameReady: Boolean(payload.gameReady || streamReady),
+    interactionRequired,
+  };
+}
+
 export async function getRecRoomBrokerStatus(): Promise<RecRoomBrokerStatus> {
   const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/status`, { cache: "no-store" });
   return parseJson<RecRoomBrokerStatus>(response);
@@ -226,10 +252,6 @@ export async function createRecRoomSession(firebaseIdToken: string): Promise<Rec
 
   while (Date.now() < deadline) {
     try {
-      // Do not gate Start on a cached readiness flag. The broker is authoritative
-      // for allocation and may be able to provision the runtime between status
-      // polls. This also makes server-side diagnostics reach the player instead
-      // of hiding them behind a client pre-flight loop.
       const response = await fetch(`${getRecRoomBrokerUrl()}/api/recroom-public/sessions`, {
         method: "POST",
         cache: "no-store",
@@ -245,15 +267,14 @@ export async function createRecRoomSession(firebaseIdToken: string): Promise<Rec
           identityVersion: revivalIdentity?.version || 1,
         }),
       });
-      return await parseJson<RecRoomPlayResponse>(response);
+      const payload = await parseJson<RecRoomPlayResponse>(response);
+      return normalizeRecRoomPlayResponse(payload);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (!isTransientRuntimeMessage(message)) throw error;
       lastTransient = message;
     }
 
-    // Refresh the status only after an allocation attempt. This keeps status
-    // informative while ensuring Start always reaches the actual broker.
     try {
       const status = await getRecRoomBrokerStatus();
       lastTransient = runtimeStatusDetail(status);
@@ -268,7 +289,8 @@ export async function createRecRoomSession(firebaseIdToken: string): Promise<Rec
 
 export async function getRecRoomSession(sessionId: string, accessToken: string): Promise<RecRoomPlayResponse> {
   const response = await fetch(sessionPath(sessionId, accessToken), { cache: "no-store" });
-  return parseJson<RecRoomPlayResponse>(response);
+  const payload = await parseJson<RecRoomPlayResponse>(response);
+  return normalizeRecRoomPlayResponse(payload);
 }
 
 export async function releaseRecRoomSession(sessionId: string, accessToken: string): Promise<void> {
