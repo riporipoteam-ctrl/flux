@@ -14,15 +14,16 @@ function forbidText(source, marker, label) {
 
 const layout = read("src/app/layout.tsx");
 requireText(layout, "RouteMotion", "Global route motion");
-requireText(layout, "flux-polish.css", "Global polish stylesheet");
+requireText(layout, "flux-v12-rebuild.css", "Global v12 stylesheet");
 
-const polish = read("src/styles/flux-polish.css");
+const v12 = read("src/styles/flux-v12-rebuild.css");
 for (const marker of [
   "prefers-reduced-motion",
-  "flux-studio-ai-trigger",
-  "flux-live-status-dot",
-  "flux-action-pending",
-]) requireText(polish, marker, "Flux UI polish");
+  "flux-v12-shell",
+  "flux-v12-mobile-dock",
+  "flux-v12-post",
+  "flux-v12-composer",
+]) requireText(v12, marker, "Flux UI v12");
 
 const studioRoute = read("src/app/(main)/studio/page.tsx");
 requireText(studioRoute, "FluxStudioShell", "Studio route");
@@ -90,4 +91,4 @@ for (const marker of [
   "setLivePeerStatus",
 ]) requireText(liveViewer, marker, "Live viewer recovery");
 
-console.log("Flux UI, Studio AskAI, Live recovery and repost reliability audit passed.");
+console.log("Flux UI v12, Studio AskAI, Live recovery and repost reliability audit passed.");
