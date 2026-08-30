@@ -1,0 +1,734 @@
+{
+ "tile": {
+  "w": 128,
+  "h": 64
+ },
+ "sprites": {
+  "bush": {
+   "w": 70,
+   "h": 58,
+   "ax": 47,
+   "ay": 49
+  },
+  "bush2": {
+   "w": 92,
+   "h": 48,
+   "ax": 53,
+   "ay": 41
+  },
+  "cactus": {
+   "w": 95,
+   "h": 84,
+   "ax": 72,
+   "ay": 80
+  },
+  "chimneyBase": {
+   "w": 71,
+   "h": 105,
+   "ax": 26,
+   "ay": 93
+  },
+  "chimneyTop": {
+   "w": 32,
+   "h": 100,
+   "ax": -4,
+   "ay": 93
+  },
+  "corn": {
+   "w": 112,
+   "h": 93,
+   "ax": 61,
+   "ay": 66
+  },
+  "cornDouble": {
+   "w": 123,
+   "h": 101,
+   "ax": 64,
+   "ay": 70
+  },
+  "cornYoung": {
+   "w": 85,
+   "h": 51,
+   "ax": 42,
+   "ay": 24
+  },
+  "cornYoungDouble": {
+   "w": 98,
+   "h": 59,
+   "ax": 49,
+   "ay": 28
+  },
+  "dirt": {
+   "w": 128,
+   "h": 72,
+   "ax": 64,
+   "ay": 32
+  },
+  "dirtFarmland": {
+   "w": 128,
+   "h": 72,
+   "ax": 64,
+   "ay": 32
+  },
+  "fenceHigh_E": {
+   "w": 70,
+   "h": 92,
+   "ax": 64,
+   "ay": 80
+  },
+  "fenceHigh_N": {
+   "w": 70,
+   "h": 89,
+   "ax": 64,
+   "ay": 49
+  },
+  "fenceHigh_S": {
+   "w": 70,
+   "h": 92,
+   "ax": 6,
+   "ay": 80
+  },
+  "fenceHigh_W": {
+   "w": 70,
+   "h": 89,
+   "ax": 6,
+   "ay": 49
+  },
+  "fenceLowBroken_E": {
+   "w": 70,
+   "h": 73,
+   "ax": 64,
+   "ay": 61
+  },
+  "fenceLowBroken_N": {
+   "w": 70,
+   "h": 70,
+   "ax": 64,
+   "ay": 30
+  },
+  "fenceLowBroken_S": {
+   "w": 70,
+   "h": 73,
+   "ax": 6,
+   "ay": 61
+  },
+  "fenceLowBroken_W": {
+   "w": 70,
+   "h": 70,
+   "ax": 6,
+   "ay": 30
+  },
+  "fenceLow_E": {
+   "w": 70,
+   "h": 73,
+   "ax": 64,
+   "ay": 61
+  },
+  "fenceLow_N": {
+   "w": 70,
+   "h": 70,
+   "ax": 64,
+   "ay": 30
+  },
+  "fenceLow_S": {
+   "w": 70,
+   "h": 73,
+   "ax": 6,
+   "ay": 61
+  },
+  "fenceLow_W": {
+   "w": 70,
+   "h": 70,
+   "ax": 6,
+   "ay": 30
+  },
+  "grass0": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "grass1": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "grass2": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "grass3": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "grassDry0": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "grassDry1": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "grassTuft": {
+   "w": 66,
+   "h": 45,
+   "ax": 39,
+   "ay": 39
+  },
+  "grassTuft2": {
+   "w": 55,
+   "h": 40,
+   "ax": 31,
+   "ay": 34
+  },
+  "hay": {
+   "w": 49,
+   "h": 38,
+   "ax": 27,
+   "ay": 18
+  },
+  "hayBales": {
+   "w": 65,
+   "h": 54,
+   "ax": 34,
+   "ay": 30
+  },
+  "hayBalesStacked": {
+   "w": 101,
+   "h": 75,
+   "ax": 53,
+   "ay": 44
+  },
+  "hemp": {
+   "w": 64,
+   "h": 66,
+   "ax": 44,
+   "ay": 63
+  },
+  "ladderStand": {
+   "w": 56,
+   "h": 101,
+   "ax": 17,
+   "ay": 89
+  },
+  "ladderStraight": {
+   "w": 57,
+   "h": 97,
+   "ax": 45,
+   "ay": 82
+  },
+  "path0": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "pine": {
+   "w": 174,
+   "h": 165,
+   "ax": 103,
+   "ay": 147
+  },
+  "pine2": {
+   "w": 140,
+   "h": 144,
+   "ax": 101,
+   "ay": 129
+  },
+  "pine3": {
+   "w": 146,
+   "h": 147,
+   "ax": 93,
+   "ay": 135
+  },
+  "pineSnow": {
+   "w": 174,
+   "h": 165,
+   "ax": 103,
+   "ay": 147
+  },
+  "pineSnow2": {
+   "w": 140,
+   "h": 144,
+   "ax": 101,
+   "ay": 129
+  },
+  "planks": {
+   "w": 128,
+   "h": 77,
+   "ax": 64,
+   "ay": 37
+  },
+  "planksHigh": {
+   "w": 128,
+   "h": 81,
+   "ax": 64,
+   "ay": 41
+  },
+  "planksOld": {
+   "w": 128,
+   "h": 77,
+   "ax": 64,
+   "ay": 37
+  },
+  "planksSide": {
+   "w": 128,
+   "h": 77,
+   "ax": 64,
+   "ay": 37
+  },
+  "roofCorner_E": {
+   "w": 128,
+   "h": 139,
+   "ax": 64,
+   "ay": 99
+  },
+  "roofCorner_N": {
+   "w": 128,
+   "h": 108,
+   "ax": 64,
+   "ay": 68
+  },
+  "roofCorner_S": {
+   "w": 128,
+   "h": 108,
+   "ax": 64,
+   "ay": 68
+  },
+  "roofCorner_W": {
+   "w": 128,
+   "h": 54,
+   "ax": 64,
+   "ay": 38
+  },
+  "roofSingle_E": {
+   "w": 128,
+   "h": 102,
+   "ax": 64,
+   "ay": 62
+  },
+  "roofSingle_N": {
+   "w": 128,
+   "h": 102,
+   "ax": 64,
+   "ay": 62
+  },
+  "roofSingle_S": {
+   "w": 128,
+   "h": 102,
+   "ax": 64,
+   "ay": 62
+  },
+  "roofSingle_W": {
+   "w": 128,
+   "h": 102,
+   "ax": 64,
+   "ay": 62
+  },
+  "roof_E": {
+   "w": 128,
+   "h": 138,
+   "ax": 64,
+   "ay": 98
+  },
+  "roof_N": {
+   "w": 128,
+   "h": 138,
+   "ax": 64,
+   "ay": 98
+  },
+  "roof_S": {
+   "w": 128,
+   "h": 83,
+   "ax": 64,
+   "ay": 67
+  },
+  "roof_W": {
+   "w": 128,
+   "h": 83,
+   "ax": 64,
+   "ay": 67
+  },
+  "sack": {
+   "w": 26,
+   "h": 33,
+   "ax": 17,
+   "ay": 21
+  },
+  "sacksCrate": {
+   "w": 62,
+   "h": 42,
+   "ax": 31,
+   "ay": 24
+  },
+  "sand0": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "shrub": {
+   "w": 64,
+   "h": 60,
+   "ax": 39,
+   "ay": 57
+  },
+  "shrubTall": {
+   "w": 93,
+   "h": 70,
+   "ax": 49,
+   "ay": 67
+  },
+  "soil0": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "soil1": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "soilDark0": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "soilDark1": {
+   "w": 128,
+   "h": 64,
+   "ax": 64,
+   "ay": 32,
+   "ground": true
+  },
+  "swirl": {
+   "w": 47,
+   "h": 36,
+   "ax": 27,
+   "ay": 28
+  },
+  "treeBig": {
+   "w": 290,
+   "h": 194,
+   "ax": 179,
+   "ay": 165
+  },
+  "treeBig2": {
+   "w": 201,
+   "h": 168,
+   "ax": 132,
+   "ay": 143
+  },
+  "treeBig3": {
+   "w": 279,
+   "h": 184,
+   "ax": 174,
+   "ay": 158
+  },
+  "treePalm": {
+   "w": 170,
+   "h": 131,
+   "ax": 121,
+   "ay": 122
+  },
+  "tropical": {
+   "w": 80,
+   "h": 56,
+   "ax": 46,
+   "ay": 47
+  },
+  "weed": {
+   "w": 51,
+   "h": 39,
+   "ax": 31,
+   "ay": 29
+  },
+  "woodWallCorner_E": {
+   "w": 14,
+   "h": 93,
+   "ax": 64,
+   "ay": 79
+  },
+  "woodWallCorner_N": {
+   "w": 17,
+   "h": 90,
+   "ax": 8,
+   "ay": 50
+  },
+  "woodWallCorner_S": {
+   "w": 17,
+   "h": 93,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWallCorner_W": {
+   "w": 14,
+   "h": 93,
+   "ax": -50,
+   "ay": 80
+  },
+  "woodWallDoorClosed_E": {
+   "w": 73,
+   "h": 122,
+   "ax": 64,
+   "ay": 108
+  },
+  "woodWallDoorClosed_N": {
+   "w": 73,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWallDoorClosed_S": {
+   "w": 73,
+   "h": 123,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWallDoorClosed_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  },
+  "woodWallDoorOpen_E": {
+   "w": 73,
+   "h": 131,
+   "ax": 64,
+   "ay": 109
+  },
+  "woodWallDoorOpen_N": {
+   "w": 90,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWallDoorOpen_S": {
+   "w": 90,
+   "h": 123,
+   "ax": 26,
+   "ay": 109
+  },
+  "woodWallDoorOpen_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  },
+  "woodWallEmpty_E": {
+   "w": 73,
+   "h": 123,
+   "ax": 64,
+   "ay": 109
+  },
+  "woodWallEmpty_N": {
+   "w": 73,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWallEmpty_S": {
+   "w": 73,
+   "h": 123,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWallEmpty_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  },
+  "woodWallGateClosed_E": {
+   "w": 73,
+   "h": 123,
+   "ax": 64,
+   "ay": 109
+  },
+  "woodWallGateClosed_N": {
+   "w": 73,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWallGateClosed_S": {
+   "w": 73,
+   "h": 123,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWallGateClosed_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  },
+  "woodWallRoofLeft_E": {
+   "w": 73,
+   "h": 110,
+   "ax": 64,
+   "ay": 98
+  },
+  "woodWallRoofLeft_N": {
+   "w": 70,
+   "h": 109,
+   "ax": 64,
+   "ay": 69
+  },
+  "woodWallRoofLeft_S": {
+   "w": 70,
+   "h": 81,
+   "ax": 6,
+   "ay": 67
+  },
+  "woodWallRoofLeft_W": {
+   "w": 73,
+   "h": 78,
+   "ax": 9,
+   "ay": 38
+  },
+  "woodWallRoofRight_E": {
+   "w": 70,
+   "h": 81,
+   "ax": 64,
+   "ay": 67
+  },
+  "woodWallRoofRight_N": {
+   "w": 73,
+   "h": 78,
+   "ax": 64,
+   "ay": 38
+  },
+  "woodWallRoofRight_S": {
+   "w": 73,
+   "h": 109,
+   "ax": 9,
+   "ay": 97
+  },
+  "woodWallRoofRight_W": {
+   "w": 70,
+   "h": 109,
+   "ax": 6,
+   "ay": 69
+  },
+  "woodWallSupport_E": {
+   "w": 73,
+   "h": 123,
+   "ax": 64,
+   "ay": 109
+  },
+  "woodWallSupport_N": {
+   "w": 73,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWallSupport_S": {
+   "w": 73,
+   "h": 123,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWallSupport_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  },
+  "woodWallWindowGlass_E": {
+   "w": 73,
+   "h": 123,
+   "ax": 64,
+   "ay": 109
+  },
+  "woodWallWindowGlass_N": {
+   "w": 73,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWallWindowGlass_S": {
+   "w": 73,
+   "h": 123,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWallWindowGlass_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  },
+  "woodWallWindow_E": {
+   "w": 73,
+   "h": 123,
+   "ax": 64,
+   "ay": 109
+  },
+  "woodWallWindow_N": {
+   "w": 73,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWallWindow_S": {
+   "w": 73,
+   "h": 123,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWallWindow_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  },
+  "woodWall_E": {
+   "w": 73,
+   "h": 123,
+   "ax": 64,
+   "ay": 109
+  },
+  "woodWall_N": {
+   "w": 73,
+   "h": 120,
+   "ax": 64,
+   "ay": 80
+  },
+  "woodWall_S": {
+   "w": 73,
+   "h": 123,
+   "ax": 9,
+   "ay": 109
+  },
+  "woodWall_W": {
+   "w": 73,
+   "h": 120,
+   "ax": 9,
+   "ay": 80
+  }
+ }
+}

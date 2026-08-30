@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,45304,t=>{"use strict";t.s(["EmptyState",()=>o]);var i=t.i(43476),e=t.i(67069);function o(t){let{icon:o,title:c,description:n,action:r}=t;return(0,i.jsx)(e.XEmpty,{icon:o,title:c,description:n,action:r})}}]);
