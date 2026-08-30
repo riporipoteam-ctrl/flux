@@ -32,7 +32,6 @@ import {
   getRecRoomCapture,
   getRecRoomSession,
   releaseRecRoomSession,
-  releaseRecRoomSessionOnPageExit,
   requestRecRoomCapture,
   type RecRoomBrokerStatus,
   type RecRoomPlayResponse,
@@ -192,17 +191,7 @@ export function RecRoomCloudPlayer() {
     };
   }, [play?.sessionId, play?.sessionAccessToken, play?.state, play?.ok, play?.gameReady]);
 
-  // The browser page is the lifetime boundary for the disposable runtime. A
-  // backend idle reaper is the final safety net if pagehide never reaches us.
-  useEffect(() => {
-    const sessionId = play?.sessionId;
-    const accessToken = play?.sessionAccessToken;
-    if (!sessionId || !accessToken) return;
-
-    const release = () => releaseRecRoomSessionOnPageExit(sessionId, accessToken);
-    window.addEventListener("pagehide", release);
-    return () => window.removeEventListener("pagehide", release);
-  }, [play?.sessionId, play?.sessionAccessToken]);
+  // Runtime lifetime is managed by explicit Close and the backend idle reaper.
 
   const releaseSession = async () => {
     const sessionId = play?.sessionId;
@@ -323,6 +312,11 @@ export function RecRoomCloudPlayer() {
         )}
         toolbarActions={
           <>
+            {play?.interactionRequired === "steam-login" ? (
+              <span className="hidden items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white/80 sm:inline-flex">
+                Steam sign-in · scan Steam’s QR in the Steam Mobile app
+              </span>
+            ) : null}
             {play?.gameReady ? (
               <span className="hidden rounded-md bg-emerald-400/15 px-2.5 py-1 text-xs font-bold text-emerald-100 sm:inline">Rec Room ready</span>
             ) : null}
