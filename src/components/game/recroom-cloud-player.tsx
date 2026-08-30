@@ -89,10 +89,14 @@ export function RecRoomCloudPlayer() {
   const [shareText, setShareText] = useState("Captured in Rec Room 🎮 #RecRoom #FluxGames");
 
   const streamUrl = play?.streamUrl || "";
+  // Steam authentication is interactive. The server can publish a usable desktop
+  // stream before Rec Room itself is ready, so never hide that stream behind a
+  // later gameReady flag.
+  const interactiveStream = Boolean(streamUrl && play?.ok !== false && play?.state !== "failed");
   const waitingForGame = Boolean(
     play?.sessionId &&
     play?.sessionAccessToken &&
-    play?.gameReady !== true &&
+    !interactiveStream &&
     play?.ok !== false &&
     play?.state !== "failed",
   );
@@ -138,7 +142,7 @@ export function RecRoomCloudPlayer() {
     const pending = Boolean(
       sessionId &&
       accessToken &&
-      play?.gameReady !== true &&
+      !play?.streamUrl &&
       play?.ok !== false &&
       play?.state !== "failed",
     );
@@ -308,7 +312,7 @@ export function RecRoomCloudPlayer() {
     }
   };
 
-  if (streamUrl && play?.gameReady === true && play?.ok !== false) {
+  if (streamUrl && play?.ok !== false && play?.state !== "failed") {
     return (
       <StreamPlayer
         url={streamUrl}
