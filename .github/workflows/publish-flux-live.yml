@@ -81,7 +81,7 @@ jobs:
           verify_text() {
             local needle="$1"
             local path="$2"
-            grep -R -q -- "$needle" "$path" || {
+            grep -R -q -F -- "$needle" "$path" || {
               echo "Missing required Pages marker: $needle"
               echo "Search path: $path"
               exit 1
@@ -91,7 +91,7 @@ jobs:
           verify_absent() {
             local needle="$1"
             local path="$2"
-            if grep -R -q -- "$needle" "$path"; then
+            if grep -R -q -F -- "$needle" "$path"; then
               echo "Forbidden stale Pages marker still present: $needle"
               echo "Search path: $path"
               exit 1
@@ -129,7 +129,8 @@ jobs:
           verify_text 'Ask me anything' out/rakazo
           verify_text 'rakazo-auth' out/rakazo
           verify_text 'Computer control needs a connected Rakazo host' out/rakazo
-          verify_absent 'Sign in to Rakazo\|Sign up to Rakazo' out/rakazo
+          verify_absent 'Sign in to Rakazo' out/rakazo
+          verify_absent 'Sign up to Rakazo' out/rakazo
           verify_absent 'https://app.rakazo.com/app' out/rakazo
 
       - name: Add release proof and no-cache fallbacks
