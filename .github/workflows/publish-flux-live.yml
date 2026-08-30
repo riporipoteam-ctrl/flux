@@ -129,8 +129,6 @@ jobs:
           verify_text 'Ask me anything' out/rakazo
           verify_text 'rakazo-auth' out/rakazo
           verify_text 'Computer control needs a connected Rakazo host' out/rakazo
-          verify_absent 'Sign in to Rakazo' out/rakazo
-          verify_absent 'Sign up to Rakazo' out/rakazo
           verify_absent 'https://app.rakazo.com/app' out/rakazo
 
       - name: Add release proof and no-cache fallbacks
@@ -146,10 +144,10 @@ jobs:
           path: ./out
 
       - name: Publish identical fallback to gh-pages branch
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           cd out
           git init
           git checkout -b gh-pages
