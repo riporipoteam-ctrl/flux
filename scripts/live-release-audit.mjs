@@ -35,9 +35,12 @@ const ice = read("src/lib/live-ice.ts");
 for (const marker of ["staticauth.openrelay.metered.ca", "openrelayprojectsecret", "turns:", "createReliableLivePeer"]) requireText(ice, marker, "TURN relay fallback");
 
 const mainLayout = read("src/app/(main)/layout.tsx");
-for (const marker of ["isPublicLiveViewer", "temporary anonymous Firebase identity"]) requireText(mainLayout, marker, "Public Live route");
+for (const marker of ["isPublicLiveViewer", "isPublicAskAI", "data-flux-shell=\"v12\""]) requireText(mainLayout, marker, "Main application shell");
 
 const askai = read("src/lib/ai/askai-groq.ts");
 for (const marker of ["checkAskAIGroqHealth", "ASKAI_PROVIDER_MISSING", "ASKAI_UPSTREAM_FAILED", "Ripo Team AI server"]) requireText(askai, marker, "AskAI diagnostics");
 
-console.log("Flux v12 release audit passed with public TURN-backed Live, hybrid AskAI, and bundled open-source games.");
+const recroom = read("src/services/recroom-browser.ts");
+for (const marker of ["recroom-2021-08-25", "v12-session-direct", "streamUrl", "gameReady"]) requireText(recroom, marker, "Rec Room browser session");
+
+console.log("Flux v12 release audit passed with public TURN-backed Live, hybrid AskAI, bundled open-source games, and Rec Room browser sessions.");
