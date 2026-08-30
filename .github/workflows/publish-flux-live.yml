@@ -88,16 +88,6 @@ jobs:
             }
           }
 
-          verify_absent() {
-            local needle="$1"
-            local path="$2"
-            if grep -R -q -F -- "$needle" "$path"; then
-              echo "Forbidden stale Pages marker still present: $needle"
-              echo "Search path: $path"
-              exit 1
-            fi
-          }
-
           verify_file out/index.html
           verify_file out/home/index.html
           verify_file out/games/index.html
@@ -117,10 +107,6 @@ jobs:
           verify_text 'echoxr-ripoteam-cloud-pc.hf.space' out/_next/static
           grep -q 'createPortal' src/components/layout/mobile-nav.tsx
           verify_text 'flux-mobile-dock-portal' out/_next/static
-
-          # Steam QR login is shown by the official Steam client inside the
-          # interactive stream; do not ship the unrelated host-pairing QR as a
-          # fake player-login flow.
           verify_text 'Press Play. Flux starts the game.' out/games/recroom
           verify_text 'Browser only · no download' out/games/recroom
 
@@ -129,7 +115,12 @@ jobs:
           verify_text 'Ask me anything' out/rakazo
           verify_text 'rakazo-auth' out/rakazo
           verify_text 'Computer control needs a connected Rakazo host' out/rakazo
-          verify_absent 'https://app.rakazo.com/app' out/rakazo
+          # Only reject the actual external app URL; the guest build may legitimately
+          # contain auth copy in bundled strings that is not an external navigation.
+          if grep -R -q -F -- 'https://app.rakazo.com/app' out/rakazo; then
+            echo 'Forbidden external Rakazo app URL present in Pages artifact'
+            exit 1
+          fi
 
       - name: Add release proof and no-cache fallbacks
         run: |
