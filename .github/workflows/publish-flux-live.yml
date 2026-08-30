@@ -118,9 +118,11 @@ jobs:
           grep -q 'createPortal' src/components/layout/mobile-nav.tsx
           verify_text 'flux-mobile-dock-portal' out/_next/static
 
-          verify_text 'Set up host' out/games/recroom
-          verify_text 'Steam account isolation' out/games/recroom
-          verify_text 'One-time Flux pairing only' out/games/recroom
+          # Steam QR login is shown by the official Steam client inside the
+          # interactive stream; do not ship the unrelated host-pairing QR as a
+          # fake player-login flow.
+          verify_text 'Press Play. Flux starts the game.' out/games/recroom
+          verify_text 'Browser only · no download' out/games/recroom
 
           verify_file out/rakazo/index.html
           verify_text 'Guest mode is ready' out/rakazo
