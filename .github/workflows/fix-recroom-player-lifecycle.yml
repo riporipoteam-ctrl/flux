@@ -1,0 +1,65 @@
+name: Fix Rec Room Player Lifecycle
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Fix session lifecycle and make Steam QR instructions explicit
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/components/game/recroom-cloud-player.tsx')
+          text = path.read_text(encoding='utf-8')
+          original = text
+
+          # iOS Safari can fire pagehide for BFCache/tab transitions. Releasing
+          # the runtime there caused the next poll to return "session not found".
+          text = text.replace(
+              '  releaseRecRoomSessionOnPageExit,\n',
+              ''
+          )
+          marker = '  // The browser page is the lifetime boundary for the disposable runtime. A\n  // backend idle reaper is the final safety net if pagehide never reaches us.\n'
+          start = text.find(marker)
+          if start >= 0:
+              end = text.find('  const releaseSession = async () => {', start)
+              if end >= 0:
+                  text = text[:start] + '  // Runtime lifetime is managed by explicit Close and the backend idle reaper.\n\n' + text[end:]
+
+          # Surface the Steam authentication action above the live stream so the
+          # player knows that the QR must come from Steam itself.
+          needle = '        toolbarActions={\n          <>\n'
+          insert = '''        toolbarActions={\n          <>\n            {play?.interactionRequired === "steam-login" ? (\n              <span className="hidden items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white/80 sm:inline-flex">\n                Steam sign-in · scan Steam’s QR in the Steam Mobile app\n              </span>\n            ) : null}\n'''
+          if needle in text and 'Steam sign-in · scan Steam’s QR' not in text:
+              text = text.replace(needle, insert, 1)
+
+          if text != original:
+              path.write_text(text, encoding='utf-8')
+              print('patched recroom-cloud-player.tsx')
+          else:
+              print('already patched')
+
+      - name: Commit Rec Room lifecycle repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/game/recroom-cloud-player.tsx
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'fix(recroom): preserve sessions across mobile pagehide and clarify Steam QR'
+          git push
