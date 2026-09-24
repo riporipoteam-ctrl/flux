@@ -4,12 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  ArrowLeft,
   Calendar,
-  Camera,
-  FileText,
-  Heart,
-  Image as ImageIcon,
-  AtSign,
   Link as LinkIcon,
   Loader2,
   LockKeyhole,
@@ -36,7 +32,6 @@ import {
   ShopFlairBadge,
   VerifiedBadge,
 } from "@/components/shared/verified-badge";
-import { Button } from "@/components/ui/button";
 import { PostCard } from "@/components/posts/post-card";
 import {
   Dialog,
@@ -46,7 +41,6 @@ import {
 } from "@/components/ui/dialog";
 import { cn, formatCount } from "@/lib/utils";
 import { MOOD_OPTIONS } from "@/lib/default-avatars";
-import { PageTransition } from "@/components/shared/page-transition";
 import { ImageViewer } from "@/components/shared/image-viewer";
 import {
   flairForDecoration,
@@ -54,13 +48,6 @@ import {
 } from "@/lib/shop-catalog";
 import { assetUrl } from "@/lib/asset-url";
 import { absoluteAppUrl, profilePath } from "@/lib/routes";
-import {
-  XEmpty,
-  XHeader,
-  XRowSkeleton,
-  XSwitch,
-  XTabs,
-} from "@/components/x/x-ui";
 
 type ProfileTab = "posts" | "replies" | "media" | "photos" | "likes";
 
@@ -201,11 +188,46 @@ export default function ProfilePage(
     setListUsers(users);
   };
 
+  const shareProfile = async () => {
+    if (!profile) return;
+    const url = absoluteAppUrl(profilePath(profile.username));
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Profile link copied");
+    } catch {
+      toast.message(url);
+    }
+  };
+
+  const openDm = async () => {
+    if (!user || !profile) return;
+    try {
+      const { getOrCreateDm } = await import("@/services/chats");
+      const id = await getOrCreateDm(user.uid, profile.uid);
+      router.push(`/messages?c=${id}`);
+    } catch {
+      toast.error("Could not open chat");
+    }
+  };
+
   if (loading && !profile) {
     return (
       <div>
-        <XHeader back title={username ? `@${username}` : "Profile"} />
-        <XRowSkeleton rows={8} />
+        <div className="xxprof-head">
+          <button type="button" className="xxprof-back" onClick={() => router.back()} aria-label="Go back">
+            <ArrowLeft />
+          </button>
+          <div><h1>{username ? `@${username}` : "Profile"}</h1></div>
+        </div>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="xxskel" aria-hidden="true">
+            <div className="xxskel-ava" />
+            <div className="xxskel-main">
+              <div className="xxskel-line" style={{ width: "35%" }} />
+              <div className="xxskel-line" style={{ width: "95%" }} />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -213,17 +235,16 @@ export default function ProfilePage(
   if (!profile) {
     return (
       <div>
-        <XHeader back title="Profile" />
-        <XEmpty
-          icon={FileText}
-          title="This account doesn't exist"
-          description={`@${username} doesn't exist on Flux. Try searching for something else.`}
-          action={
-            <Button variant="outline" className="rounded-full" onClick={() => router.push("/home")}>
-              Back home
-            </Button>
-          }
-        />
+        <div className="xxprof-head">
+          <button type="button" className="xxprof-back" onClick={() => router.back()} aria-label="Go back">
+            <ArrowLeft />
+          </button>
+          <div><h1>Profile</h1></div>
+        </div>
+        <div className="xxempty">
+          <h3>This account doesn&apos;t exist</h3>
+          <p>Try searching for something else.</p>
+        </div>
       </div>
     );
   }
@@ -234,387 +255,249 @@ export default function ProfilePage(
 
   const bannerDeco = getCatalogItem(profile.decorations?.bannerDecorationId);
   const shopFlair = flairForDecoration(profile.decorations?.badgeId);
-  const themeItem = getCatalogItem(profile.decorations?.themeId);
   const isBusiness = profile.accountType === "business";
   const accent = profile.profileAccent || "#1d9bf0";
-
-  const accentWash: React.CSSProperties =
-    profile.bannerUrl || bannerDeco?.imageUrl
-      ? {}
-      : {
-          background: `linear-gradient(180deg, color-mix(in srgb, ${accent} 22%, var(--v8-panel-2)) 0%, var(--v8-panel-2) 100%)`,
-        };
+  const bannerSrc = profile.bannerUrl ? assetUrl(profile.bannerUrl) : bannerDeco?.imageUrl ? assetUrl(bannerDeco.imageUrl) : null;
 
   const lastActive = profile.lastActiveAt?.toDate?.();
   const onlineNow = followsMe && lastActive ? Date.now() - lastActive.getTime() < 120000 : false;
 
   return (
-    <div
-      className={cn(
-        themeItem?.id === "midnight-card-theme" && "bg-[#0a0a0c]",
-        themeItem?.id === "ocean-theme" && "bg-[#061018]"
-      )}
-    >
-      <XHeader
-        back
-        title={profile.displayName}
-        subtitle={`${formatCount(profile.postsCount)} posts`}
-      />
-
-      <PageTransition>
-        {/* Banner */}
-        <button
-          type="button"
-          className="relative block h-32 w-full overflow-hidden sm:h-48"
-          style={accentWash}
-          onClick={() => {
-            if (profile.bannerUrl || bannerDeco?.imageUrl) setBannerView(true);
-          }}
-          aria-label={profile.bannerUrl || bannerDeco?.imageUrl ? "View banner" : undefined}
-        >
-          {profile.bannerUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={assetUrl(profile.bannerUrl)}
-              alt=""
-              className="h-full w-full cursor-zoom-in object-cover"
-            />
-          ) : bannerDeco?.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={assetUrl(bannerDeco.imageUrl)}
-              alt=""
-              className="h-full w-full object-cover opacity-90"
-            />
-          ) : null}
-          {bannerDeco && profile.bannerUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={assetUrl(bannerDeco.imageUrl)}
-              alt=""
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-screen"
-            />
-          ) : null}
+    <div>
+      {/* Sticky header: back + name + post count */}
+      <div className="xxprof-head">
+        <button type="button" className="xxprof-back" onClick={() => router.back()} aria-label="Go back">
+          <ArrowLeft />
         </button>
-
-        {/* Avatar + actions */}
-        <div className="px-4">
-          <div className="-mt-10 flex items-end justify-between sm:-mt-[68px]">
-            <UserAvatar
-              user={profile}
-              size="xl"
-              className="h-20 w-20 text-xl sm:h-[134px] sm:w-[134px] sm:text-4xl"
-              decorations={profile.decorations}
-              ring
-            />
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 pb-1">
-              {isOwn ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                    aria-label="Share profile"
-                    onClick={async () => {
-                      const url = absoluteAppUrl(profilePath(profile.username));
-                      try {
-                        await navigator.clipboard.writeText(url);
-                        toast.success("Profile link copied");
-                      } catch {
-                        toast.message(url);
-                      }
-                    }}
-                  >
-                    <Share2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Share</span>
-                  </Button>
-                  <Link
-                    href="/settings/profile"
-                    className="inline-flex h-8 items-center rounded-full border border-border bg-transparent px-4 text-sm font-bold transition hover:bg-muted"
-                  >
-                    Edit profile
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                    onClick={async () => {
-                      if (!user || !profile) return;
-                      try {
-                        const { getOrCreateDm } = await import(
-                          "@/services/chats"
-                        );
-                        const id = await getOrCreateDm(user.uid, profile.uid);
-                        router.push(`/messages?c=${id}`);
-                      } catch {
-                        toast.error("Could not open chat");
-                      }
-                    }}
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="hidden sm:inline">Message</span>
-                  </Button>
-                  <button
-                    type="button"
-                    disabled={followLoading}
-                    onClick={onFollow}
-                    className={cn(
-                      "flux-follow-btn group inline-flex h-8 min-w-[76px] items-center justify-center rounded-full px-4 text-sm font-bold transition active:scale-95 disabled:opacity-60",
-                      following
-                        ? "border border-border text-foreground hover:border-red-500/50 hover:text-red-500"
-                        : "bg-foreground text-background hover:opacity-90"
-                    )}
-                  >
-                    {followLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : following ? (
-                      <>
-                        <span className="group-hover:hidden">Following</span>
-                        <span className="hidden group-hover:inline">Unfollow</span>
-                      </>
-                    ) : (
-                      "Follow"
-                    )}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Identity */}
-          <div className="mt-3">
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-              <h2 className="text-xl font-extrabold leading-tight tracking-tight">
-                {profile.displayName}
-              </h2>
-              {profile.isVerified ? (
-                <VerifiedBadge
-                  className="h-5 w-5"
-                  type={
-                    isBusiness
-                      ? "business"
-                      : profile.verifiedType || "flux"
-                  }
-                />
-              ) : null}
-              {isBusiness ? <BusinessBadge /> : null}
-              {shopFlair ? (
-                <ShopFlairBadge emoji={shopFlair.emoji} label={shopFlair.label} />
-              ) : null}
-              {followsMe && !isOwn ? (
-                <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                  Follows you
-                </span>
-              ) : null}
-              {profile.mood
-                ? (() => {
-                    const m = MOOD_OPTIONS.find((x) => x.id === profile.mood);
-                    return m?.emoji ? (
-                      <span className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-medium">
-                        {m.emoji} {m.label}
-                      </span>
-                    ) : null;
-                  })()
-                : null}
-            </div>
-            <p className="text-[15px] text-muted-foreground">
-              @{profile.username}
-              {isBusiness && profile.businessName
-                ? ` · ${profile.businessName}`
-                : ""}
-            </p>
-            {onlineNow ? (
-              <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Online now
-              </p>
+        <div>
+          <h1>
+            {profile.displayName}{" "}
+            {profile.isVerified ? (
+              <VerifiedBadge className="inline h-5 w-5 align-[-3px]" type={isBusiness ? "business" : profile.verifiedType || "flux"} />
             ) : null}
-            {profile.bio ? (
-              <p className="mt-3 whitespace-pre-wrap text-[15px] leading-snug">
-                {profile.bio}
-              </p>
-            ) : null}
+          </h1>
+          <p>{formatCount(profile.postsCount)} posts</p>
+        </div>
+      </div>
 
-            {/* Meta row */}
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              {profile.location ? (
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-4 w-4 shrink-0" />
-                  {profile.location}
-                </span>
-              ) : null}
-              {profile.website || profile.socialLinks?.website ? (
-                <a
-                  href={normalizeUrl(
-                    profile.website || profile.socialLinks?.website || ""
-                  )}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  <LinkIcon className="h-4 w-4 shrink-0" />
-                  {(profile.website || profile.socialLinks?.website || "")
-                    .replace(/^https?:\/\//, "")
-                    .slice(0, 32)}
-                </a>
-              ) : null}
-              {joined ? (
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="h-4 w-4 shrink-0" />
-                  Joined {joined}
-                </span>
-              ) : null}
-            </div>
+      {/* Banner */}
+      <button
+        type="button"
+        className="xxprof-banner"
+        style={!bannerSrc ? { background: `color-mix(in srgb, ${accent} 16%, var(--xx-card))`, cursor: "default" } : undefined}
+        onClick={() => { if (bannerSrc) setBannerView(true); }}
+        aria-label={bannerSrc ? "View banner" : undefined}
+      >
+        {bannerSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={bannerSrc} alt="" />
+        ) : null}
+      </button>
 
-            {/* Social links */}
-            {profile.socialLinks?.instagram ||
-            profile.socialLinks?.tiktok ||
-            profile.socialLinks?.youtube ||
-            profile.socialLinks?.x ? (
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-                {profile.socialLinks?.instagram ? (
-                  <SocialLink label="Instagram" value={profile.socialLinks.instagram} />
-                ) : null}
-                {profile.socialLinks?.tiktok ? (
-                  <SocialLink label="TikTok" value={profile.socialLinks.tiktok} />
-                ) : null}
-                {profile.socialLinks?.youtube ? (
-                  <SocialLink label="YouTube" value={profile.socialLinks.youtube} />
-                ) : null}
-                {profile.socialLinks?.x ? (
-                  <SocialLink label="X" value={profile.socialLinks.x} />
-                ) : null}
-              </div>
-            ) : null}
-
-            {/* Stats */}
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-              <button
-                type="button"
-                onClick={() => openList("following")}
-                className="transition hover:underline"
-              >
-                <span className="font-bold text-foreground">
-                  {formatCount(profile.followingCount)}
-                </span>{" "}
-                <span className="text-muted-foreground">Following</span>
+      {/* Avatar + actions */}
+      <div className="xxprof-ava-row">
+        <div className="xxprof-ava">
+          <UserAvatar
+            user={profile}
+            size="xl"
+            className="xxprof-ava-img"
+            decorations={profile.decorations}
+            clickable={false}
+          />
+        </div>
+        <div className="xxprof-actions">
+          {isOwn ? (
+            <>
+              <button type="button" className="xxprof-icobtn" onClick={shareProfile} aria-label="Share profile">
+                <Share2 />
+              </button>
+              <Link href="/settings/profile" className="xxbtn xxbtn-outline">
+                Edit profile
+              </Link>
+            </>
+          ) : (
+            <>
+              <button type="button" className="xxprof-icobtn" onClick={shareProfile} aria-label="Share profile">
+                <Share2 />
+              </button>
+              <button type="button" className="xxprof-icobtn" onClick={openDm} aria-label="Message">
+                <MessageCircle />
               </button>
               <button
                 type="button"
-                onClick={() => openList("followers")}
-                className="transition hover:underline"
+                disabled={followLoading}
+                onClick={onFollow}
+                className={cn("xxbtn", following ? "xxbtn-outline" : "xxbtn-black")}
+                style={following ? { borderColor: "var(--xx-border)" } : undefined}
               >
-                <span className="font-bold text-foreground">
-                  {formatCount(profile.followersCount)}
-                </span>{" "}
-                <span className="text-muted-foreground">Followers</span>
+                {followLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : following ? (
+                  "Following"
+                ) : followsMe ? (
+                  "Follow back"
+                ) : (
+                  "Follow"
+                )}
               </button>
-              <span>
-                <span className="font-bold text-foreground">
-                  {formatCount(profile.likesCount)}
-                </span>{" "}
-                <span className="text-muted-foreground">Likes</span>
-              </span>
-              {typeof profile.coins === "number" && isOwn ? (
-                <span>
-                  <span className="font-bold text-foreground">
-                    {formatCount(profile.coins)}
-                  </span>{" "}
-                  <span className="text-muted-foreground">Coins</span>
-                </span>
-              ) : null}
-            </div>
-          </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Identity */}
+      <div className="xxprof-body">
+        <h2 className="xxprof-name">
+          {profile.displayName}
+          {profile.isVerified ? (
+            <VerifiedBadge type={isBusiness ? "business" : profile.verifiedType || "flux"} />
+          ) : null}
+          {isBusiness ? <BusinessBadge /> : null}
+          {shopFlair ? <ShopFlairBadge emoji={shopFlair.emoji} label={shopFlair.label} /> : null}
+        </h2>
+        <p className="xxprof-handle">
+          @{profile.username}
+          {followsMe && !isOwn ? <span className="xxprof-followsyou">Follows you</span> : null}
+        </p>
+        {onlineNow ? (
+          <p className="xxprof-meta" style={{ marginTop: 8 }}>
+            <span><span style={{ width: 8, height: 8, borderRadius: 999, background: "#00ba7c", display: "inline-block" }} /> Online now</span>
+          </p>
+        ) : null}
+        {profile.bio ? <p className="xxprof-bio">{profile.bio}</p> : null}
+
+        <div className="xxprof-meta">
+          {profile.location ? (
+            <span><MapPin />{profile.location}</span>
+          ) : null}
+          {profile.website || profile.socialLinks?.website ? (
+            <span>
+              <LinkIcon />
+              <a
+                href={normalizeUrl(profile.website || profile.socialLinks?.website || "")}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {(profile.website || profile.socialLinks?.website || "").replace(/^https?:\/\//, "").slice(0, 32)}
+              </a>
+            </span>
+          ) : null}
+          {joined ? (
+            <span><Calendar />Joined {joined}</span>
+          ) : null}
         </div>
 
-        {/* Tabs + content */}
-        {!canSeePrivate ? (
-          <div className="px-4 py-10">
-            <XEmpty
-              icon={LockKeyhole}
-              title="These posts are protected"
-              description="Only approved followers can see this account's posts. Follow them and wait for approval to see everything."
-              action={
-                !isOwn && user && !following ? (
-                  <button
-                    type="button"
-                    onClick={onFollow}
-                    className="inline-flex h-9 items-center rounded-full bg-foreground px-5 text-sm font-bold text-background transition hover:opacity-90"
-                  >
-                    Follow
-                  </button>
-                ) : undefined
-              }
-            />
+        {profile.socialLinks?.instagram || profile.socialLinks?.tiktok || profile.socialLinks?.youtube || profile.socialLinks?.x ? (
+          <div className="xxprof-meta" style={{ marginTop: 6 }}>
+            {profile.socialLinks?.instagram ? <SocialLink label="Instagram" value={profile.socialLinks.instagram} /> : null}
+            {profile.socialLinks?.tiktok ? <SocialLink label="TikTok" value={profile.socialLinks.tiktok} /> : null}
+            {profile.socialLinks?.youtube ? <SocialLink label="YouTube" value={profile.socialLinks.youtube} /> : null}
+            {profile.socialLinks?.x ? <SocialLink label="X" value={profile.socialLinks.x} /> : null}
           </div>
-        ) : (
-          <>
-            <XTabs
-              tabs={TAB_DEFS}
-              value={tab}
-              onChange={setTab}
-              scrollable
-              className="mt-3"
-            />
-            <XSwitch id={tab}>
-              {tabLoading ? (
-                <XRowSkeleton rows={5} />
-              ) : tab === "photos" ? (
-                <PhotosPanel
-                  visibility={photoVisibility}
-                  onVisibilityChange={setPhotoVisibility}
-                  isOwn={isOwn}
-                />
-              ) : posts.length === 0 ? (
-                <TabEmpty
-                  tab={tab}
-                  username={profile.username}
-                  isOwn={isOwn}
-                />
-              ) : (
-                <div>
-                  {posts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onChange={(updated) =>
-                        setPosts((prev) =>
-                          updated.isDeleted
-                            ? prev.filter((p) => p.id !== updated.id)
-                            : prev.map((p) =>
-                                p.id === updated.id ? updated : p
-                              )
-                        )
-                      }
-                    />
-                  ))}
+        ) : null}
+
+        <div className="xxprof-stats">
+          <button type="button" onClick={() => openList("following")}>
+            <b>{formatCount(profile.followingCount)}</b> <span className="lbl">Following</span>
+          </button>
+          <button type="button" onClick={() => openList("followers")}>
+            <b>{formatCount(profile.followersCount)}</b> <span className="lbl">Followers</span>
+          </button>
+        </div>
+
+        {profile.mood ? (() => {
+          const m = MOOD_OPTIONS.find((x) => x.id === profile.mood);
+          return m?.emoji ? (
+            <p className="xxprof-meta" style={{ marginTop: 8 }}>
+              <span>{m.emoji} {m.label}</span>
+            </p>
+          ) : null;
+        })() : null}
+      </div>
+
+      {/* Tabs */}
+      {!canSeePrivate ? (
+        <div className="xxempty">
+          <h3>These posts are protected</h3>
+          <p>Only approved followers can see @{profile.username}&apos;s posts.</p>
+        </div>
+      ) : (
+        <>
+          <div className="xxtabs" role="tablist" aria-label="Profile" style={{ borderBottom: "1px solid var(--xx-line)" }}>
+            {TAB_DEFS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                className={cn("xxtab", tab === t.id && "is-active")}
+              >
+                <span className="xxtab-inner">
+                  <span className="xxtab-label">{t.label}</span>
+                  <span className="xxtab-bar" aria-hidden="true" />
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {tabLoading ? (
+            <div aria-label="Loading">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="xxskel" aria-hidden="true">
+                  <div className="xxskel-ava" />
+                  <div className="xxskel-main">
+                    <div className="xxskel-line" style={{ width: "35%" }} />
+                    <div className="xxskel-line" style={{ width: "95%" }} />
+                  </div>
                 </div>
-              )}
-            </XSwitch>
-          </>
-        )}
-      </PageTransition>
+              ))}
+            </div>
+          ) : tab === "photos" ? (
+            <PhotosPanel
+              visibility={photoVisibility}
+              onVisibilityChange={setPhotoVisibility}
+              isOwn={isOwn}
+            />
+          ) : posts.length === 0 ? (
+            <TabEmpty tab={tab} username={profile.username} isOwn={isOwn} />
+          ) : (
+            <div>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onChange={(updated) =>
+                    setPosts((prev) =>
+                      updated.isDeleted
+                        ? prev.filter((p) => p.id !== updated.id)
+                        : prev.map((p) => (p.id === updated.id ? updated : p))
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       <ImageViewer
         open={bannerView}
-        src={profile.bannerUrl || bannerDeco?.imageUrl}
+        src={bannerSrc}
         alt="Banner"
         onClose={() => setBannerView(false)}
       />
 
       <Dialog open={!!listOpen} onOpenChange={() => setListOpen(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="overflow-hidden rounded-2xl p-0 sm:max-w-md">
+          <DialogHeader className="px-4 py-3" style={{ borderBottom: "1px solid var(--xx-line)" }}>
+            <DialogTitle className="text-left text-[17px] font-extrabold">
               {listOpen === "followers" ? "Followers" : "Following"}
             </DialogTitle>
           </DialogHeader>
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto py-2">
             {listUsers.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
+              <p className="py-8 text-center text-sm" style={{ color: "var(--xx-gray)" }}>
                 No users yet
               </p>
             ) : (
@@ -623,14 +506,17 @@ export default function ProfilePage(
                   key={u.uid}
                   href={profilePath(u.username)}
                   onClick={() => setListOpen(null)}
-                  className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-muted/60"
+                  className="flex items-center gap-3 px-4 py-2.5 transition"
+                  style={{ textDecoration: "none", color: "inherit" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--xx-card-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <UserAvatar user={u} decorations={u.decorations} />
+                  <UserAvatar user={u} decorations={u.decorations} size="md" clickable={false} />
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-bold leading-tight">
                       {u.displayName}
                     </p>
-                    <p className="truncate text-sm text-muted-foreground">
+                    <p className="truncate text-sm" style={{ color: "var(--xx-gray)" }}>
                       @{u.username}
                     </p>
                   </div>
@@ -654,56 +540,31 @@ function TabEmpty({
   isOwn: boolean;
 }) {
   const who = isOwn ? "You" : `@${username}`;
-  switch (tab) {
-    case "replies":
-      return (
-        <XEmpty
-          icon={AtSign}
-          title="No replies yet"
-          description={
-            isOwn
-              ? "When you reply to posts, they'll show up here."
-              : `${who} hasn't replied to any posts yet.`
-          }
-        />
-      );
-    case "media":
-      return (
-        <XEmpty
-          icon={ImageIcon}
-          title="No media yet"
-          description={
-            isOwn
-              ? "Photos and videos you share will show up here."
-              : `${who} hasn't shared any photos or videos yet.`
-          }
-        />
-      );
-    case "likes":
-      return (
-        <XEmpty
-          icon={Heart}
-          title="No likes yet"
-          description={
-            isOwn
-              ? "Tap the heart on any post to show appreciation. Posts you like will live here."
-              : `${who} hasn't liked any posts yet.`
-          }
-        />
-      );
-    default:
-      return (
-        <XEmpty
-          icon={FileText}
-          title="No posts yet"
-          description={
-            isOwn
-              ? "Share your first post and start the conversation."
-              : `${who} hasn't posted anything yet.`
-          }
-        />
-      );
-  }
+  const copy: Record<string, { title: string; description: string }> = {
+    replies: {
+      title: "No replies yet",
+      description: isOwn ? "When you reply to posts, they'll show up here." : `${who} hasn't replied to any posts yet.`,
+    },
+    media: {
+      title: "No media yet",
+      description: isOwn ? "Photos and videos you share will show up here." : `${who} hasn't shared any photos or videos yet.`,
+    },
+    likes: {
+      title: "No likes yet",
+      description: isOwn ? "Tap the heart on any post to show appreciation." : `${who} hasn't liked any posts yet.`,
+    },
+    posts: {
+      title: "No posts yet",
+      description: isOwn ? "Share your first post and start the conversation." : `${who} hasn't posted anything yet.`,
+    },
+  };
+  const c = copy[tab] || copy.posts;
+  return (
+    <div className="xxempty">
+      <h3>{c.title}</h3>
+      <p>{c.description}</p>
+    </div>
+  );
 }
 
 function PhotosPanel({
@@ -716,11 +577,12 @@ function PhotosPanel({
   isOwn: boolean;
 }) {
   return (
-    <div className="px-4 py-4">
+    <div style={{ padding: "16px" }}>
       <div
-        className="mb-4 inline-flex rounded-full bg-muted p-1 text-sm font-bold"
+        className="mb-4 inline-flex rounded-full p-1 text-sm font-bold"
         role="tablist"
         aria-label="Photo visibility"
+        style={{ background: "var(--xx-line)" }}
       >
         <button
           type="button"
@@ -730,9 +592,10 @@ function PhotosPanel({
           className={cn(
             "rounded-full px-4 py-1.5 transition",
             visibility === "public"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "text-[var(--xx-text)]"
+              : "text-[var(--xx-gray)]"
           )}
+          style={visibility === "public" ? { background: "var(--xx-bg)", boxShadow: "0 1px 2px rgba(0,0,0,.12)" } : undefined}
         >
           Public
         </button>
@@ -744,29 +607,27 @@ function PhotosPanel({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 transition",
             visibility === "private"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "text-[var(--xx-text)]"
+              : "text-[var(--xx-gray)]"
           )}
+          style={visibility === "private" ? { background: "var(--xx-bg)", boxShadow: "0 1px 2px rgba(0,0,0,.12)" } : undefined}
         >
           <LockKeyhole className="h-3.5 w-3.5" />
           Private
         </button>
       </div>
-      <XEmpty
-        icon={Camera}
-        title={
-          visibility === "public" ? "No public photos yet" : "No private photos yet"
-        }
-        description={
-          visibility === "public"
+      <div className="xxempty" style={{ padding: "32px 16px" }}>
+        <h3 style={{ fontSize: 24 }}>{visibility === "public" ? "No public photos yet" : "No private photos yet"}</h3>
+        <p>
+          {visibility === "public"
             ? isOwn
               ? "Photos marked Public in Flux Rec will appear here for everyone to see."
               : "Public Flux Rec photos will appear here."
             : isOwn
               ? "Only you can see these. Snap a photo in Flux Rec and mark it Private."
-              : "Private photos are only visible to the account owner."
-        }
-      />
+              : "Private photos are only visible to the account owner."}
+        </p>
+      </div>
     </div>
   );
 }
@@ -777,7 +638,7 @@ function SocialLink({ label, value }: { label: string; value: string }) {
       href={normalizeUrl(value)}
       target="_blank"
       rel="noreferrer"
-      className="font-medium text-muted-foreground transition hover:text-primary hover:underline"
+      style={{ fontWeight: 500, color: "var(--xx-gray)" }}
     >
       {label}
     </a>
