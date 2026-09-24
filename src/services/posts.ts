@@ -284,6 +284,7 @@ export async function getForYouFeed(
     collection(db, "posts"),
     where("isDeleted", "==", false),
     where("isDraft", "==", false),
+    where("visibility", "==", "public"),
     where("type", "in", ["post", "quote", "repost"]),
     orderBy("createdAt", "desc"),
     limit(pageSize)
@@ -294,6 +295,7 @@ export async function getForYouFeed(
       collection(db, "posts"),
       where("isDeleted", "==", false),
       where("isDraft", "==", false),
+      where("visibility", "==", "public"),
       where("type", "in", ["post", "quote", "repost"]),
       orderBy("createdAt", "desc"),
       startAfter(cursor),
@@ -355,6 +357,7 @@ export async function getFollowingFeed(
           where("authorId", "in", chunk),
           where("isDeleted", "==", false),
           where("isDraft", "==", false),
+          where("visibility", "==", "public"),
           orderBy("createdAt", "desc"),
           limit(pageSize)
         )
@@ -409,6 +412,7 @@ export async function getUserPosts(
         where("authorId", "==", authorId),
         where("isDeleted", "==", false),
         where("isDraft", "==", false),
+        where("visibility", "==", "public"),
         orderBy("createdAt", "desc"),
         limit(40)
       )
@@ -644,6 +648,7 @@ export async function getReplies(
         collection(db, "posts"),
         where("parentId", "==", postId),
         where("isDeleted", "==", false),
+        where("visibility", "==", "public"),
         orderBy("createdAt", "asc"),
         limit(100)
       )
@@ -699,6 +704,7 @@ export async function searchPosts(
         collection(db, "posts"),
         where("isDeleted", "==", false),
         where("isDraft", "==", false),
+        where("visibility", "==", "public"),
         orderBy("createdAt", "desc"),
         limit(80)
       )
