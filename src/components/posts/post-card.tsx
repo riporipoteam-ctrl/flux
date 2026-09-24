@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNowStrict } from "date-fns";
+import { motion } from "framer-motion";
 import {
   Ban,
-  BarChart3,
   Bookmark,
   Heart,
   Loader2,
@@ -54,6 +54,7 @@ import { blockUser, muteUser } from "@/services/users";
 export function PostCard({
   post,
   onChange,
+  compact = false,
   disableNavigate = false,
 }: {
   post: PostWithAuthor;
@@ -213,23 +214,47 @@ export function PostCard({
 
   if (post.type === "repost" && post.repostOfId) {
     return (
-      <article className="xxpost" onClick={() => router.push(postPath(post.repostOfId!))}>
-        <div className="xxpost-repostline">
-          <Repeat2 />
-          <span>{author?.displayName || "Someone"} reposted</span>
+      <motion.article
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="border-b border-border/70 px-4 py-3 transition-colors hover:bg-muted/30"
+      >
+        <div className="mb-2 flex items-center gap-2 pl-10 text-xs font-semibold text-muted-foreground">
+          <Repeat2 className="h-3.5 w-3.5 text-repost" />
+          {author?.displayName || "Someone"} reposted
         </div>
         {post.quotedPost ? (
           <PostCard post={post.quotedPost} onChange={onChange} />
         ) : (
-          <div className="xxpost-quote">View the original post</div>
+          <button
+            type="button"
+            onClick={() => router.push(postPath(post.repostOfId!))}
+            className="w-full rounded-2xl border border-border bg-background/70 p-4 text-left text-sm text-muted-foreground shadow-sm hover:border-primary/30 hover:bg-muted/50"
+          >
+            View the original post
+          </button>
         )}
-      </article>
+      </motion.article>
     );
   }
 
   return (
-    <article
-      className="xxpost"
+    <motion.article
+      layout="position"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      className={cn(
+        "post-row border-b border-border/70 px-4 py-3.5",
+        !disableNavigate && "cursor-pointer",
+        compact && "pl-6",
+        disableNavigate && "bg-gradient-to-b from-accent/30 to-transparent"
+      )}
+      onPointerMove={(event) => {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        event.currentTarget.style.setProperty("--post-x", `${event.clientX - bounds.left}px`);
+        event.currentTarget.style.setProperty("--post-y", `${event.clientY - bounds.top}px`);
+      }}
       onClick={goToPost}
       role={disableNavigate ? undefined : "link"}
       tabIndex={disableNavigate ? undefined : 0}
@@ -238,108 +263,85 @@ export function PostCard({
       }}
     >
       {post.author?.pinnedPostId === post.id ? (
-        <div className="xxpost-pinline">
-          <Pin className="h-3.5 w-3.5" />
-          <span>Pinned</span>
+        <div className="mb-1 flex items-center gap-1.5 pl-12 text-xs font-medium text-muted-foreground">
+          <Pin className="h-3 w-3" />Pinned
         </div>
       ) : null}
 
-      <div className="xxpost-row">
+      <div className="flex gap-3">
         <Link
           href={author?.username ? profilePath(author.username) : "#"}
           onClick={(event) => event.stopPropagation()}
-          className="xxpost-avatar"
-          aria-label={`${author?.displayName || "User"} profile`}
+          className="shrink-0"
         >
-          <UserAvatar user={author} size="md" decorations={author?.decorations} clickable={false} />
+          <UserAvatar user={author} size={compact ? "sm" : "md"} decorations={author?.decorations} />
         </Link>
 
-        <div className="xxpost-main">
-          <div className="xxpost-head">
-            <Link
-              href={author?.username ? profilePath(author.username) : "#"}
-              onClick={(event) => event.stopPropagation()}
-              className="xxpost-name"
-            >
-              {author?.displayName || "User"}
-            </Link>
-            {author?.isVerified ? (
-              <span className="xxpost-badge">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[15px]">
+              <Link
+                href={author?.username ? profilePath(author.username) : "#"}
+                onClick={(event) => event.stopPropagation()}
+                className="truncate font-bold hover:underline"
+              >
+                {author?.displayName || "User"}
+              </Link>
+              {author?.isVerified ? (
                 <VerifiedBadge type={author.accountType === "business" ? "business" : author.verifiedType || "flux"} />
-              </span>
-            ) : null}
-            {author?.accountType === "business" ? <BusinessBadge className="scale-90" /> : null}
-            {(() => {
-              const flair = flairForDecoration(author?.decorations?.badgeId);
-              return flair ? <ShopFlairBadge emoji={flair.emoji} /> : null;
-            })()}
-            <span className="xxpost-meta">
-              @{author?.username || "user"}{time ? ` · ${time}` : ""}
-            </span>
+              ) : null}
+              {author?.accountType === "business" ? <BusinessBadge className="scale-90" /> : null}
+              {(() => {
+                const flair = flairForDecoration(author?.decorations?.badgeId);
+                return flair ? <ShopFlairBadge emoji={flair.emoji} /> : null;
+              })()}
+              <span className="truncate text-muted-foreground">@{author?.username || "user"}</span>
+              {time ? <><span className="text-muted-foreground">·</span><span className="text-muted-foreground">{time}</span></> : null}
+            </div>
 
-            <div className="xxpost-menuwrap" onClick={(event) => event.stopPropagation()}>
+            <div className="relative" onClick={(event) => event.stopPropagation()}>
               <button
                 type="button"
                 onClick={() => setMenuOpen((value) => !value)}
-                className="xxpost-menubtn"
-                aria-label="More"
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                aria-label="Post menu"
                 aria-expanded={menuOpen}
               >
-                <MoreHorizontal className="h-[18px] w-[18px]" />
+                <MoreHorizontal className="h-4 w-4" />
               </button>
               {menuOpen ? (
-                <>
-                  <button
-                    type="button"
-                    aria-label="Close menu"
-                    style={{ position: "fixed", inset: 0, background: "transparent", border: "none", cursor: "default", zIndex: 49, padding: 0 }}
-                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
-                  />
-                  <div className="xxpost-menu" role="menu" style={{ zIndex: 50 }}>
+                <div className="absolute right-0 z-30 mt-1 w-48 overflow-hidden rounded-2xl border border-border bg-card py-1.5 shadow-soft">
                   {user?.uid === post.authorId ? (
                     <>
-                      <button type="button" onClick={() => { setMenuOpen(false); void onPin(); }}>
-                        <Pin />Pin to profile
-                      </button>
-                      <button type="button" className="danger" onClick={() => { setMenuOpen(false); void onDelete(); }}>
-                        <Trash2 />Delete
-                      </button>
+                      <MenuButton icon={Pin} label="Pin to profile" onClick={() => { setMenuOpen(false); void onPin(); }} />
+                      <MenuButton destructive icon={Trash2} label="Delete post" onClick={() => { setMenuOpen(false); void onDelete(); }} />
                     </>
                   ) : (
                     <>
-                      <button type="button" onClick={() => { setMenuOpen(false); setQuoteOpen(true); }}>
-                        <Quote />Quote
-                      </button>
-                      <button type="button" onClick={async () => {
+                      <MenuButton icon={Quote} label="Quote post" onClick={() => { setMenuOpen(false); setQuoteOpen(true); }} />
+                      <MenuButton icon={VolumeX} label="Mute user" onClick={async () => {
                         setMenuOpen(false);
                         if (!user) return;
                         try { await muteUser(user.uid, post.authorId); toast.success("User muted"); }
                         catch { toast.error("Could not mute"); }
-                      }}>
-                        <VolumeX />Mute @{author?.username}
-                      </button>
-                      <button type="button" onClick={async () => {
+                      }} />
+                      <MenuButton icon={Ban} label="Block user" onClick={async () => {
                         setMenuOpen(false);
                         if (!user) return;
                         try { await blockUser(user.uid, post.authorId); toast.success("User blocked"); emit({ isDeleted: true }); }
                         catch { toast.error("Could not block"); }
-                      }}>
-                        <Ban />Block @{author?.username}
-                      </button>
-                      <button type="button" className="danger" onClick={async () => {
+                      }} />
+                      <MenuButton destructive label="Report post" onClick={async () => {
                         setMenuOpen(false);
                         if (!user) return toast.error("Sign in to report");
                         try {
                           await createReport({ reporterId: user.uid, targetType: "post", targetId: post.id, reason: "spam_or_abuse", details: "Reported from post menu" });
                           toast.success("Report submitted");
                         } catch { toast.error("Could not report"); }
-                      }}>
-                        Report post
-                      </button>
+                      }} />
                     </>
                   )}
                 </div>
-                </>
               ) : null}
             </div>
           </div>
@@ -348,33 +350,35 @@ export function PostCard({
 
           {post.media?.length ? (
             <div
-              className={cn("xxpost-media", post.media.length > 1 && "xxpost-media-grid cols-2")}
+              className={cn(
+                "mt-3 grid gap-1 overflow-hidden rounded-2xl border border-border bg-muted/20",
+                post.media.length === 1 ? "grid-cols-1" : "grid-cols-2"
+              )}
               onClick={(event) => event.stopPropagation()}
             >
               {post.media.map((media, index) => media.type === "video" ? (
-                <video key={`${media.url}-${index}`} src={media.url} controls playsInline preload="metadata" />
+                <video key={`${media.url}-${index}`} src={media.url} controls playsInline preload="metadata" className="max-h-96 w-full bg-black object-contain" />
               ) : (
                 <button
                   type="button"
                   key={`${media.url}-${index}`}
-                  style={{ padding: 0, border: "none", background: "transparent", cursor: "zoom-in", display: "block", width: "100%" }}
+                  className="group relative overflow-hidden bg-muted"
                   onClick={() => {
                     const imageIndex = post.media.slice(0, index + 1).filter((item) => item.type !== "video").length - 1;
                     setLightboxIndex(Math.max(0, imageIndex));
                     setLightbox(true);
                   }}
-                  aria-label="View image"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={media.url} alt="" loading="lazy" />
-                  {media.type === "gif" ? <span style={{ position: "absolute" }} /> : null}
+                  <img src={media.url} alt="" loading="lazy" className="max-h-96 w-full object-cover transition duration-300 group-hover:scale-[1.015] group-hover:brightness-95" />
+                  {media.type === "gif" ? <span className="absolute left-2 top-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">GIF</span> : null}
                 </button>
               ))}
             </div>
           ) : null}
 
           {post.poll ? (
-            <div className="xxpost-quote" style={{ cursor: "default" }} onClick={(event) => event.stopPropagation()}>
+            <div className="mt-3 space-y-2 rounded-2xl border border-border p-3" onClick={(event) => event.stopPropagation()}>
               {post.poll.options.map((option) => {
                 const total = post.poll!.options.reduce((sum, item) => sum + item.votes, 0) || 1;
                 const percentage = Math.round((option.votes / total) * 100);
@@ -382,7 +386,7 @@ export function PostCard({
                   <button
                     type="button"
                     key={option.id}
-                    style={{ position: "relative", width: "100%", overflow: "hidden", borderRadius: 16, border: "1px solid var(--xx-line)", padding: "10px 12px", textAlign: "left", marginBottom: 8, background: "transparent", cursor: "pointer", color: "var(--xx-text)", fontSize: 15 }}
+                    className="relative w-full overflow-hidden rounded-xl border border-border px-3 py-2 text-left hover:border-primary/40"
                     onClick={async () => {
                       if (!user) return toast.error("Sign in to vote");
                       try {
@@ -394,88 +398,77 @@ export function PostCard({
                       }
                     }}
                   >
-                    <span style={{ position: "absolute", inset: 0, background: "color-mix(in srgb, var(--xx-blue) 12%, transparent)", width: `${percentage}%` }} />
-                    <span style={{ position: "relative", display: "flex", justifyContent: "space-between" }}>
-                      <span>{option.text}</span>
-                      <span style={{ color: "var(--xx-gray)" }}>{percentage}%</span>
-                    </span>
+                    <span className="absolute inset-y-0 left-0 bg-primary/15 transition-[width] duration-500" style={{ width: `${percentage}%` }} />
+                    <span className="relative flex justify-between text-sm font-medium"><span>{option.text}</span><span className="text-muted-foreground">{percentage}%</span></span>
                   </button>
                 );
               })}
-              <p style={{ fontSize: 13, color: "var(--xx-gray)", margin: "4px 0 0" }}>
-                {post.poll.options.reduce((sum, item) => sum + item.votes, 0)} votes · Final results
-              </p>
+              <p className="text-[11px] text-muted-foreground">Tap an option to vote · {post.poll.options.reduce((sum, item) => sum + item.votes, 0)} votes</p>
             </div>
           ) : null}
 
           {post.quotedPost ? (
             <button
               type="button"
-              className="xxpost-quote"
+              className="mt-3 block w-full overflow-hidden rounded-2xl border border-border p-3 text-left hover:bg-muted/40"
               onClick={(event) => { event.stopPropagation(); router.push(postPath(post.quotedPost!.id)); }}
             >
-              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, marginBottom: 4 }}>
+              <span className="mb-1 flex items-center gap-1.5 text-sm">
+                <UserAvatar user={post.quotedPost.author} size="sm" className="h-5 w-5" />
                 <strong>{post.quotedPost.author?.displayName}</strong>
-                <span style={{ color: "var(--xx-gray)" }}>@{post.quotedPost.author?.username}</span>
+                <span className="truncate text-muted-foreground">@{post.quotedPost.author?.username}</span>
               </span>
-              <span style={{ fontSize: 15, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                {post.quotedPost.text}
-              </span>
+              <span className="line-clamp-4 text-sm">{post.quotedPost.text}</span>
             </button>
           ) : null}
 
-          <div className="xxpost-actions" onClick={(event) => event.stopPropagation()}>
-            <ActionButton
-              kind="reply"
-              label="Reply"
-              count={post.repliesCount}
-              onClick={() => disableNavigate ? setReplyOpen(true) : router.push(postPath(post.id))}
-            >
-              <MessageCircle />
+          <div className="mt-3 flex max-w-md items-center justify-between text-muted-foreground" onClick={(event) => event.stopPropagation()}>
+            <ActionButton label="Reply" count={post.repliesCount} hover="hover:text-primary" onClick={() => disableNavigate ? setReplyOpen(true) : router.push(postPath(post.id))}>
+              <MessageCircle className="h-[18px] w-[18px]" />
             </ActionButton>
             <ActionButton
-              kind="repost"
-              label={reposted ? "Undo repost" : "Repost"}
+              label={reposted ? "Remove repost" : "Repost"}
               count={repostCount}
               active={reposted}
+              activeClass="text-repost"
+              hover="hover:text-repost"
               busy={repostBusy}
               onClick={onRepost}
             >
-              <Repeat2 />
+              <Repeat2 className="h-[18px] w-[18px]" />
             </ActionButton>
             <ActionButton
-              kind="like"
               label={liked ? "Unlike" : "Like"}
               count={likeCount}
               active={liked}
+              activeClass="text-like"
+              hover="hover:text-like"
               busy={likeBusy}
               className={likeAnim ? "like-burst" : unlikeAnim ? "like-unburst" : ""}
               onClick={onLike}
             >
-              <Heart />
-            </ActionButton>
-            <ActionButton kind="views" label="Views" count={post.viewsCount}>
-              <BarChart3 />
+              <Heart className={cn("h-[18px] w-[18px]", liked && "fill-like text-like")} />
             </ActionButton>
             <ActionButton
-              kind="bm"
               label={bookmarked ? "Remove bookmark" : "Bookmark"}
               active={bookmarked}
+              activeClass="text-primary"
+              hover="hover:text-primary"
               busy={bookmarkBusy}
               onClick={onBookmark}
             >
-              <Bookmark />
+              <Bookmark className={cn("h-[18px] w-[18px]", bookmarked && "fill-primary text-primary")} />
             </ActionButton>
-            <ActionButton kind="share" label="Share" onClick={onShare}>
-              <Share2 />
+            <ActionButton label="Share" hover="hover:text-primary" onClick={onShare}>
+              <Share2 className="h-[18px] w-[18px]" />
             </ActionButton>
           </div>
         </div>
       </div>
 
       <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
-        <DialogContent className="max-w-lg overflow-hidden rounded-2xl p-0" onClick={(event) => event.stopPropagation()}>
-          <DialogHeader className="px-4 py-3" style={{ borderBottom: "1px solid var(--xx-line)" }}><DialogTitle>Reply</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg p-0" onClick={(event) => event.stopPropagation()}>
+          <DialogHeader className="border-b border-border px-4 py-3"><DialogTitle>Reply</DialogTitle></DialogHeader>
           <div className="p-4">
             <ComposeBox parentId={post.id} placeholder="Post your reply" autofocus onSuccess={() => {
               setReplyOpen(false);
@@ -487,19 +480,37 @@ export function PostCard({
 
       <MediaLightbox open={lightbox} urls={imageUrls} index={lightboxIndex} onClose={() => setLightbox(false)} onIndex={setLightboxIndex} />
       <QuoteDialog open={quoteOpen} onOpenChange={setQuoteOpen} post={post} />
-    </article>
+    </motion.article>
   );
 }
 
 function PostText({ text }: { text: string }) {
   return (
-    <p className="xxpost-text">
+    <p className="mt-1 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
       {text.split(/(\s+)/).map((part, index) => {
-        if (part.startsWith("#")) return <Link key={index} href={`/explore?q=${encodeURIComponent(part)}`} onClick={(event) => event.stopPropagation()}>{part}</Link>;
-        if (part.startsWith("@") && part.length > 1) return <Link key={index} href={profilePath(part.slice(1))} onClick={(event) => event.stopPropagation()}>{part}</Link>;
+        if (part.startsWith("#")) return <Link key={index} href={`/explore?q=${encodeURIComponent(part)}`} onClick={(event) => event.stopPropagation()} className="text-primary hover:underline">{part}</Link>;
+        if (part.startsWith("@")) return <Link key={index} href={profilePath(part.slice(1))} onClick={(event) => event.stopPropagation()} className="text-primary hover:underline">{part}</Link>;
         return <span key={index}>{part}</span>;
       })}
     </p>
+  );
+}
+
+function MenuButton({
+  icon: Icon,
+  label,
+  onClick,
+  destructive = false,
+}: {
+  icon?: typeof Pin;
+  label: string;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <button type="button" onClick={onClick} className={cn("flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-muted", destructive && "text-destructive")}>
+      {Icon ? <Icon className="h-4 w-4" /> : <span className="h-4 w-4" />}{label}
+    </button>
   );
 }
 
@@ -508,17 +519,19 @@ function ActionButton({
   onClick,
   label,
   count,
-  kind,
   active,
+  activeClass,
+  hover,
   className,
   busy = false,
 }: {
   children: React.ReactNode;
-  onClick?: (event?: React.MouseEvent) => void;
+  onClick: (event?: React.MouseEvent) => void;
   label: string;
   count?: number;
-  kind: "reply" | "repost" | "like" | "views" | "bm" | "share";
   active?: boolean;
+  activeClass?: string;
+  hover?: string;
   className?: string;
   busy?: boolean;
 }) {
@@ -527,15 +540,15 @@ function ActionButton({
       type="button"
       aria-label={label}
       aria-pressed={typeof active === "boolean" ? active : undefined}
-      disabled={busy || !onClick}
-      onClick={(event) => { event.stopPropagation(); onClick?.(event); }}
-      className={cn("xxact", `xxact-${kind}`, active && "is-on", className)}
-      style={!onClick ? { cursor: "default" } : undefined}
+      aria-busy={busy}
+      disabled={busy}
+      onClick={(event) => { event.stopPropagation(); onClick(event); }}
+      className={cn("flux-action-btn group flex items-center gap-1 rounded-full text-[13px]", hover, active && activeClass, busy && "flux-action-pending", className)}
     >
-      <span className="xxact-ic">
-        {busy ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : children}
+      <span className="rounded-full p-1.5 transition-colors group-hover:bg-current/10">
+        {busy ? <Loader2 className="h-[18px] w-[18px]" /> : children}
       </span>
-      {typeof count === "number" && count > 0 ? <span className="xxact-count">{formatCount(count)}</span> : null}
+      {typeof count === "number" && count > 0 ? <span className="tabular-nums">{formatCount(count)}</span> : null}
     </button>
   );
 }
