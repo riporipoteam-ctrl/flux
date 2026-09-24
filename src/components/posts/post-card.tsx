@@ -70,6 +70,7 @@ export function PostCard({
   const [reposted, setReposted] = useState(Boolean(post.repostedByMe));
   const [repostCount, setRepostCount] = useState(Math.max(0, post.repostsCount));
   const [likeAnim, setLikeAnim] = useState(false);
+  const [unlikeAnim, setUnlikeAnim] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const [repostBusy, setRepostBusy] = useState(false);
@@ -104,7 +105,10 @@ export function PostCard({
     setLikeCount((count) => Math.max(0, count + (desired ? 1 : -1)));
     if (desired) {
       setLikeAnim(true);
-      window.setTimeout(() => setLikeAnim(false), 380);
+      window.setTimeout(() => setLikeAnim(false), 460);
+    } else {
+      setUnlikeAnim(true);
+      window.setTimeout(() => setUnlikeAnim(false), 240);
     }
     try {
       const saved = await toggleLike(post.id, user.uid);
@@ -440,7 +444,7 @@ export function PostCard({
               activeClass="text-like"
               hover="hover:text-like"
               busy={likeBusy}
-              className={likeAnim ? "like-burst" : ""}
+              className={likeAnim ? "like-burst" : unlikeAnim ? "like-unburst" : ""}
               onClick={onLike}
             >
               <Heart className={cn("h-[18px] w-[18px]", liked && "fill-like text-like")} />
@@ -539,7 +543,7 @@ function ActionButton({
       aria-busy={busy}
       disabled={busy}
       onClick={(event) => { event.stopPropagation(); onClick(event); }}
-      className={cn("group flex items-center gap-1 rounded-full text-[13px]", hover, active && activeClass, busy && "flux-action-pending", className)}
+      className={cn("flux-action-btn group flex items-center gap-1 rounded-full text-[13px]", hover, active && activeClass, busy && "flux-action-pending", className)}
     >
       <span className="rounded-full p-1.5 transition-colors group-hover:bg-current/10">
         {busy ? <Loader2 className="h-[18px] w-[18px]" /> : children}

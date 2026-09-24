@@ -362,7 +362,7 @@ export default function ProfilePage(
                     disabled={followLoading}
                     onClick={onFollow}
                     className={cn(
-                      "group inline-flex h-8 min-w-[76px] items-center justify-center rounded-full px-4 text-sm font-bold transition active:scale-95 disabled:opacity-60",
+                      "flux-follow-btn group inline-flex h-8 min-w-[76px] items-center justify-center rounded-full px-4 text-sm font-bold transition active:scale-95 disabled:opacity-60",
                       following
                         ? "border border-border text-foreground hover:border-red-500/50 hover:text-red-500"
                         : "bg-foreground text-background hover:opacity-90"

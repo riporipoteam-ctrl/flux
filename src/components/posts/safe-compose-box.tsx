@@ -148,7 +148,7 @@ export function SafeComposeBox({
   };
 
   return (
-    <div className="flex gap-3">
+    <div className={cn("flux-composer flex gap-3 rounded-2xl border border-transparent p-2 -m-2", text.trim() && "has-text")}>
       <UserAvatar user={profile} animate clickable={false} />
       <div className="min-w-0 flex-1">
         <div className="relative">
@@ -196,7 +196,7 @@ export function SafeComposeBox({
           </div>
           <div className="flex items-center gap-3">
             {text.length ? <span className={cn("text-[10px] font-black", remaining < 0 ? "text-red-500" : remaining < 40 ? "text-amber-500" : "text-muted-foreground")}>{remaining}</span> : null}
-            <Button onClick={() => void submit()} disabled={!canPost} className="h-10 min-w-[88px] rounded-full font-black">{posting ? <Loader2 className="h-4 w-4 animate-spin" /> : parentId ? "Reply" : "Post"}</Button>
+            <Button onClick={() => void submit()} disabled={!canPost} className="flux-post-btn h-10 min-w-[88px] rounded-full font-black">{posting ? <Loader2 className="h-4 w-4 animate-spin" /> : parentId ? "Reply" : "Post"}</Button>
           </div>
         </div>
       </div>

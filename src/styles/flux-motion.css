@@ -1,0 +1,373 @@
+/* Flux Motion — delightful micro-interactions, X/Twitter quality.
+   Fast (140–260ms), subtle, GPU-friendly (transform/opacity/scale only).
+   Never bouncy or cartoonish. Respects prefers-reduced-motion via the
+   global guard in flux-v11.css plus local guards below. */
+
+:root {
+  --flux-ease: cubic-bezier(.22, 1, .36, 1);
+  --flux-ease-swift: cubic-bezier(.32, .72, 0, 1);
+}
+
+/* ------------------------------------------------------------------ */
+/* 1. Like button — heart pop + particle burst (X-style)               */
+/* ------------------------------------------------------------------ */
+
+.like-burst > span {
+  position: relative;
+  animation: flux-heart-pop 440ms var(--flux-ease);
+}
+
+/* Expanding ring */
+.like-burst > span::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 2px solid var(--like, #f91880);
+  opacity: 0;
+  pointer-events: none;
+  animation: flux-like-ring 440ms var(--flux-ease) both;
+}
+
+/* Particles: 6 dots that fly outward as the wrapper scales up */
+.like-burst > span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 999px;
+  background: var(--like, #f91880);
+  box-shadow:
+    0 -13px 0 0 var(--like, #f91880),
+    11px -7px 0 0 var(--like, #f91880),
+    11px 7px 0 0 var(--like, #f91880),
+    0 13px 0 0 var(--like, #f91880),
+    -11px 7px 0 0 var(--like, #f91880),
+    -11px -7px 0 0 var(--like, #f91880);
+  opacity: 0;
+  pointer-events: none;
+  animation: flux-like-particles 440ms var(--flux-ease) both;
+}
+
+@keyframes flux-heart-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.32); }
+  55% { transform: scale(.9); }
+  75% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes flux-like-ring {
+  0% { opacity: .8; transform: scale(.45); }
+  100% { opacity: 0; transform: scale(1.55); }
+}
+
+@keyframes flux-like-particles {
+  0% { opacity: 1; transform: scale(.22) rotate(0deg); }
+  100% { opacity: 0; transform: scale(1.5) rotate(24deg); }
+}
+
+/* Unlike is deliberately quiet — just a soft settle */
+.like-unburst > span {
+  animation: flux-heart-settle 200ms var(--flux-ease);
+}
+@keyframes flux-heart-settle {
+  0% { transform: scale(.86); }
+  100% { transform: scale(1); }
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. Post action buttons — press feedback                             */
+/* ------------------------------------------------------------------ */
+
+.flux-action-btn {
+  transition: transform 140ms var(--flux-ease), color 140ms var(--flux-ease),
+    background-color 140ms var(--flux-ease);
+}
+.flux-action-btn:active:not(:disabled) {
+  transform: scale(.82);
+}
+.flux-action-btn > span:first-child {
+  transition: background-color 140ms var(--flux-ease), transform 140ms var(--flux-ease);
+}
+.flux-action-btn:active:not(:disabled) > span:first-child {
+  transform: scale(.9);
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. Buttons — press-down + hover lift                                 */
+/* ------------------------------------------------------------------ */
+
+.flux-btn {
+  transition: transform 140ms var(--flux-ease), background-color 160ms var(--flux-ease),
+    border-color 160ms var(--flux-ease), color 160ms var(--flux-ease),
+    box-shadow 200ms var(--flux-ease), opacity 160ms var(--flux-ease);
+}
+.flux-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.flux-btn:active:not(:disabled) {
+  transform: translateY(0) scale(.96);
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. Dialog / modal — spring-in scale + fade, blurred backdrop         */
+/* ------------------------------------------------------------------ */
+
+.flux-dialog-overlay[data-state="open"] {
+  animation: flux-fade-in 200ms var(--flux-ease) both;
+}
+.flux-dialog-overlay[data-state="closed"] {
+  animation: flux-fade-out 150ms var(--flux-ease) both;
+}
+.flux-dialog-content[data-state="open"] {
+  animation: flux-dialog-in 260ms var(--flux-ease) both;
+}
+.flux-dialog-content[data-state="closed"] {
+  animation: flux-dialog-out 170ms var(--flux-ease) both;
+}
+
+@keyframes flux-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes flux-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes flux-dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes flux-dialog-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(6px) scale(.96); }
+}
+
+/* Bottom sheets on mobile slide up instead */
+@media (max-width: 640px) {
+  .flux-dialog-content[data-state="open"] {
+    animation-name: flux-sheet-in;
+  }
+  .flux-dialog-content[data-state="closed"] {
+    animation-name: flux-sheet-out;
+  }
+}
+@keyframes flux-sheet-in {
+  from { opacity: 0; transform: translateY(48px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes flux-sheet-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(32px); }
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. Toasts — slide in from top                                       */
+/* ------------------------------------------------------------------ */
+
+[data-sonner-toast][data-mounted="true"] {
+  animation: flux-toast-in 280ms var(--flux-ease) both;
+}
+@keyframes flux-toast-in {
+  from { opacity: 0; transform: translateY(-14px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. Follow button — smooth morph between states                      */
+/* ------------------------------------------------------------------ */
+
+.flux-follow-btn {
+  transition: background-color 200ms var(--flux-ease), border-color 200ms var(--flux-ease),
+    color 200ms var(--flux-ease), transform 140ms var(--flux-ease),
+    min-width 220ms var(--flux-ease), box-shadow 200ms var(--flux-ease);
+  will-change: transform;
+}
+.flux-follow-btn:active:not(:disabled) {
+  transform: scale(.94);
+}
+.flux-follow-btn .flux-follow-label {
+  display: inline-block;
+  transition: opacity 140ms var(--flux-ease), transform 180ms var(--flux-ease);
+}
+.flux-follow-btn:active:not(:disabled) .flux-follow-label {
+  transform: scale(.96);
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. Composer — focus expansion                                       */
+/* ------------------------------------------------------------------ */
+
+.flux-composer {
+  transition: box-shadow 220ms var(--flux-ease), border-color 220ms var(--flux-ease),
+    background-color 220ms var(--flux-ease);
+}
+.flux-composer:focus-within {
+  border-color: color-mix(in srgb, var(--flux-brand, #1d9bf0) 45%, var(--flux-line, #e7ebef));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--flux-brand, #1d9bf0) 10%, transparent);
+}
+.flux-composer textarea {
+  transition: min-height 240ms var(--flux-ease);
+}
+.flux-composer-tools {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 240ms var(--flux-ease), opacity 200ms var(--flux-ease),
+    margin 240ms var(--flux-ease);
+  margin-top: 0;
+}
+.flux-composer:focus-within .flux-composer-tools,
+.flux-composer.has-text .flux-composer-tools {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 8px;
+}
+.flux-composer-tools > div {
+  overflow: hidden;
+  min-height: 0;
+}
+.flux-post-btn {
+  transition: transform 140ms var(--flux-ease), background-color 180ms var(--flux-ease),
+    opacity 180ms var(--flux-ease), box-shadow 200ms var(--flux-ease);
+}
+.flux-post-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--flux-brand, #1d9bf0) 32%, transparent);
+}
+.flux-post-btn:not(:disabled):active {
+  transform: scale(.95);
+}
+.flux-post-btn:disabled {
+  transition: opacity 200ms var(--flux-ease);
+}
+
+/* ------------------------------------------------------------------ */
+/* 8. Skeleton shimmer                                                 */
+/* ------------------------------------------------------------------ */
+
+.flux-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--flux-surface-2, #f7f8fa);
+}
+.flux-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in srgb, var(--flux-text, #0b0f14) 6%, transparent) 50%,
+    transparent 80%
+  );
+  animation: flux-shimmer-slide 1.4s var(--flux-ease-swift) infinite;
+}
+@keyframes flux-shimmer-slide {
+  100% { transform: translateX(100%); }
+}
+
+/* ------------------------------------------------------------------ */
+/* 9. Pull-to-refresh spinner                                          */
+/* ------------------------------------------------------------------ */
+
+.flux-ptr-spinner {
+  animation: flux-ptr-spin 900ms linear infinite;
+}
+@keyframes flux-ptr-spin {
+  to { transform: rotate(360deg); }
+}
+.flux-ptr-pull {
+  transition: transform 160ms var(--flux-ease);
+}
+
+/* ------------------------------------------------------------------ */
+/* 10. List stagger — children rise in sequence                        */
+/* ------------------------------------------------------------------ */
+
+.flux-stagger > * {
+  animation: flux-rise-in 380ms var(--flux-ease) both;
+}
+.flux-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.flux-stagger > *:nth-child(3) { animation-delay: 80ms; }
+.flux-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.flux-stagger > *:nth-child(5) { animation-delay: 160ms; }
+.flux-stagger > *:nth-child(6) { animation-delay: 200ms; }
+.flux-stagger > *:nth-child(n+7) { animation-delay: 240ms; }
+
+@keyframes flux-rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* 11. Message bubble entrance                                         */
+/* ------------------------------------------------------------------ */
+
+.flux-msg-in {
+  animation: flux-msg-in 240ms var(--flux-ease) both;
+  transform-origin: bottom left;
+}
+.flux-msg-in.mine {
+  transform-origin: bottom right;
+}
+@keyframes flux-msg-in {
+  from { opacity: 0; transform: translateY(8px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* 12. Tab content crossfade                                           */
+/* ------------------------------------------------------------------ */
+
+.flux-tab-panel {
+  animation: flux-tab-in 220ms var(--flux-ease) both;
+}
+@keyframes flux-tab-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* 13. Avatar / image hover polish                                     */
+/* ------------------------------------------------------------------ */
+
+.flux-zoomable {
+  transition: transform 240ms var(--flux-ease), filter 240ms var(--flux-ease);
+}
+.flux-zoomable:hover {
+  transform: scale(1.02);
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion — hard stop for everything in this file              */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .like-burst > span,
+  .like-burst > span::before,
+  .like-burst > span::after,
+  .like-unburst > span,
+  .flux-dialog-overlay,
+  .flux-dialog-content,
+  [data-sonner-toast],
+  .flux-shimmer::after,
+  .flux-ptr-spinner,
+  .flux-stagger > *,
+  .flux-msg-in,
+  .flux-tab-panel {
+    animation: none !important;
+  }
+  .flux-btn,
+  .flux-action-btn,
+  .flux-follow-btn,
+  .flux-composer,
+  .flux-post-btn {
+    transition-duration: .01ms !important;
+  }
+}
