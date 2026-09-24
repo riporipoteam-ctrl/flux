@@ -3,12 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { Separator } from "@/components/ui/separator";
+import { FluxMark } from "@/components/shared/logo";
+import { cn } from "@/lib/utils";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const { signIn, signUp, signInWithGoogle } = useAuth();
@@ -16,6 +19,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -55,94 +59,168 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     }
   };
 
+  const isSignup = mode === "signup";
+
   return (
-    <div>
-      <h2 className="text-3xl font-bold tracking-tight">
-        {mode === "login" ? "Welcome back" : "Join Flux"}
-      </h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {mode === "login"
-          ? "Sign in to continue your feed."
-          : "Create your account in seconds."}
-      </p>
-
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-8 w-full"
-        loading={googleLoading}
-        onClick={onGoogle}
+    <div className="w-full">
+      {/* Brand mark (mobile already shows one in layout; keep this subtle on desktop) */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.35 }}
+        className="mb-6 hidden lg:block"
       >
-        <GoogleIcon />
-        Continue with Google
-      </Button>
+        <FluxMark size={48} className="text-primary" />
+      </motion.div>
 
-      <div className="my-6 flex items-center gap-3">
-        <Separator className="flex-1" />
-        <span className="text-xs text-muted-foreground">or email</span>
-        <Separator className="flex-1" />
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.05 }}
+      >
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          {isSignup ? "Join Flux today" : "Welcome back"}
+        </h1>
+        <p className="mt-2 text-[15px] text-muted-foreground">
+          {isSignup
+            ? "Create your account and start posting in seconds."
+            : "Sign in to see what's happening."}
+        </p>
+      </motion.div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        {mode === "signup" ? (
-          <div className="space-y-2">
-            <Label htmlFor="name">Display name</Label>
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.12 }}
+        className="mt-8"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="w-full rounded-full border-border bg-card font-bold shadow-sm hover:bg-muted"
+          disabled={googleLoading || loading}
+          onClick={onGoogle}
+        >
+          {googleLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <GoogleIcon />
+          )}
+          Continue with Google
+        </Button>
+
+        <div className="my-6 flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            or
+          </span>
+          <Separator className="flex-1" />
+        </div>
+
+        <form onSubmit={onSubmit} className="space-y-4">
+          {isSignup ? (
+            <div>
+              <Input
+                id="name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Display name"
+                autoComplete="name"
+                required
+                disabled={loading}
+                className="h-13 rounded-2xl px-5 py-3.5 text-[15px]"
+              />
+            </div>
+          ) : null}
+          <div>
             <Input
-              id="name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Alex Rivera"
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
               required
+              disabled={loading}
+              className="h-13 rounded-2xl px-5 py-3.5 text-[15px]"
             />
           </div>
-        ) : null}
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            minLength={6}
-            required
-          />
-        </div>
-        <Button type="submit" className="w-full" size="lg" loading={loading}>
-          {mode === "login" ? "Sign in" : "Create account"}
-        </Button>
-      </form>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete={isSignup ? "new-password" : "current-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              minLength={6}
+              required
+              disabled={loading}
+              className="h-13 rounded-2xl px-5 py-3.5 pr-12 text-[15px]"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              disabled={loading}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className={cn(
+                "absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1",
+                "text-muted-foreground transition-colors hover:text-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              )}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4.5 w-4.5" />
+              ) : (
+                <Eye className="h-4.5 w-4.5" />
+              )}
+            </button>
+          </div>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        {mode === "login" ? (
-          <>
-            New to Flux?{" "}
-            <Link href="/signup" className="font-semibold text-primary hover:underline">
-              Sign up
-            </Link>
-          </>
-        ) : (
-          <>
-            Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-primary hover:underline">
-              Sign in
-            </Link>
-          </>
-        )}
-      </p>
+          <Button
+            type="submit"
+            variant="flux"
+            size="lg"
+            className="w-full rounded-full text-base"
+            loading={loading}
+            disabled={loading || googleLoading}
+          >
+            {isSignup ? "Create account" : "Sign in"}
+          </Button>
+        </form>
+
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          {isSignup ? (
+            <>
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="font-bold text-primary hover:underline"
+              >
+                Sign in
+              </Link>
+            </>
+          ) : (
+            <>
+              New to Flux?{" "}
+              <Link
+                href="/signup"
+                className="font-bold text-primary hover:underline"
+              >
+                Sign up
+              </Link>
+            </>
+          )}
+        </p>
+
+        {isSignup ? (
+          <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
+            By signing up, you agree to the Terms of Service and Privacy
+            Policy.
+          </p>
+        ) : null}
+      </motion.div>
     </div>
   );
 }

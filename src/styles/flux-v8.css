@@ -1427,3 +1427,113 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 
+
+/* --------------------------------------------------------------------------
+   Notifications — X-style rows. Flat surfaces, hairline separators, a soft
+   unread wash. No gradients, no card soup.
+   -------------------------------------------------------------------------- */
+.notif-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 14px var(--v8-gutter);
+  border-bottom: 1px solid var(--v8-line);
+  background: var(--v8-panel);
+  color: var(--v8-text);
+  text-align: left;
+  text-decoration: none;
+  transition: background var(--v8-fast) ease;
+}
+.notif-row:hover { background: var(--v8-panel-2); }
+.notif-row.is-unread { background: color-mix(in srgb, var(--v8-accent) 8%, var(--v8-panel)); }
+.notif-row.is-unread:hover { background: color-mix(in srgb, var(--v8-accent) 12%, var(--v8-panel)); }
+.notif-badge { display: grid; place-items: center; width: 32px; height: 32px; flex: none; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.notif-head b {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notif-head .notif-handle {
+  overflow: hidden;
+  color: var(--v8-muted);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notif-action { margin-top: 1px; font-size: 15px; line-height: 1.4; color: var(--v8-text); }
+.notif-meta { margin-top: 3px; font-size: 13px; color: var(--v8-muted); }
+.notif-preview {
+  margin-top: 8px;
+  border: 1px solid var(--v8-line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--v8-text-2);
+}
+.notif-dot { width: 8px; height: 8px; margin-top: 7px; border-radius: 999px; background: var(--v8-accent); flex: none; }
+
+/* --------------------------------------------------------------------------
+   Explore — trend rows and follow rows. Same flat X language.
+   -------------------------------------------------------------------------- */
+.trend-row {
+  display: block;
+  width: 100%;
+  padding: 12px var(--v8-gutter);
+  border-bottom: 1px solid var(--v8-line);
+  background: var(--v8-panel);
+  color: var(--v8-text);
+  text-align: left;
+  transition: background var(--v8-fast) ease;
+}
+.trend-row:hover { background: var(--v8-panel-2); }
+.trend-row .trend-meta { display: block; font-size: 13px; color: var(--v8-muted); }
+.trend-row .trend-topic { display: block; margin-top: 2px; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.trend-row .trend-count { display: block; margin-top: 2px; font-size: 13px; color: var(--v8-muted); }
+
+.follow-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 12px var(--v8-gutter);
+  border-bottom: 1px solid var(--v8-line);
+  background: var(--v8-panel);
+  color: var(--v8-text);
+  text-decoration: none;
+  transition: background var(--v8-fast) ease;
+}
+.follow-row:hover { background: var(--v8-panel-2); }
+.follow-row .follow-main { flex: 1; min-width: 0; }
+.follow-row .follow-name {
+  display: block;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.follow-row .follow-handle {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--v8-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.follow-row .follow-bio {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--v8-text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
