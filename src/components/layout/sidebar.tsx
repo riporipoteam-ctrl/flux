@@ -11,9 +11,10 @@ import {
   Gift,
   Home,
   Mail,
+  Menu,
   MoreHorizontal,
   Palette,
-  PenLine,
+  PenSquare,
   Radio,
   Search,
   Settings,
@@ -21,39 +22,31 @@ import {
   Sparkles,
   User,
   Users,
-  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/shared/logo";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
 import { isNavPathActive, profilePath } from "@/lib/routes";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ComposeBox } from "@/components/posts/compose-box";
 import { getUnreadCount } from "@/services/notifications";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
-function XLogo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
 
 const mainItems: Array<{ href: string; label: string; icon: LucideIcon; badge?: "notifications" }> = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/explore", label: "Explore", icon: Search },
   { href: "/notifications", label: "Notifications", icon: Bell, badge: "notifications" },
   { href: "/messages", label: "Messages", icon: Mail },
-];
-
-const moreItems: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/ask-ai", label: "AskAI", icon: Sparkles },
   { href: "/flux-rec", label: "Flux Rec", icon: Gamepad2 },
   { href: "/groups", label: "Communities", icon: Users },
   { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+];
+
+const moreItems: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/stories", label: "Stories", icon: Radio },
   { href: "/live", label: "Live", icon: Radio },
   { href: "/studio", label: "Studio", icon: Boxes },
@@ -70,11 +63,10 @@ function backToTop(event: React.MouseEvent) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { profile, user, signOut } = useAuth();
+  const { profile, user } = useAuth();
   const [composeOpen, setComposeOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const profileHref = profilePath(profile?.username);
-  const profileActive = pathname.startsWith("/profile") || pathname === profileHref || (profile?.username ? pathname === `/${profile.username}` : false);
 
   useEffect(() => {
     if (!user) return;
@@ -84,119 +76,29 @@ export function Sidebar() {
   }, [pathname, user]);
 
   return (
-    <div className="xxnav-col">
-      <aside className="xxnav" aria-label="Primary">
-        <Link href="/home" className="xxnav-logo" aria-label="Flux home">
-          <XLogo />
-        </Link>
-
-        <nav className="xxnav-links" aria-label="Primary navigation">
-          {mainItems.map((item) => {
-            const active = isNavPathActive(pathname, item.href);
-            const Icon = item.icon;
-            const badge = item.badge === "notifications" ? unread : 0;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                onClick={active ? backToTop : undefined}
-                className={cn("xxnav-link", active && "is-active")}
-              >
-                <span className="xxnav-icon">
-                  <Icon strokeWidth={active ? 2.6 : 1.9} />
-                  {badge > 0 ? <em className="xxnav-badge">{badge > 99 ? "99+" : badge}</em> : null}
-                </span>
-                <span className="xxnav-label">{item.label}</span>
-              </Link>
-            );
-          })}
-
-          <Link
-            href={profileHref}
-            aria-current={profileActive ? "page" : undefined}
-            className={cn("xxnav-link", profileActive && "is-active")}
-          >
-            <span className="xxnav-icon"><User strokeWidth={profileActive ? 2.6 : 1.9} /></span>
-            <span className="xxnav-label">Profile</span>
-          </Link>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="xxnav-link" aria-label="More">
-                <span className="xxnav-icon"><MoreHorizontal strokeWidth={1.9} /></span>
-                <span className="xxnav-label">More</span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="end" className="w-[290px] p-2">
-              {moreItems.map(({ href, label, icon: Icon }) => (
-                <DropdownMenuItem key={href} asChild>
-                  <Link href={href} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-bold">
-                    <Icon className="h-5 w-5" strokeWidth={1.9} />
-                    {label}
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-              {profile?.isAdmin ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-bold text-red-600">
-                      <Shield className="h-5 w-5" strokeWidth={1.9} />
-                      Admin
-                    </Link>
-                  </DropdownMenuItem>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </nav>
-
-        <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-          <DialogTrigger asChild>
-            <button type="button" className="xxnav-post" aria-label="Post">
-              <PenLine strokeWidth={2.4} />
-              <span className="xxnav-post-label">Post</span>
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-xl overflow-hidden rounded-2xl p-0">
-            <div className="p-4"><ComposeBox onSuccess={() => setComposeOpen(false)} autofocus /></div>
-          </DialogContent>
-        </Dialog>
-
-        <div className="xxnav-spacer" />
-
-        {profile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="xxnav-me" aria-label="Account menu">
-                <UserAvatar user={profile} size="md" decorations={profile.decorations} clickable={false} />
-                <span className="xxnav-me-names">
-                  <strong>{profile.displayName}</strong>
-                  <span>@{profile.username || "…"}</span>
-                </span>
-                <span className="xxnav-me-dots"><MoreHorizontal className="h-5 w-5" /></span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="end" className="w-[260px] p-2">
-              <DropdownMenuItem asChild>
-                <Link href={profileHref} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-bold">
-                  <User className="h-5 w-5" strokeWidth={1.9} />
-                  View profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => void signOut()}
-                className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-bold"
-              >
-                <LogOut className="h-5 w-5" strokeWidth={1.9} />
-                Log out @{profile.username}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-      </aside>
-    </div>
+    <aside className="flux8-sidebar hidden lg:flex">
+      <Link href="/home" className="flux8-sidebar-brand" aria-label="Flux home"><Logo showWordmark size={34} /></Link>
+      <nav className="flux8-sidebar-nav no-scrollbar" aria-label="Primary navigation">
+        {mainItems.map((item) => {
+          const active = isNavPathActive(pathname, item.href);
+          const Icon = item.icon;
+          const badge = item.badge === "notifications" ? unread : 0;
+          return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={active ? backToTop : undefined} className={cn("flux8-sidebar-link", active && "is-active")}><span className="flux8-sidebar-icon"><Icon className="h-[25px] w-[25px]" strokeWidth={active ? 2.55 : 2} />{badge > 0 ? <em>{badge > 99 ? "99+" : badge}</em> : null}</span><strong>{item.label}</strong></Link>;
+        })}
+        <Link href={profileHref} className={cn("flux8-sidebar-link", (pathname.startsWith("/profile") || pathname === profileHref) && "is-active")}><span className="flux8-sidebar-icon"><User className="h-[25px] w-[25px]" /></span><strong>Profile</strong></Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><button type="button" className="flux8-sidebar-link w-full"><span className="flux8-sidebar-icon"><MoreHorizontal className="h-[25px] w-[25px]" /></span><strong>More</strong></button></DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="end" className="flux8-more-menu w-[290px] p-2">
+            {moreItems.map(({ href, label, icon: Icon }) => <DropdownMenuItem key={href} asChild><Link href={href} className="flux8-more-item"><Icon className="h-5 w-5" /><strong>{label}</strong></Link></DropdownMenuItem>)}
+            {profile?.isAdmin ? <><DropdownMenuSeparator /><DropdownMenuItem asChild><Link href="/admin" className="flux8-more-item text-red-600"><Shield className="h-5 w-5" /><strong>Admin</strong></Link></DropdownMenuItem></> : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </nav>
+      <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+        <DialogTrigger asChild><button type="button" className="flux8-sidebar-create"><PenSquare className="h-5 w-5" /><span>Post</span></button></DialogTrigger>
+        <DialogContent className="flux8-dialog max-w-xl overflow-hidden p-0"><DialogHeader className="border-b border-border px-5 py-4"><DialogTitle>Create post</DialogTitle></DialogHeader><div className="p-4"><ComposeBox onSuccess={() => setComposeOpen(false)} autofocus /></div></DialogContent>
+      </Dialog>
+      {profile ? <Link href={profileHref} className="flux8-sidebar-profile"><UserAvatar user={profile} size="sm" decorations={profile.decorations} clickable={false} /><div><strong>{profile.displayName}</strong><span>@{profile.username || "…"}</span></div><Menu className="h-4 w-4" /></Link> : null}
+    </aside>
   );
 }

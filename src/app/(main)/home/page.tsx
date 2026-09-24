@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
+import { AlertCircle, Gamepad2, Newspaper, Radio, RefreshCw, Sparkles, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { ComposeBox } from "@/components/posts/compose-box";
 import { PostCard } from "@/components/posts/post-card";
+import { EmptyState } from "@/components/shared/empty-state";
+import { StoryRail } from "@/components/stories/story-rail";
 import { getForYouFeed, getFollowingFeed } from "@/services/posts";
 import type { PostWithAuthor } from "@/types";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type FeedTab = "foryou" | "following";
 type FeedCache = { posts: PostWithAuthor[]; savedAt: number };
@@ -122,106 +126,66 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, [loadMore, tab]);
 
-  const setPostList: React.Dispatch<React.SetStateAction<PostWithAuthor[]>> = (update) =>
-    setPosts((previous) => {
-      const next = typeof update === "function" ? (update as (p: PostWithAuthor[]) => PostWithAuthor[])(previous) : update;
-      if (user) saveCache(user.uid, tab, next);
-      return next;
-    });
-
   return (
-    <div>
-      {/* Sticky X tab header */}
-      <header className="xxhead">
-        <div className="xxtabs" role="tablist" aria-label="Timeline">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "foryou"}
-            onClick={() => setTab("foryou")}
-            className={cn("xxtab", tab === "foryou" && "is-active")}
-          >
-            <span className="xxtab-inner">
-              <span className="xxtab-label">For you</span>
-              <span className="xxtab-bar" aria-hidden="true" />
-            </span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "following"}
-            onClick={() => setTab("following")}
-            className={cn("xxtab", tab === "following" && "is-active")}
-          >
-            <span className="xxtab-inner">
-              <span className="xxtab-label">Following</span>
-              <span className="xxtab-bar" aria-hidden="true" />
-            </span>
-          </button>
-        </div>
+    <main className="flux8-feed">
+      <header className="flux8-timeline-header hidden lg:flex">
+        <div className="flex min-w-0 flex-col"><strong>Home</strong><span className="text-[9px] font-black uppercase tracking-[.12em] text-muted-foreground">Your Flux timeline</span></div>
+        <button type="button" onClick={() => void load(true)} aria-label="Refresh feed"><RefreshCw className={refreshing ? "h-[18px] w-[18px] animate-spin" : "h-[18px] w-[18px]"} /></button>
       </header>
 
-      {/* Composer */}
-      <section className="xxcomposer" aria-label="Create a post">
-        <ComposeBox onSuccess={() => void load(true)} placeholder="What's happening?" />
-      </section>
+      <div className="flux8-feed-tabs">
+        <FeedTabButton active={tab === "foryou"} onClick={() => setTab("foryou")}>For you</FeedTabButton>
+        <FeedTabButton active={tab === "following"} onClick={() => setTab("following")}>Following</FeedTabButton>
+      </div>
 
-      {/* Error */}
-      {error ? (
-        <div role="alert" className="xxerror">
-          <span style={{ flex: 1 }}>{error}. {posts.length ? "Showing your saved timeline." : "Try again."}</span>
-          <button type="button" onClick={() => void load(true)} className="xxbtn xxbtn-outline" style={{ height: 32, fontSize: 14 }}>
-            Retry
-          </button>
-        </div>
-      ) : null}
+      <nav className="grid grid-cols-3 border-b border-border bg-[linear-gradient(180deg,rgba(29,155,240,.045),transparent)] p-2.5 sm:p-3" aria-label="Flux quick actions">
+        <QuickLaunch href="/ask-ai" icon={Sparkles} title="AskAI" subtitle="Ripo local AI" />
+        <QuickLaunch href="/live" icon={Radio} title="Live" subtitle="Watch now" />
+        <QuickLaunch href="/flux-rec" icon={Gamepad2} title="Flux Rec" subtitle="Rooms and photos" />
+      </nav>
 
-      {/* Feed */}
-      {loading ? (
-        <div aria-label="Loading posts">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="xxskel" aria-hidden="true">
-              <div className="xxskel-ava" />
-              <div className="xxskel-main">
-                <div className="xxskel-line" style={{ width: "40%" }} />
-                <div className="xxskel-line" style={{ width: "100%" }} />
-                <div className="xxskel-line" style={{ width: "85%" }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="xxempty">
-          <h3>{tab === "following" ? "No posts from people you follow" : "Your timeline is quiet"}</h3>
-          <p>{tab === "following" ? "Follow people to build your Following timeline." : "When you post or follow people, their posts will show up here."}</p>
-        </div>
-      ) : (
-        <div>
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onChange={(updated) => setPostList((previous) =>
-                updated.isDeleted
-                  ? previous.filter((item) => item.id !== updated.id)
-                  : previous.map((item) => item.id === updated.id ? updated : item)
-              )}
-            />
-          ))}
-        </div>
-      )}
+      {error ? <div className="flex items-center gap-3 border-b border-border bg-amber-500/8 px-4 py-3 text-sm"><AlertCircle className="h-4 w-4 text-amber-600" /><span className="min-w-0 flex-1">{error}. {posts.length ? "Showing your saved timeline." : "Try again."}</span><button type="button" onClick={() => void load(true)} className="font-bold text-primary">Retry</button></div> : null}
 
+      <section className="flux8-composer-card"><ComposeBox onSuccess={() => void load(true)} placeholder="What is happening?" /></section>
+      <section className="flux8-story-card"><StoryRail compact /></section>
+
+      <FeedList
+        loading={loading}
+        posts={posts}
+        emptyTitle={tab === "following" ? "No posts from people you follow" : "Your timeline is quiet"}
+        emptyDescription={tab === "following" ? "Follow people to build your Following timeline." : "Post something or follow people to fill this timeline."}
+        emptyIcon={tab === "following" ? Users : Newspaper}
+        onRefresh={() => void load(true)}
+        setPosts={(update) => setPosts((previous) => {
+          const next = typeof update === "function" ? update(previous) : update;
+          if (user) saveCache(user.uid, tab, next);
+          return next;
+        })}
+      />
       <div ref={sentinelRef} className="h-1" aria-hidden="true" />
-      {loadingMore ? (
-        <div className="flex items-center justify-center py-6 text-sm" style={{ color: "var(--xx-gray)" }}>
-          Loading more posts&hellip;
-        </div>
-      ) : null}
-      {refreshing && !loading ? (
-        <div className="flex items-center justify-center py-4 text-[13px]" style={{ color: "var(--xx-gray)" }}>
-          Updating timeline&hellip;
-        </div>
-      ) : null}
-    </div>
+      {loadingMore ? <div className="flux8-loading-more">Loading more posts…</div> : null}
+    </main>
   );
+}
+
+function QuickLaunch({ href, icon: Icon, title, subtitle }: { href: string; icon: typeof Sparkles; title: string; subtitle: string }) {
+  return <Link href={href} className="group flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2 transition hover:bg-foreground/[.05] sm:px-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition group-hover:scale-105"><Icon className="h-4 w-4" /></span><span className="min-w-0"><strong className="block truncate text-xs font-black">{title}</strong><small className="mt-0.5 block truncate text-[9px] font-semibold text-muted-foreground">{subtitle}</small></span></Link>;
+}
+
+function FeedTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} className={active ? "is-active" : ""}><span>{children}</span></button>;
+}
+
+function FeedList({ loading, posts, emptyTitle, emptyDescription, emptyIcon = Newspaper, onRefresh, setPosts }: {
+  loading: boolean;
+  posts: PostWithAuthor[];
+  emptyTitle: string;
+  emptyDescription: string;
+  emptyIcon?: typeof Newspaper;
+  onRefresh: () => void;
+  setPosts: React.Dispatch<React.SetStateAction<PostWithAuthor[]>>;
+}) {
+  if (loading) return <div aria-label="Loading posts">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="flux8-post-skeleton"><div className="skeleton h-10 w-10 shrink-0 rounded-full" /><div className="min-w-0 flex-1 space-y-2"><div className="skeleton h-4 w-40 rounded" /><div className="skeleton h-4 w-full rounded" /><div className="skeleton h-4 w-4/5 rounded" />{index % 2 === 0 ? <div className="skeleton mt-3 aspect-video w-full rounded-2xl" /> : null}</div></div>)}</div>;
+  if (!posts.length) return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={<Button variant="outline" onClick={onRefresh}>Refresh</Button>} />;
+  return <>{posts.map((post) => <div key={post.id} className="flux8-post-wrap"><PostCard post={post} onChange={(updated) => setPosts((previous) => updated.isDeleted ? previous.filter((item) => item.id !== updated.id) : previous.map((item) => item.id === updated.id ? updated : item))} /></div>)}</>;
 }
