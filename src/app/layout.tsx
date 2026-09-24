@@ -15,7 +15,6 @@ import "@/styles/askai-v11-deep.css";
 import "@/styles/flux-v11-visible.css";
 import "@/styles/flux-v12-rebuild.css";
 import "@/styles/flux-v13-redesign.css";
-import "@/styles/flux-motion.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const release = process.env.NEXT_PUBLIC_RELEASE_SHA || "local";
@@ -53,7 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className="light" data-accent="blue" data-flux-ui="x5" data-flux-release={release.slice(0, 12)} suppressHydrationWarning>
       <head>
         <meta name="flux-compat-ui" content="x5" data-flux-ui="x5" />
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem("flux-theme-v2");var a=localStorage.getItem("flux-accent-v1");var r=document.documentElement;if(!t){t="light";try{localStorage.setItem("flux-theme-v2","light")}catch(e){}}if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}if(t==="light"||t==="dim"||t==="dark"){r.classList.remove("light","dim","dark");r.classList.add(t);r.style.colorScheme=t==="light"?"light":"dark"}if(a){r.dataset.accent=a}}catch(e){}})()` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem("flux-theme-v2");var a=localStorage.getItem("flux-accent-v1");var r=document.documentElement;if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}if(t==="light"||t==="dim"||t==="dark"){r.classList.remove("light","dim","dark");r.classList.add(t);r.style.colorScheme=t==="light"?"light":"dark"}if(a){r.dataset.accent=a}}catch(e){}})()` }} />
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <ThemeProvider>
