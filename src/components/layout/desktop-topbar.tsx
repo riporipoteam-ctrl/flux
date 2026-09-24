@@ -15,7 +15,7 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith("/explore")) return "Explore";
   if (pathname.startsWith("/stories")) return "Stories";
   if (pathname.startsWith("/groups") || pathname.startsWith("/group")) return "Communities";
-  if (pathname.startsWith("/games")) return "Games";
+  if (pathname.startsWith("/flux-rec")) return "Flux Rec";
   if (pathname.startsWith("/messages")) return "Messages";
   if (pathname.startsWith("/notifications")) return "Notifications";
   if (pathname.startsWith("/live")) return "Live";

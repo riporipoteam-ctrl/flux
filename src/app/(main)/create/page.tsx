@@ -92,7 +92,7 @@ const creatorTools = [
 ];
 
 const destinations = [
-  { href: "/games", label: "Flux Games", icon: Gamepad2, description: "Play and discover published creator games" },
+  { href: "/flux-rec", label: "Flux Rec", icon: Gamepad2, description: "Rooms, photos and your game account" },
   { href: "/stories", label: "Stories", icon: Images, description: "Watch active Stories and view analytics" },
   { href: "/live", label: "Live", icon: Radio, description: "Discover broadcasts happening now" },
   { href: "/premium", label: "Premium", icon: Crown, description: "Unlock creator limits, rewards and verification" },

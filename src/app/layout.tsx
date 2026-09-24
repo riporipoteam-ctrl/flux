@@ -14,13 +14,14 @@ import "@/styles/flux-v11-posts.css";
 import "@/styles/askai-v11-deep.css";
 import "@/styles/flux-v11-visible.css";
 import "@/styles/flux-v12-rebuild.css";
+import "@/styles/flux-v13-redesign.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const release = process.env.NEXT_PUBLIC_RELEASE_SHA || "local";
 
 export const metadata: Metadata = {
-  title: "Flux — Social, Games, Create",
-  description: "Flux is the social and gaming network by Ripo Team — connect, create, share and play free browser games from mobile, tablet or PC.",
+  title: "Flux — Social, Create, Flux Rec",
+  description: "Flux is the social network by Ripo Team — connect, create, share, and explore Flux Rec rooms and photos from mobile, tablet or PC.",
   applicationName: "Flux",
   authors: [{ name: "Ripo Team" }],
   manifest: `${basePath}/manifest.webmanifest`,

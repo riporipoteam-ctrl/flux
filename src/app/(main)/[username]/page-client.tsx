@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Calendar,
+  Camera,
   Link as LinkIcon,
   MapPin,
   Loader2,
@@ -65,6 +66,7 @@ export default function ProfilePage(
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [tab, setTab] = useState("posts");
+  const [photoVisibility, setPhotoVisibility] = useState<"public" | "private">("public");
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [followsMe, setFollowsMe] = useState(false);
@@ -481,8 +483,42 @@ export default function ProfilePage(
             <TabsTrigger value="posts">Posts</TabsTrigger>
             <TabsTrigger value="replies">Replies</TabsTrigger>
             <TabsTrigger value="media">Media</TabsTrigger>
+            <TabsTrigger value="photos">Photos</TabsTrigger>
             <TabsTrigger value="likes">Likes</TabsTrigger>
           </TabsList>
+          <TabsContent value="photos">
+            <div className="fluxrec-photos-wrap">
+              <div className="fluxrec-visibility-toggle" role="tablist" aria-label="Photo visibility">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={photoVisibility === "public"}
+                  onClick={() => setPhotoVisibility("public")}
+                  className={photoVisibility === "public" ? "is-active" : ""}
+                >
+                  Public
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={photoVisibility === "private"}
+                  onClick={() => setPhotoVisibility("private")}
+                  className={photoVisibility === "private" ? "is-active" : ""}
+                >
+                  <LockKeyhole className="h-3.5 w-3.5" /> Private
+                </button>
+              </div>
+              <EmptyState
+                icon={Camera}
+                title={photoVisibility === "public" ? "No public photos yet" : "No private photos yet"}
+                description={
+                  photoVisibility === "public"
+                    ? "Photos marked Public in Flux Rec will appear here for everyone to see."
+                    : "Only you can see these. Snap a photo in Flux Rec and mark it Private."
+                }
+              />
+            </div>
+          </TabsContent>
           {(["posts", "replies", "media", "likes"] as const).map((t) => (
             <TabsContent key={t} value={t}>
               {posts.length === 0 ? (

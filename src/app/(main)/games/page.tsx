@@ -1,11 +1,5 @@
-import GamesHub from "@/components/game/games-hub";
-import { RecRoomFeatureBanner } from "@/components/game/recroom-feature-banner";
+import { redirect } from "next/navigation";
 
 export default function GamesPage() {
-  return (
-    <>
-      <RecRoomFeatureBanner />
-      <GamesHub />
-    </>
-  );
+  redirect("/flux-rec");
 }

@@ -6,7 +6,7 @@ import "./studio.css";
 const links = [
   { href: "/studio", label: "Editor", icon: Boxes },
   { href: "/studio/music", label: "Audio", icon: Headphones },
-  { href: "/games", label: "Games", icon: Gamepad2 },
+  { href: "/flux-rec", label: "Flux Rec", icon: Gamepad2 },
   { href: "/create", label: "Create", icon: LayoutGrid },
 ];
 

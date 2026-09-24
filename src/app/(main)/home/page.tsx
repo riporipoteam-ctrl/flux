@@ -141,7 +141,7 @@ export default function HomePage() {
       <nav className="grid grid-cols-3 border-b border-border bg-[linear-gradient(180deg,rgba(29,155,240,.045),transparent)] p-2.5 sm:p-3" aria-label="Flux quick actions">
         <QuickLaunch href="/ask-ai" icon={Sparkles} title="AskAI" subtitle="Ripo local AI" />
         <QuickLaunch href="/live" icon={Radio} title="Live" subtitle="Watch now" />
-        <QuickLaunch href="/games" icon={Gamepad2} title="Games" subtitle="Play instantly" />
+        <QuickLaunch href="/flux-rec" icon={Gamepad2} title="Flux Rec" subtitle="Rooms and photos" />
       </nav>
 
       {error ? <div className="flex items-center gap-3 border-b border-border bg-amber-500/8 px-4 py-3 text-sm"><AlertCircle className="h-4 w-4 text-amber-600" /><span className="min-w-0 flex-1">{error}. {posts.length ? "Showing your saved timeline." : "Try again."}</span><button type="button" onClick={() => void load(true)} className="font-bold text-primary">Retry</button></div> : null}

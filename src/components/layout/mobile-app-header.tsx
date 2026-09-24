@@ -17,7 +17,7 @@ function sectionLabel(pathname: string): string {
   if (pathname.startsWith("/live")) return "Live";
   if (pathname.startsWith("/bookmarks")) return "Bookmarks";
   if (pathname.startsWith("/groups") || pathname.startsWith("/group")) return "Communities";
-  if (pathname.startsWith("/games")) return "Games";
+  if (pathname.startsWith("/flux-rec")) return "Flux Rec";
   if (pathname.startsWith("/shop")) return "Shop";
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/post")) return "Post";

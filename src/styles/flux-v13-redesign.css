@@ -1,0 +1,692 @@
+/* ==========================================================================
+   Flux v13 — redesign pass
+   A modern, clean Facebook/X-style refinement layer. Loaded last so it wins
+   over older layers. Mobile-first; every new surface ships responsive.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Flux Rec page
+   -------------------------------------------------------------------------- */
+
+.fluxrec-page {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+.fluxrec-hero {
+  margin: 12px 12px 0;
+  overflow: hidden;
+  border: 1px solid var(--v8-line);
+  border-radius: 24px;
+  background: var(--v8-panel);
+  box-shadow: var(--v8-shadow-sm);
+}
+
+.fluxrec-hero-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 168px;
+  background:
+    radial-gradient(120% 140% at 15% 10%, rgba(29, 155, 240, 0.55), transparent 55%),
+    radial-gradient(120% 140% at 85% 90%, rgba(249, 115, 22, 0.5), transparent 55%),
+    linear-gradient(135deg, #0b1220, #1b2a4a 55%, #3b1d5e);
+  overflow: hidden;
+}
+
+.fluxrec-hero-logo {
+  display: grid;
+  place-items: center;
+  height: 76px;
+  width: 76px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #1d9bf0, #7856ff);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  box-shadow: 0 12px 40px rgba(29, 155, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.fluxrec-hero-glow {
+  position: absolute;
+  inset: auto -20% -60% -20%;
+  height: 120%;
+  background: radial-gradient(50% 60% at 50% 100%, rgba(29, 155, 240, 0.28), transparent 70%);
+  pointer-events: none;
+}
+
+.fluxrec-hero-text { padding: 18px 18px 20px; }
+
+.fluxrec-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: var(--v8-accent-soft);
+  color: var(--v8-accent-2);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fluxrec-hero-text h1 {
+  margin: 10px 0 8px;
+  font-size: clamp(26px, 6vw, 34px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.fluxrec-hero-text > p {
+  color: var(--v8-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+  max-width: 60ch;
+}
+
+.fluxrec-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.fluxrec-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  border-radius: 999px;
+  background: var(--v8-accent);
+  color: #fff;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(29, 155, 240, 0.35);
+  transition: transform 0.15s var(--v8-ease), background 0.15s;
+}
+
+.fluxrec-connect-btn:hover { background: var(--v8-accent-2); }
+.fluxrec-connect-btn:active { transform: scale(0.97); }
+
+.fluxrec-hero-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v8-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fluxrec-hero-live svg { color: #f97316; }
+
+.fluxrec-rooms-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 22px 16px 10px;
+}
+
+.fluxrec-rooms-head h2 {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.fluxrec-rooms-head span {
+  color: var(--v8-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fluxrec-rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 12px;
+}
+
+.fluxrec-room-card {
+  overflow: hidden;
+  border: 1px solid var(--v8-line);
+  border-radius: 20px;
+  background: var(--v8-panel);
+  box-shadow: var(--v8-shadow-sm);
+  transition: transform 0.18s var(--v8-ease), box-shadow 0.18s;
+}
+
+.fluxrec-room-card:hover { box-shadow: var(--v8-shadow-md); }
+.fluxrec-room-card:active { transform: scale(0.98); }
+
+.fluxrec-room-thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+}
+
+.fluxrec-room-players {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  backdrop-filter: blur(6px);
+}
+
+.fluxrec-room-rro {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f1419;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.fluxrec-room-play {
+  display: grid;
+  place-items: center;
+  height: 52px;
+  width: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f1419;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.18s, transform 0.18s var(--v8-spring);
+  box-shadow: var(--v8-shadow-md);
+}
+
+.fluxrec-room-card:hover .fluxrec-room-play,
+.fluxrec-room-card:focus-visible .fluxrec-room-play {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.fluxrec-room-body { padding: 12px 14px 14px; }
+
+.fluxrec-room-body h3 {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fluxrec-room-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  color: var(--v8-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.fluxrec-room-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fluxrec-skeleton-thumb {
+  aspect-ratio: 16 / 10;
+  background: var(--v8-panel-3);
+  animation: fluxrec-pulse 1.4s ease-in-out infinite;
+}
+
+.fluxrec-skeleton-line {
+  height: 14px;
+  margin: 12px 14px 16px;
+  border-radius: 7px;
+  background: var(--v8-panel-3);
+  animation: fluxrec-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes fluxrec-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.fluxrec-link-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 12px 0;
+  border: 1px dashed var(--v8-line-strong);
+  border-radius: 18px;
+  background: var(--v8-panel-2);
+  padding: 14px 16px;
+}
+
+.fluxrec-link-strip > svg { flex: none; color: var(--v8-muted); }
+
+.fluxrec-link-strip p {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--v8-muted);
+}
+
+.fluxrec-link-strip p strong { color: var(--v8-text); }
+
+.fluxrec-link-strip a {
+  flex: none;
+  color: var(--v8-accent);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Room detail dialog */
+
+.fluxrec-detail-hero {
+  position: relative;
+  min-height: 170px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.fluxrec-detail-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  display: grid;
+  place-items: center;
+  height: 36px;
+  width: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+
+.fluxrec-detail-hero-text { padding: 16px 20px; color: #fff; }
+
+.fluxrec-detail-hero-text h2 {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.fluxrec-detail-hero-text p {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fluxrec-live-dot {
+  height: 8px;
+  width: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.25);
+  animation: fluxrec-pulse 1.6s ease-in-out infinite;
+}
+
+.fluxrec-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.fluxrec-detail-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--v8-line);
+  border-radius: 16px;
+  background: var(--v8-panel-2);
+  padding: 12px 6px;
+}
+
+.fluxrec-detail-stats strong { font-size: 17px; font-weight: 900; }
+.fluxrec-detail-stats span { font-size: 11.5px; color: var(--v8-muted); font-weight: 600; }
+
+.fluxrec-tag {
+  border-radius: 999px;
+  background: var(--v8-panel-3);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v8-text-2);
+}
+
+.fluxrec-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 20px 0 10px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.fluxrec-empty {
+  border-radius: 14px;
+  background: var(--v8-panel-2);
+  padding: 14px;
+  font-size: 13px;
+  color: var(--v8-muted);
+}
+
+.fluxrec-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.fluxrec-photo {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 0;
+}
+
+.fluxrec-photo figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 18px 8px 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  color: #fff;
+}
+
+.fluxrec-photo figcaption strong {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.fluxrec-photo figcaption span { font-size: 10px; opacity: 0.75; }
+
+.fluxrec-play-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  margin-top: 20px;
+  border-radius: 999px;
+  background: var(--v8-panel-3);
+  color: var(--v8-muted);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: not-allowed;
+}
+
+.fluxrec-note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--v8-muted);
+}
+
+/* --------------------------------------------------------------------------
+   2. Flux Rec account link card (settings)
+   -------------------------------------------------------------------------- */
+
+.fluxrec-link-card { scroll-margin-top: 90px; }
+
+.fluxrec-link-icon {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  width: 44px;
+  flex: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1d9bf0, #7856ff);
+  color: #fff;
+}
+
+.fluxrec-linked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--v8-green-soft);
+  color: var(--v8-green);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fluxrec-code-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fluxrec-code-input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  border: 1.5px solid var(--v8-line-strong);
+  border-radius: 14px;
+  background: var(--v8-panel);
+  padding: 0 16px;
+  font-family: ui-monospace, monospace;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--v8-text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.fluxrec-code-input:focus {
+  border-color: var(--v8-accent);
+  box-shadow: 0 0 0 4px var(--v8-accent-ring);
+}
+
+.fluxrec-code-input::placeholder { color: var(--v8-faint); letter-spacing: 0.18em; }
+
+.fluxrec-connect-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--v8-accent);
+  color: #fff;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.fluxrec-connect-btn-sm:hover:not(:disabled) { background: var(--v8-accent-2); }
+.fluxrec-connect-btn-sm:active:not(:disabled) { transform: scale(0.97); }
+.fluxrec-connect-btn-sm:disabled { opacity: 0.7; }
+
+.fluxrec-unlink-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--v8-red-soft);
+  color: var(--v8-red);
+  padding: 0 18px;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+/* --------------------------------------------------------------------------
+   3. Profile photos tab
+   -------------------------------------------------------------------------- */
+
+.fluxrec-photos-wrap { padding: 4px 0 24px; }
+
+.fluxrec-visibility-toggle {
+  display: inline-flex;
+  margin: 12px 16px 4px;
+  border-radius: 999px;
+  background: var(--v8-panel-3);
+  padding: 4px;
+}
+
+.fluxrec-visibility-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  border-radius: 999px;
+  padding: 0 18px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--v8-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.fluxrec-visibility-toggle button.is-active {
+  background: var(--v8-panel);
+  color: var(--v8-text);
+  box-shadow: var(--v8-shadow-sm);
+}
+
+/* --------------------------------------------------------------------------
+   4. Global modern polish
+   -------------------------------------------------------------------------- */
+
+/* Sticky page headers get the frosted X look */
+.x-header {
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+}
+
+/* Sidebar links: X-style pill hover */
+.flux8-sidebar-link {
+  border-radius: 999px;
+  transition: background 0.15s var(--v8-ease);
+}
+
+.flux8-sidebar-link:hover { background: var(--v8-panel-3); }
+
+.flux8-sidebar-link.is-active strong { color: var(--v8-text); }
+
+/* Post action bars: softer hover targets */
+.flux8-post-actions button,
+[class*="post-actions"] button {
+  border-radius: 999px;
+}
+
+/* Dialogs: modern sheet rounding */
+.flux8-dialog {
+  border-radius: 24px;
+  box-shadow: var(--v8-shadow-lg);
+}
+
+/* Mobile dock: frosted, safe-area aware */
+.flux8-mobile-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+}
+
+.flux8-mobile-tab {
+  min-height: 56px;
+  border-radius: 16px;
+}
+
+/* Composer: elevated card */
+.flux8-compose,
+[class*="compose-box"] {
+  border-radius: 20px;
+}
+
+/* Inputs: consistent modern treatment */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+textarea {
+  font-size: 16px; /* prevents iOS zoom on focus */
+}
+
+/* Focus visibility for accessibility */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--v8-accent);
+  outline-offset: 2px;
+}
+
+/* Thin, theme-aware scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--v8-line-strong) transparent;
+}
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--v8-line-strong);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* --------------------------------------------------------------------------
+   5. Responsive: tablet + desktop
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 640px) {
+  .fluxrec-rooms-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fluxrec-hero { margin: 16px 16px 0; }
+  .fluxrec-link-strip { margin: 24px 16px 0; }
+  .fluxrec-rooms-head { padding: 26px 20px 12px; }
+  .fluxrec-rooms-grid { padding: 0 16px; }
+}
+
+@media (min-width: 1024px) {
+  .fluxrec-hero {
+    display: grid;
+    grid-template-columns: minmax(280px, 380px) 1fr;
+    margin: 20px auto 0;
+    max-width: 980px;
+  }
+  .fluxrec-hero-thumb { min-height: 100%; }
+  .fluxrec-hero-text { padding: 28px 32px; }
+  .fluxrec-rooms-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .fluxrec-rooms-head { max-width: 980px; margin: 0 auto; }
+  .fluxrec-link-strip { max-width: 980px; margin-left: auto; margin-right: auto; }
+  .fluxrec-page { padding-bottom: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluxrec-room-card,
+  .fluxrec-connect-btn,
+  .fluxrec-room-play { transition: none; }
+  .fluxrec-live-dot { animation: none; }
+}

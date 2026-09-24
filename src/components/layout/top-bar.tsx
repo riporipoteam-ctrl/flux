@@ -27,7 +27,7 @@ import { ComposeBox } from "@/components/posts/compose-box";
 const TABS: Array<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/games", label: "Games", icon: Gamepad2 },
+  { href: "/flux-rec", label: "Flux Rec", icon: Gamepad2 },
   { href: "/messages", label: "Messages", icon: Mail },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];

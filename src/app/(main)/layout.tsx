@@ -29,13 +29,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isPublicAskAI = isAskAI;
   const isMessages = pathname?.startsWith("/messages");
   const isCall = pathname?.startsWith("/messages/call");
-  const isGames = pathname?.startsWith("/games");
+  const isFluxRec = pathname?.startsWith("/flux-rec");
   const isArcade = pathname?.startsWith("/games/arcade");
   const isLive = pathname?.startsWith("/live");
   const isStudio = pathname?.startsWith("/studio");
   const isLiveRoom = pathname?.startsWith("/live/create") || isPublicLiveViewer;
   const isImmersive = isAskAI || isCall || isLiveRoom || isArcade;
-  const hideRail = isMessages || isGames || isLive;
+  const hideRail = isMessages || isFluxRec || isLive;
   const profileCompleted = Boolean(profile && (profile.onboardingComplete || String(profile.username || "").trim()));
 
   useEffect(() => {

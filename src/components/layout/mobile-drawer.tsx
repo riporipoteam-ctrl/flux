@@ -42,7 +42,7 @@ const sections: Array<{ label: string; items: Array<{ href: string; label: strin
     items: [
       { href: "/ask-ai", label: "AskAI", icon: Sparkles, description: "Ask, search and create" },
       { href: "/studio", label: "Flux Studio", icon: Boxes, description: "Build and publish games" },
-      { href: "/games", label: "Games", icon: Gamepad2, description: "Play the Flux catalog" },
+      { href: "/flux-rec", label: "Flux Rec", icon: Gamepad2, description: "Rooms, photos and your game account" },
       { href: "/stories/create", label: "Create Story", icon: Images },
       { href: "/live/create", label: "Go Live", icon: Radio },
       { href: "/stickers", label: "Sticker Lab", icon: Sticker },

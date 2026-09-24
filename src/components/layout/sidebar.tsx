@@ -41,7 +41,7 @@ const mainItems: Array<{ href: string; label: string; icon: LucideIcon; badge?: 
   { href: "/notifications", label: "Notifications", icon: Bell, badge: "notifications" },
   { href: "/messages", label: "Messages", icon: Mail },
   { href: "/ask-ai", label: "AskAI", icon: Sparkles },
-  { href: "/games", label: "Games", icon: Gamepad2 },
+  { href: "/flux-rec", label: "Flux Rec", icon: Gamepad2 },
   { href: "/groups", label: "Communities", icon: Users },
   { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
 ];

@@ -25,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { updateUserProfile } from "@/services/users";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { XCard, XHeader, XPage, XRow, XSectionTitle } from "@/components/x/x-ui";
+import { FluxRecLinkCard } from "@/components/fluxrec/flux-rec-link-card";
 import { formatCount } from "@/lib/utils";
 import { profilePath } from "@/lib/routes";
 
@@ -77,6 +78,8 @@ export default function SettingsPage() {
         </div>
       ) : null}
 
+      <FluxRecLinkCard />
+
       <XSectionTitle>Appearance</XSectionTitle>
       <XRow
         icon={Palette}
@@ -107,7 +110,7 @@ export default function SettingsPage() {
       <XRow icon={Activity} title="Activity history" description="Likes, follows and replies timeline" href="/activity" trailing={<ChevronRight className="h-4 w-4" />} />
       <XRow icon={Bookmark} title="Bookmarks" description="Posts you saved for later" href="/bookmarks" trailing={<ChevronRight className="h-4 w-4" />} />
       <XRow icon={Bell} title="Notifications" description="Alerts and mentions" href="/notifications" trailing={<ChevronRight className="h-4 w-4" />} />
-      <XRow icon={Gamepad2} title="Games" description="Flux Farm and the rest of the arcade" href="/games" trailing={<ChevronRight className="h-4 w-4" />} />
+      <XRow icon={Gamepad2} title="Flux Rec" description="Rooms, photos and game account linking" href="/flux-rec" trailing={<ChevronRight className="h-4 w-4" />} />
 
       <XSectionTitle>Support</XSectionTitle>
       <XRow icon={Crown} title="Flux Premium" description="Plans, multipliers and creator tools" href="/premium" trailing={<ChevronRight className="h-4 w-4" />} />
