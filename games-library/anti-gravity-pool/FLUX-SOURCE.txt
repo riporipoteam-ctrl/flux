@@ -1,0 +1,4 @@
+Hosted by Flux from the open-source project below.
+Upstream: https://github.com/erichlof/AntiGravity-Pool
+Revision: d64ea2104be8ee36e833719986ad707fffd2576a
+Flux has not removed the upstream copyright or license files.

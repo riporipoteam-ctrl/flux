@@ -1,0 +1,4 @@
+Hosted by Flux from the open-source project below.
+Upstream: https://github.com/scottrippey/xquestjs
+Revision: 0df3825fe96ba4171eb18387128b002f388c7efd
+Flux has not removed the upstream copyright or license files.

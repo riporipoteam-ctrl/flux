@@ -1,0 +1,12 @@
+FLUX ORIGINALS
+
+Flux Velocity, Flux Orbit, Flux Rooftop, Flux Hoops, Flux Defender and Flux Stack are original Ripo Team game implementations stored and served by the Flux repository.
+
+ENGINE NOTICE
+
+Flux Velocity and Flux Orbit use the Three.js rendering library.
+Three.js is licensed under the MIT License.
+Copyright © 2010-2026 Three.js authors.
+The full Three.js license is preserved with the bundled library files in this repository.
+
+No remote game host is loaded by the Flux Originals catalog.
