@@ -180,8 +180,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
           <Button
             type="submit"
+            variant="flux"
             size="lg"
-            className="xxauth-submit"
+            className="w-full rounded-full text-base"
             loading={loading}
             disabled={loading || googleLoading}
           >
