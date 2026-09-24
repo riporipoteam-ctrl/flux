@@ -11,11 +11,7 @@ export function FluxMark({ size = 34, className }: { size?: number; className?: 
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 40 40" width={size} height={size} fill="none">
-        <rect x="1.5" y="1.5" width="37" height="37" rx="12" fill="currentColor" />
-        <path d="M11.5 11.5h18v5.4H17.8v4.1h10v5.2h-10v7h-6.3V11.5Z" fill="var(--flux-mark-ink,#fff)" />
-        <path d="M27.3 28.2 32 32.9" stroke="var(--flux-mark-ink,#fff)" strokeWidth="3.4" strokeLinecap="round" />
-      </svg>
+      <img src="/flux-logo.png" alt="" width={size} height={size} className="object-contain" />
     </span>
   );
 }
