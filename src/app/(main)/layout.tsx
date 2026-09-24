@@ -15,7 +15,6 @@ import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
 import { IncomingCallBanner } from "@/components/messages/incoming-call-banner";
 import { RouteProgress } from "@/components/layout/route-progress";
-import { TopBar } from "@/components/layout/top-bar";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading, refreshProfile, signOut } = useAuth();
@@ -76,7 +75,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (!user) return <LoadingScreen label="Opening sign in" />;
 
   if (!profile) {
-    return <div className="flux8-auth-fallback grid min-h-[100dvh] place-items-center px-5"><div className="w-full max-w-sm rounded-2xl border border-border bg-card p-7 text-center"><h1 className="text-xl font-black">We couldn&apos;t load your profile</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">Your session is safe. Retry the connection, or return to sign in.</p><button onClick={() => void refreshProfile()} className="mt-5 h-11 w-full rounded-full bg-primary text-sm font-black text-white">Try again</button><button onClick={() => void signOut()} className="mt-2 h-10 w-full rounded-full text-sm font-semibold text-muted-foreground hover:bg-muted">Return to sign in</button></div></div>;
+    return <div className="grid min-h-[100dvh] place-items-center px-5" style={{ background: "var(--xx-bg)" }}><div className="w-full max-w-sm rounded-2xl p-7 text-center" style={{ border: "1px solid var(--xx-line)" }}><h1 className="text-xl font-black">We couldn&apos;t load your profile</h1><p className="mt-2 text-sm leading-6" style={{ color: "var(--xx-gray)" }}>Your session is safe. Retry the connection, or return to sign in.</p><button onClick={() => void refreshProfile()} className="xxbtn xxbtn-blue mt-5 h-11 w-full">Try again</button><button onClick={() => void signOut()} className="mt-2 h-10 w-full rounded-full text-sm font-semibold" style={{ color: "var(--xx-gray)" }}>Return to sign in</button></div></div>;
   }
 
   if (needsOnboarding) return <LoadingScreen label="Continuing setup" />;
@@ -85,13 +84,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (isImmersive) return <div className="h-[100dvh] w-full overflow-auto bg-background"><RouteProgress /><IncomingCallBanner />{children}</div>;
 
   return (
-    <div className="flux8-app-shell flux-v12-shell min-h-[100dvh] overflow-x-clip" data-flux-shell="v12" data-rail={hideRail ? "off" : "on"}>
+    <div className="xxshell">
       <RouteProgress />
       <IncomingCallBanner />
-      <TopBar />
-      <Sidebar />
-      <main className="flux8-main-column min-w-0 lg:pb-0"><MobileAppHeader />{children}</main>
-      {!hideRail ? <RightRail /> : null}
+      <div className="xxshell-inner">
+        <Sidebar />
+        <main className="xxmain-col">
+          <MobileAppHeader />
+          {children}
+        </main>
+        {!hideRail ? <RightRail /> : null}
+      </div>
       <MobileNav />
     </div>
   );
