@@ -42,6 +42,7 @@ jobs:
       - name: Build static export
         env:
           GITHUB_PAGES: "true"
+          CUSTOM_DOMAIN: "true"
           NEXT_PUBLIC_RELEASE_SHA: ${{ github.sha }}
           NEXT_PUBLIC_ASK_AI_ENDPOINT: ${{ vars.NEXT_PUBLIC_ASK_AI_ENDPOINT }}
           NEXT_PUBLIC_TURN_URL: ${{ vars.NEXT_PUBLIC_TURN_URL }}
