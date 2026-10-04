@@ -2,9 +2,10 @@ import type { NextConfig } from "next";
 
 const isGitHubPages = process.env.GITHUB_PAGES === "true";
 const isCapacitor = process.env.CAPACITOR_BUILD === "true";
+const isCustomDomain = process.env.CUSTOM_DOMAIN === "true";
 const isStaticExport = isGitHubPages || isCapacitor;
 const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "flux";
-const basePath = isGitHubPages ? `/${repositoryName}` : "";
+const basePath = (isGitHubPages && !isCustomDomain) ? `/${repositoryName}` : "";
 
 const nextConfig: NextConfig = {
   env: {
