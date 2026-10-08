@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import {
   Camera,
   Flame,
   Gamepad2,
   Heart,
+  Image as ImageIcon,
   Link2,
-  Lock,
+  Loader2,
   Play,
-  Sparkles,
+  Star,
   Trophy,
   Users,
   X,
@@ -19,34 +19,47 @@ import { XHeader, XPage } from "@/components/x/x-ui";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   fetchFluxRecRooms,
+  fetchLinkedPhotos,
+  fetchLinkedRooms,
   formatCompact,
+  type FluxRecPhoto,
   type FluxRecRoom,
 } from "@/data/flux-rec-rooms";
+import {
+  clearStoredFluxToken,
+  exchangePairingCode,
+  getFluxSocialMe,
+  readStoredFluxToken,
+  storeFluxToken,
+  unlinkFluxSocial,
+  type FluxSocialLinkedAccount,
+} from "@/services/fluxrec-pairing";
 
 function RoomCard({ room, onOpen }: { room: FluxRecRoom; onOpen: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="fluxrec-room-card group text-left"
-      aria-label={`Open ${room.name}`}
-    >
-      <div className="fluxrec-room-thumb" style={{ background: room.gradient }}>
-        <span className="fluxrec-room-players">
-          <Users className="h-3.5 w-3.5" />
-          {room.playersNow}
-        </span>
-        {room.isRRO ? <span className="fluxrec-room-rro">RRO</span> : null}
-        <span className="fluxrec-room-play">
-          <Play className="h-5 w-5 fill-current" />
-        </span>
+    <button type="button" onClick={onOpen} className="frx-card" aria-label={`Open ${room.name}`}>
+      <div className="frx-thumb">
+        {room.imageUrl ? (
+          <img src={room.imageUrl} alt={room.name} loading="lazy" />
+        ) : (
+          <div className="frx-thumb-fallback">
+            <Gamepad2 className="h-10 w-10 text-white/30" />
+          </div>
+        )}
+        {room.isRRO ? <span className="frx-rro">RRO</span> : null}
+        {room.maxPlayers > 0 ? (
+          <span className="frx-maxp">
+            <Users className="h-3.5 w-3.5" /> up to {room.maxPlayers}
+          </span>
+        ) : null}
       </div>
-      <div className="fluxrec-room-body">
+      <div className="frx-body">
         <h3>{room.name}</h3>
-        <p className="fluxrec-room-stats">
-          <span><Trophy className="h-3 w-3" /> {formatCompact(room.visits)} visits</span>
-          <span><Heart className="h-3 w-3" /> {formatCompact(room.cheers)}</span>
-        </p>
+        <p>{room.description || "A Flux Rec room."}</p>
+        <div className="frx-stats">
+          <span><Trophy className="h-3.5 w-3.5" /> {formatCompact(room.visits)}</span>
+          <span><Heart className="h-3.5 w-3.5" /> {formatCompact(room.cheers)}</span>
+        </div>
       </div>
     </button>
   );
@@ -55,64 +68,123 @@ function RoomCard({ room, onOpen }: { room: FluxRecRoom; onOpen: () => void }) {
 function RoomDetail({ room, onClose }: { room: FluxRecRoom; onClose: () => void }) {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="flux8-dialog max-h-[92dvh] max-w-2xl overflow-y-auto p-0">
+      <DialogContent className="max-h-[92dvh] max-w-2xl overflow-y-auto p-0">
         <DialogTitle className="sr-only">{room.name}</DialogTitle>
-        <div className="fluxrec-detail-hero" style={{ background: room.gradient }}>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close room details"
-            className="fluxrec-detail-close"
-          >
+        <div className="frx-detail-hero">
+          {room.imageUrl ? (
+            <img src={room.imageUrl} alt={room.name} />
+          ) : (
+            <div className="frx-thumb-fallback">
+              <Gamepad2 className="h-16 w-16 text-white/30" />
+            </div>
+          )}
+          <button type="button" onClick={onClose} aria-label="Close" className="frx-detail-close">
             <X className="h-5 w-5" />
           </button>
-          <div className="fluxrec-detail-hero-text">
-            <h2>{room.name}</h2>
-            <p>
-              <span className="fluxrec-live-dot" /> {room.playersNow} playing now
-            </p>
-          </div>
         </div>
-        <div className="p-5">
-          <p className="text-[15px] leading-6 text-foreground/90">{room.description}</p>
-
-          <div className="fluxrec-detail-stats">
-            <div><Trophy className="h-4 w-4 text-amber-500" /><strong>{formatCompact(room.visits)}</strong><span>Visits</span></div>
-            <div><Heart className="h-4 w-4 text-rose-500" /><strong>{formatCompact(room.cheers)}</strong><span>Cheers</span></div>
-            <div><Users className="h-4 w-4 text-sky-500" /><strong>{room.playersNow}/{room.maxPlayers}</strong><span>In room</span></div>
+        <div className="frx-detail-body">
+          <h2>{room.name}</h2>
+          {room.isRRO ? <span className="frx-tag" style={{ marginBottom: 10, display: "inline-block" }}>Official RRO room</span> : null}
+          <p>{room.description || "A Flux Rec room."}</p>
+          <div className="frx-detail-stats">
+            <div><strong>{formatCompact(room.visits)}</strong><span>Visits</span></div>
+            <div><strong>{formatCompact(room.cheers)}</strong><span>Cheers</span></div>
+            <div><strong>{formatCompact(room.favorites)}</strong><span>Favorites</span></div>
+            <div><strong>{room.maxPlayers || "–"}</strong><span>Max players</span></div>
           </div>
-
           {room.tags.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="frx-tags">
               {room.tags.map((t) => (
-                <span key={t} className="fluxrec-tag">{t}</span>
+                <span key={t} className="frx-tag">{t}</span>
               ))}
             </div>
           ) : null}
-
-          <h3 className="fluxrec-section-title"><Camera className="h-4 w-4" /> Room photos</h3>
-          {room.photos.length === 0 ? (
-            <p className="fluxrec-empty">No photos yet — be the first to snap one in game.</p>
-          ) : (
-            <div className="fluxrec-photo-grid">
-              {room.photos.map((p) => (
-                <figure key={p.id} className="fluxrec-photo" style={{ background: p.gradient }}>
-                  <figcaption>
-                    <strong>{p.caption}</strong>
-                    <span>{p.author}</span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
-
-          <button type="button" className="fluxrec-play-btn" disabled>
-            <Gamepad2 className="h-5 w-5" /> Open in Flux Rec
+          <button type="button" className="frx-play-btn" disabled>
+            <Play className="h-5 w-5 fill-current" /> Play in Flux Rec
           </button>
-          <p className="fluxrec-note">Link your Flux Rec account to jump straight into rooms from here.</p>
+          <p className="frx-note">Open Flux Rec on your PC to jump into this room.</p>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PairDialog({
+  open,
+  onClose,
+  onLinked,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onLinked: (token: string, account: FluxSocialLinkedAccount) => void;
+}) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      const result = await exchangePairingCode(code);
+      storeFluxToken(result.token);
+      const me = await getFluxSocialMe(result.token);
+      onLinked(result.token, me);
+      setCode("");
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Linking failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setCode(""); setErr(null); onClose(); } }}>
+      <DialogContent className="max-w-md">
+        <DialogTitle>Connect Flux Rec account</DialogTitle>
+        <p className="mt-2 text-[15px] leading-6 text-foreground/80">
+          In Flux Rec, open <strong>Settings → Connect Flux account</strong> and
+          enter the 6-digit code shown there.
+        </p>
+        <div className="frx-code-row">
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            inputMode="numeric"
+            aria-label="6-digit pairing code"
+            onKeyDown={(e) => { if (e.key === "Enter" && code.length === 6 && !busy) void submit(); }}
+          />
+        </div>
+        {err ? <p className="frx-dialog-err">{err}</p> : null}
+        <button
+          type="button"
+          className="frx-play-btn"
+          disabled={code.length !== 6 || busy}
+          onClick={() => void submit()}
+        >
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Link2 className="h-5 w-5" />}
+          Link accounts
+        </button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SkeletonGrid() {
+  return (
+    <div className="frx-grid">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="frx-skel">
+          <div className="frx-skel-thumb" />
+          <div style={{ padding: 16 }}>
+            <div style={{ height: 18, width: "60%", borderRadius: 6, background: "var(--xx-hover)" }} />
+            <div style={{ height: 12, width: "90%", borderRadius: 6, background: "var(--xx-hover)", marginTop: 10 }} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -120,19 +192,69 @@ export default function FluxRecPage() {
   const [rooms, setRooms] = useState<FluxRecRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<FluxRecRoom | null>(null);
+  const [pairOpen, setPairOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [linked, setLinked] = useState<FluxSocialLinkedAccount | null>(null);
+  const [myRooms, setMyRooms] = useState<FluxRecRoom[]>([]);
+  const [myPhotos, setMyPhotos] = useState<FluxRecPhoto[]>([]);
+  const [mineLoading, setMineLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
     fetchFluxRecRooms().then((r) => {
       if (alive) { setRooms(r); setLoading(false); }
     });
+    const stored = readStoredFluxToken();
+    if (stored) {
+      setToken(stored);
+      getFluxSocialMe(stored)
+        .then((me) => { if (alive) setLinked(me); })
+        .catch(() => { clearStoredFluxToken(); if (alive) setToken(null); });
+    }
     return () => { alive = false; };
   }, []);
 
-  const totalPlayers = rooms.reduce((n, r) => n + r.playersNow, 0);
+  const loadMine = useCallback(
+    async (t: string) => {
+      setMineLoading(true);
+      try {
+        const [r, p] = await Promise.all([fetchLinkedRooms(t), fetchLinkedPhotos(t)]);
+        setMyRooms(r);
+        setMyPhotos(p);
+      } finally {
+        setMineLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (token && linked) void loadMine(token);
+  }, [token, linked, loadMine]);
+
+  const handleLinked = useCallback(
+    (t: string, account: FluxSocialLinkedAccount) => {
+      setToken(t);
+      setLinked(account);
+    },
+    []
+  );
+
+  const handleUnlink = useCallback(async () => {
+    if (token) {
+      try { await unlinkFluxSocial(token); } catch { /* ignore */ }
+    }
+    clearStoredFluxToken();
+    setToken(null);
+    setLinked(null);
+    setMyRooms([]);
+    setMyPhotos([]);
+  }, [token]);
+
+  const totalVisits = rooms.reduce((n, r) => n + r.visits, 0);
 
   return (
-    <XPage className="fluxrec-page">
+    <XPage className="frx-page">
       <XHeader
         title="Flux Rec"
         subtitle="Rooms, photos and your game account"
@@ -140,44 +262,99 @@ export default function FluxRecPage() {
         hideOnMobile
       />
 
-      {/* Hero */}
-      <section className="fluxrec-hero">
-        <div className="fluxrec-hero-thumb" aria-hidden>
-          <span className="fluxrec-hero-logo">FR</span>
-          <span className="fluxrec-hero-glow" />
+      {/* Hero — real Flux Rec logo */}
+      <section className="frx-hero">
+        <div className="frx-hero-logo">
+          <img src="/brand/flux-rec-logo.png" alt="Flux Rec" />
         </div>
-        <div className="fluxrec-hero-text">
-          <p className="fluxrec-hero-kicker"><Sparkles className="h-3.5 w-3.5" /> The private Rec Room revival</p>
+        <div className="frx-hero-text">
+          <p className="frx-hero-kicker">The private Rec Room revival</p>
           <h1>Welcome to Flux Rec</h1>
           <p>
-            Flux Rec is Ripo Team&apos;s private revival of Rec Room — the social hangout,
-            the games, the maker pen chaos, all running on our own servers. Browse live
-            rooms, check out photos players snapped in game, and link your account to
-            jump in from right here.
+            Ripo Team&apos;s private revival of Rec Room — the social hangout, the
+            games, the maker pen chaos, all running on our own servers. Browse live
+            rooms below, and link your game account to see your own rooms and photos
+            right here.
           </p>
-          <div className="fluxrec-hero-actions">
-            <Link href="/settings?link=fluxrec" className="fluxrec-connect-btn">
-              <Link2 className="h-4 w-4" /> Connect Flux Rec account
-            </Link>
-            <span className="fluxrec-hero-live"><Flame className="h-4 w-4" /> {loading ? "…" : `${formatCompact(totalPlayers)} in game now`}</span>
+          <div className="frx-hero-actions">
+            {linked ? (
+              <span className="frx-linked">
+                <span className="dot" />
+                Linked as {linked.displayName || linked.username}
+                <button type="button" className="frx-unlink" onClick={() => void handleUnlink()}>
+                  Unlink
+                </button>
+              </span>
+            ) : (
+              <button type="button" className="frx-connect-btn" onClick={() => setPairOpen(true)}>
+                <Link2 className="h-4 w-4" /> Connect Flux Rec account
+              </button>
+            )}
+            <span className="frx-hero-live" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 700, color: "#f97316" }}>
+              <Flame className="h-4 w-4" />
+              {loading ? "…" : `${formatCompact(totalVisits)} total visits`}
+            </span>
           </div>
         </div>
       </section>
 
-      {/* Rooms */}
-      <section>
-        <div className="fluxrec-rooms-head">
+      {/* Linked account: my rooms */}
+      {linked ? (
+        <section className="frx-section">
+          <div className="frx-section-head">
+            <h2>Your rooms</h2>
+            <span>{mineLoading ? "Loading…" : `${myRooms.length} rooms`}</span>
+          </div>
+          {mineLoading ? (
+            <SkeletonGrid />
+          ) : myRooms.length === 0 ? (
+            <p className="frx-empty">No rooms on your Flux Rec account yet.</p>
+          ) : (
+            <div className="frx-grid">
+              {myRooms.map((room) => (
+                <RoomCard key={room.id} room={room} onOpen={() => setSelected(room)} />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {/* Linked account: my photos */}
+      {linked ? (
+        <section className="frx-section">
+          <div className="frx-section-head">
+            <h2><Camera className="mr-1 inline h-4 w-4" /> Your in-game photos</h2>
+            <span>{mineLoading ? "Loading…" : `${myPhotos.length} photos`}</span>
+          </div>
+          {mineLoading ? (
+            <p className="frx-empty">Loading…</p>
+          ) : myPhotos.length === 0 ? (
+            <p className="frx-empty">
+              <ImageIcon className="mr-1 inline h-4 w-4" />
+              Photos you snap in Flux Rec will show up here.
+            </p>
+          ) : (
+            <div className="frx-photo-grid">
+              {myPhotos.map((p) => (
+                <img key={p.id} src={p.url} alt={p.caption || "In-game photo"} loading="lazy" title={p.caption} />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {/* All rooms — real data */}
+      <section className="frx-section">
+        <div className="frx-section-head">
           <h2>Rooms</h2>
           <span>{loading ? "Loading…" : `${rooms.length} rooms`}</span>
         </div>
         {loading ? (
-          <div className="fluxrec-rooms-grid">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="fluxrec-room-card"><div className="fluxrec-skeleton-thumb" /><div className="fluxrec-skeleton-line" /></div>
-            ))}
-          </div>
+          <SkeletonGrid />
+        ) : rooms.length === 0 ? (
+          <p className="frx-empty">Couldn&apos;t reach the game backend — try again in a bit.</p>
         ) : (
-          <div className="fluxrec-rooms-grid">
+          <div className="frx-grid">
             {rooms.map((room) => (
               <RoomCard key={room.id} room={room} onOpen={() => setSelected(room)} />
             ))}
@@ -185,17 +362,42 @@ export default function FluxRecPage() {
         )}
       </section>
 
-      {/* Coming soon strip */}
-      <section className="fluxrec-link-strip">
-        <Lock className="h-4 w-4" />
-        <p>
-          <strong>Photos you take in game</strong> will appear on your profile —
-          public shots on your public grid, private ones only for you.
-        </p>
-        <Link href="/settings?link=fluxrec">Link account</Link>
-      </section>
+      {/* Link strip for guests */}
+      {!linked ? (
+        <section className="frx-section">
+          <div
+            style={{
+              border: "1px solid var(--xx-line)",
+              borderRadius: 18,
+              padding: 20,
+              display: "flex",
+              gap: 14,
+              alignItems: "center",
+            }}
+          >
+            <Star className="h-6 w-6 flex-none text-amber-400" />
+            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
+              <strong>Link your Flux Rec account</strong> to see your private rooms
+              and in-game photos here.
+            </p>
+            <button
+              type="button"
+              className="frx-connect-btn secondary"
+              style={{ marginLeft: "auto", flex: "none" }}
+              onClick={() => setPairOpen(true)}
+            >
+              <Link2 className="h-4 w-4" /> Link
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {selected ? <RoomDetail room={selected} onClose={() => setSelected(null)} /> : null}
+      <PairDialog
+        open={pairOpen}
+        onClose={() => setPairOpen(false)}
+        onLinked={handleLinked}
+      />
     </XPage>
   );
 }
