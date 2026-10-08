@@ -13,6 +13,8 @@ import {
   Mail,
   MoreHorizontal,
   Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
   PenLine,
   Radio,
   Search,
@@ -66,13 +68,36 @@ function backToTop(event: React.MouseEvent) {
   window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
+const SIDEBAR_COLLAPSED_KEY = "flux.sidebar.collapsed";
+
 export function Sidebar() {
   const pathname = usePathname();
   const { profile, user, signOut } = useAuth();
   const [composeOpen, setComposeOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
   const profileHref = profilePath(profile?.username);
   const profileActive = pathname.startsWith("/profile") || pathname === profileHref || (profile?.username ? pathname === `/${profile.username}` : false);
+
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -82,11 +107,22 @@ export function Sidebar() {
   }, [pathname, user]);
 
   return (
-    <div className="xxnav-col">
+    <div className={cn("xxnav-col", collapsed && "is-collapsed")}>
       <aside className="xxnav" aria-label="Primary">
-        <Link href="/home" className="xxnav-logo" aria-label="Flux home">
-          <FluxLogo />
-        </Link>
+        <div className="xxnav-toprow">
+          <Link href="/home" className="xxnav-logo" aria-label="Flux home">
+            <FluxLogo />
+          </Link>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="xxnav-collapse"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+          </button>
+        </div>
 
         <nav className="xxnav-links" aria-label="Primary navigation">
           {mainItems.map((item) => {
