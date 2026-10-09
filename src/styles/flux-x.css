@@ -766,7 +766,7 @@ html.dark .xxbtn-black, html.dim .xxbtn-black { background: #e7e9ea; color: #000
   .flux-mobile-dock-portal .flux8-mobile-tab.is-active svg { stroke-width: 2.7; }
 }
 @media (max-width: 1290px) {
-  .xxnav-col { width: 88px; }
+  .xxnav-col { width: 88px; position: relative; z-index: 60; }
   .xxnav { width: 88px; align-items: center; padding-left: 4px; padding-right: 4px; }
   .xxnav-links { align-items: center; }
   .xxnav-link { padding: 12px; gap: 0; }
@@ -776,6 +776,47 @@ html.dark .xxbtn-black, html.dim .xxbtn-black { background: #e7e9ea; color: #000
   .xxnav-post svg { display: block; width: 24px; height: 24px; }
   .xxnav-me { justify-content: center; padding: 8px; }
   .xxnav-me-names, .xxnav-me-dots { display: none; }
+
+  /* Hover/focus-expand: the collapsed icon rail grows into the full labeled
+     nav as an overlay (no layout reflow), revealing labels, the Post button
+     text and the account row. */
+  .xxnav-col:hover .xxnav,
+  .xxnav-col:focus-within .xxnav {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 275px;
+    height: 100dvh;
+    align-items: stretch;
+    padding: 4px 12px 12px 12px;
+    background: var(--xx-bg);
+    border-right: 1px solid var(--xx-line);
+    box-shadow: 24px 0 48px rgba(0, 0, 0, 0.18);
+  }
+  .xxnav-col:hover .xxnav-links,
+  .xxnav-col:focus-within .xxnav-links { align-items: flex-start; }
+  .xxnav-col:hover .xxnav-link,
+  .xxnav-col:focus-within .xxnav-link { padding: 12px 16px 12px 12px; gap: 20px; }
+  .xxnav-col:hover .xxnav-label,
+  .xxnav-col:focus-within .xxnav-label { display: inline; }
+  .xxnav-col:hover .xxnav-post,
+  .xxnav-col:focus-within .xxnav-post {
+    width: 90%;
+    max-width: 233px;
+    height: 52px;
+    border-radius: 999px;
+    margin-top: 16px;
+  }
+  .xxnav-col:hover .xxnav-post .xxnav-post-label,
+  .xxnav-col:focus-within .xxnav-post .xxnav-post-label { display: inline; }
+  .xxnav-col:hover .xxnav-post svg,
+  .xxnav-col:focus-within .xxnav-post svg { display: none; }
+  .xxnav-col:hover .xxnav-me,
+  .xxnav-col:focus-within .xxnav-me { justify-content: flex-start; padding: 12px; gap: 12px; }
+  .xxnav-col:hover .xxnav-me-names,
+  .xxnav-col:focus-within .xxnav-me-names { display: block; }
+  .xxnav-col:hover .xxnav-me-dots,
+  .xxnav-col:focus-within .xxnav-me-dots { display: inline-flex; }
 }
 @media (max-width: 1100px) {
   .xxrail-col { display: none; }
