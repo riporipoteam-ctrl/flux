@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -9,7 +9,6 @@ import {
   BarChart3,
   Bookmark,
   Heart,
-  Loader2,
   MessageCircle,
   MoreHorizontal,
   Pin,
@@ -54,6 +53,7 @@ import { blockUser, muteUser } from "@/services/users";
 export function PostCard({
   post,
   onChange,
+  compact = false,
   disableNavigate = false,
 }: {
   post: PostWithAuthor;
@@ -70,9 +70,15 @@ export function PostCard({
   const [repostCount, setRepostCount] = useState(Math.max(0, post.repostsCount));
   const [likeAnim, setLikeAnim] = useState(false);
   const [unlikeAnim, setUnlikeAnim] = useState(false);
-  const [likeBusy, setLikeBusy] = useState(false);
-  const [bookmarkBusy, setBookmarkBusy] = useState(false);
-  const [repostBusy, setRepostBusy] = useState(false);
+  // In-flight guards are refs on purpose: tapping like/repost/bookmark must
+  // feel instant. No spinner, no disabled state — the UI updates optimistically
+  // and the server syncs silently in the background.
+  const likeInflight = useRef(false);
+  const bookmarkInflight = useRef(false);
+  const repostInflight = useRef(false);
+  // Count refs keep the emitted parent state accurate without stale closures.
+  const likeCountRef = useRef(Math.max(0, post.likesCount));
+  const repostCountRef = useRef(Math.max(0, post.repostsCount));
   const [replyOpen, setReplyOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [lightbox, setLightbox] = useState(false);
@@ -97,11 +103,14 @@ export function PostCard({
   const onLike = async (event?: React.MouseEvent) => {
     event?.stopPropagation();
     if (!user) return toast.error("Sign in to like");
-    if (likeBusy) return;
+    if (likeInflight.current) return;
     const desired = !liked;
-    setLikeBusy(true);
+    const delta = desired ? 1 : -1;
+    likeInflight.current = true;
+    // Optimistic: heart fills and count ticks instantly.
     setLiked(desired);
-    setLikeCount((count) => Math.max(0, count + (desired ? 1 : -1)));
+    likeCountRef.current = Math.max(0, likeCountRef.current + delta);
+    setLikeCount(likeCountRef.current);
     if (desired) {
       setLikeAnim(true);
       window.setTimeout(() => setLikeAnim(false), 460);
@@ -112,24 +121,28 @@ export function PostCard({
     try {
       const saved = await toggleLike(post.id, user.uid);
       setLiked(saved);
-      const nextCount = Math.max(0, post.likesCount + (saved ? 1 : 0) - (post.likedByMe ? 1 : 0));
-      setLikeCount(nextCount);
-      emit({ likedByMe: saved, likesCount: nextCount });
+      if (saved !== desired) {
+        // Server disagreed (rare race) — correct the count.
+        likeCountRef.current = Math.max(0, likeCountRef.current - delta + (saved ? 1 : -1));
+        setLikeCount(likeCountRef.current);
+      }
+      emit({ likedByMe: saved, likesCount: likeCountRef.current });
     } catch {
       setLiked(!desired);
-      setLikeCount((count) => Math.max(0, count + (desired ? -1 : 1)));
+      likeCountRef.current = Math.max(0, likeCountRef.current - delta);
+      setLikeCount(likeCountRef.current);
       toast.error("Could not update like");
     } finally {
-      setLikeBusy(false);
+      likeInflight.current = false;
     }
   };
 
   const onBookmark = async (event?: React.MouseEvent) => {
     event?.stopPropagation();
     if (!user) return toast.error("Sign in to bookmark");
-    if (bookmarkBusy) return;
+    if (bookmarkInflight.current) return;
     const desired = !bookmarked;
-    setBookmarkBusy(true);
+    bookmarkInflight.current = true;
     setBookmarked(desired);
     try {
       const saved = await toggleBookmark(post.id, user.uid);
@@ -140,7 +153,7 @@ export function PostCard({
       setBookmarked(!desired);
       toast.error("Could not update bookmark");
     } finally {
-      setBookmarkBusy(false);
+      bookmarkInflight.current = false;
     }
   };
 
@@ -151,25 +164,30 @@ export function PostCard({
       setQuoteOpen(true);
       return;
     }
-    if (repostBusy) return;
+    if (repostInflight.current) return;
 
     const desired = !reposted;
-    setRepostBusy(true);
+    const delta = desired ? 1 : -1;
+    repostInflight.current = true;
     setReposted(desired);
-    setRepostCount((count) => Math.max(0, count + (desired ? 1 : -1)));
+    repostCountRef.current = Math.max(0, repostCountRef.current + delta);
+    setRepostCount(repostCountRef.current);
     try {
       const saved = await setRepostState(post.id, user.uid, desired);
-      const nextCount = Math.max(0, post.repostsCount + (saved ? 1 : 0) - (post.repostedByMe ? 1 : 0));
       setReposted(saved);
-      setRepostCount(nextCount);
-      emit({ repostedByMe: saved, repostsCount: nextCount });
+      if (saved !== desired) {
+        repostCountRef.current = Math.max(0, repostCountRef.current - delta + (saved ? 1 : -1));
+        setRepostCount(repostCountRef.current);
+      }
+      emit({ repostedByMe: saved, repostsCount: repostCountRef.current });
       toast.success(saved ? "Reposted" : "Repost removed");
     } catch (error) {
       setReposted(!desired);
-      setRepostCount((count) => Math.max(0, count + (desired ? -1 : 1)));
+      repostCountRef.current = Math.max(0, repostCountRef.current - delta);
+      setRepostCount(repostCountRef.current);
       toast.error(error instanceof Error ? error.message : "Could not update repost");
     } finally {
-      setRepostBusy(false);
+      repostInflight.current = false;
     }
   };
 
@@ -229,7 +247,7 @@ export function PostCard({
 
   return (
     <article
-      className="xxpost"
+      className={cn("xxpost", compact && "xxpost-compact")}
       onClick={goToPost}
       role={disableNavigate ? undefined : "link"}
       tabIndex={disableNavigate ? undefined : 0}
@@ -438,7 +456,6 @@ export function PostCard({
               label={reposted ? "Undo repost" : "Repost"}
               count={repostCount}
               active={reposted}
-              busy={repostBusy}
               onClick={onRepost}
             >
               <Repeat2 />
@@ -448,7 +465,6 @@ export function PostCard({
               label={liked ? "Unlike" : "Like"}
               count={likeCount}
               active={liked}
-              busy={likeBusy}
               className={likeAnim ? "like-burst" : unlikeAnim ? "like-unburst" : ""}
               onClick={onLike}
             >
@@ -461,7 +477,6 @@ export function PostCard({
               kind="bm"
               label={bookmarked ? "Remove bookmark" : "Bookmark"}
               active={bookmarked}
-              busy={bookmarkBusy}
               onClick={onBookmark}
             >
               <Bookmark />
@@ -511,7 +526,6 @@ function ActionButton({
   kind,
   active,
   className,
-  busy = false,
 }: {
   children: React.ReactNode;
   onClick?: (event?: React.MouseEvent) => void;
@@ -520,20 +534,19 @@ function ActionButton({
   kind: "reply" | "repost" | "like" | "views" | "bm" | "share";
   active?: boolean;
   className?: string;
-  busy?: boolean;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={typeof active === "boolean" ? active : undefined}
-      disabled={busy || !onClick}
+      disabled={!onClick}
       onClick={(event) => { event.stopPropagation(); onClick?.(event); }}
       className={cn("xxact", `xxact-${kind}`, active && "is-on", className)}
       style={!onClick ? { cursor: "default" } : undefined}
     >
       <span className="xxact-ic">
-        {busy ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : children}
+        {children}
       </span>
       {typeof count === "number" && count > 0 ? <span className="xxact-count">{formatCount(count)}</span> : null}
     </button>

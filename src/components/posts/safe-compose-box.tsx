@@ -37,7 +37,7 @@ export function SafeComposeBox({
   eventId,
   placeholder = "What's happening?",
 }: {
-  onSuccess?: () => void;
+  onSuccess?: (postId: string) => void;
   autofocus?: boolean;
   parentId?: string;
   quoteOfId?: string;
@@ -112,7 +112,7 @@ export function SafeComposeBox({
       for (const option of pollOptions) {
         if (option.trim()) assertContentAllowed(option, "post");
       }
-      await createPost({
+      const newPostId = await createPost({
         authorId: user.uid,
         text,
         files,
@@ -138,7 +138,7 @@ export function SafeComposeBox({
       reset();
       await refreshProfile();
       toast.success(parentId ? "Reply posted" : "Posted");
-      onSuccess?.();
+      onSuccess?.(newPostId);
     } catch (error) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : "Could not publish this post.");

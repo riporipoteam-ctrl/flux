@@ -557,8 +557,9 @@ html.dark .xxbtn-black, html.dim .xxbtn-black { background: #e7e9ea; color: #000
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.12s ease;
 }
+.xxact:active .xxact-ic { transform: scale(0.86); }
 .xxact-ic svg { width: 18px; height: 18px; }
 .xxact-count { min-width: 20px; font-variant-numeric: tabular-nums; }
 .xxact-reply:hover { color: var(--xx-blue); }
@@ -1247,3 +1248,88 @@ html.dark .xxauth-submit, html.dim .xxauth-submit {
 }
 .frx-code-row input:focus { border-color: #1d9bf0; }
 .frx-dialog-err { color: #f4212e; font-size: 14px; margin: 0 0 12px; }
+
+/* ==========================================================================
+   Thread / comments — X-style connected replies
+   ========================================================================== */
+.xxreply-composer {
+  border-bottom: 1px solid var(--xx-line);
+  padding: 16px;
+  background: var(--xx-bg);
+}
+.xxreply-composer-title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--xx-text);
+  display: flex;
+  align-items: center;
+}
+.xxreply-composer-title::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #1d9bf0;
+  margin-right: 8px;
+  flex: none;
+}
+
+.xxthread {
+  background: var(--xx-bg);
+}
+.xxthread-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: color-mix(in srgb, var(--xx-bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--xx-line);
+  padding: 12px 16px;
+}
+.xxthread-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--xx-text);
+}
+.xxthread-count {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--xx-gray);
+}
+.xxthread-loading {
+  display: flex;
+  justify-content: center;
+  padding: 28px;
+  color: var(--xx-gray);
+}
+
+/* Compact reply cards joined by a vertical thread line through the avatars */
+.xxthread .xxpost-compact {
+  position: relative;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.xxthread .xxpost-compact::before {
+  content: "";
+  position: absolute;
+  left: 35px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--xx-line);
+  pointer-events: none;
+}
+.xxthread .xxpost-compact:first-of-type::before {
+  top: 14px;
+}
+.xxthread .xxpost-compact:last-of-type::before {
+  bottom: auto;
+  height: 56px;
+}
+.xxthread .xxpost-compact:only-of-type::before {
+  display: none;
+}

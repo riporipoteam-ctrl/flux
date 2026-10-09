@@ -23,7 +23,7 @@ export default function PostDetailPage(
   const [post, setPost] = useState<PostWithAuthor | null>(null);
   const [replies, setReplies] = useState<PostWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [replyKey, setReplyKey] = useState(0);
+  const [replyLoading, setReplyLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!postId) return;
@@ -42,11 +42,31 @@ export default function PostDetailPage(
     } finally {
       setLoading(false);
     }
-  }, [postId, user?.uid, replyKey]);
+  }, [postId, user?.uid]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // A new reply appears instantly at the top of the thread — no full-page reload.
+  const handleReplySuccess = useCallback(async (newReplyId: string) => {
+    setPost((p) =>
+      p ? { ...p, repliesCount: p.repliesCount + 1 } : p
+    );
+    setReplyLoading(true);
+    try {
+      const reply = await getPost(newReplyId, user?.uid);
+      if (reply) {
+        setReplies((prev) =>
+          prev.some((r) => r.id === reply.id) ? prev : [reply, ...prev]
+        );
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setReplyLoading(false);
+    }
+  }, [user?.uid]);
 
   if (loading) {
     return (
@@ -102,35 +122,32 @@ export default function PostDetailPage(
           }}
         />
 
-        <div className="border-b border-border p-4">
-          <p className="mb-3 text-sm font-semibold text-muted-foreground">
+        <div className="xxreply-composer">
+          <p className="xxreply-composer-title">
             Reply to @{post.author?.username || "user"}
           </p>
           <ComposeBox
             parentId={post.id}
             placeholder="Post your reply"
-            onSuccess={() => {
-              setPost((p) =>
-                p ? { ...p, repliesCount: p.repliesCount + 1 } : p
-              );
-              setReplyKey((k) => k + 1);
-            }}
+            onSuccess={handleReplySuccess}
           />
         </div>
 
-        <div>
-          <div className="border-b border-border px-4 py-3">
-            <h2 className="text-sm font-bold">
+        <div className="xxthread">
+          <div className="xxthread-header">
+            <h2>
               Comments & replies
               {replies.length > 0 ? (
-                <span className="ml-1.5 font-normal text-muted-foreground">
-                  ({replies.length})
-                </span>
+                <span className="xxthread-count">({replies.length})</span>
               ) : null}
             </h2>
           </div>
 
-          {replies.length === 0 ? (
+          {replyLoading && replies.length === 0 ? (
+            <div className="xxthread-loading">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : replies.length === 0 ? (
             <EmptyState
               icon={MessageCircle}
               title="No replies yet"

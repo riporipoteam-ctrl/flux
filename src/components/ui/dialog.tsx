@@ -17,7 +17,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "flux-dialog-overlay fixed inset-0 z-50 bg-black/40 backdrop-blur-sm",
+      "flux-dialog-overlay fixed inset-0 z-50 bg-black/55 backdrop-blur-md",
       className
     )}
     {...props}
@@ -34,7 +34,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "flux-dialog-content fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-3xl border border-border/80 bg-card p-6 shadow-soft backdrop-blur-xl",
+        "flux-dialog-content fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[28px] border border-border/80 bg-card p-6 shadow-2xl backdrop-blur-xl",
         className
       )}
       {...props}
