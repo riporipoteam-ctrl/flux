@@ -17,6 +17,7 @@ import "@/styles/flux-v12-rebuild.css";
 import "@/styles/flux-v13-redesign.css";
 import "@/styles/flux-motion.css";
 import "@/styles/flux-x.css";
+import "@/styles/askai-grok.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const release = process.env.NEXT_PUBLIC_RELEASE_SHA || "local";
