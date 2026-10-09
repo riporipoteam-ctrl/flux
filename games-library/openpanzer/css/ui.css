@@ -1,0 +1,152 @@
+@import url("fonts.css");
+@import url("ui-startmenu.css");
+@import url("ui-unit-info.css");
+@import url("ui-message.css");
+@import url("ui-equipment.css");
+@import url("ui-combat-info.css");
+
+body,html 
+{ 
+	margin:0; 
+	padding:0; 
+	border:0; 
+	height:100%; 
+	/*overflow-y:auto; */
+	overflow: hidden; /* hide the scroll bars that appear when the #game div is as large as the window */
+	background:black;
+	background-image: url('../resources/ui/page/images/mainbg.png');
+}
+#game
+{
+/*
+	margin-right: auto;
+	margin-left: auto;
+*/
+	position: relative;
+	overflow: auto;
+	margin: 0 auto;
+	border: 0px solid black;
+	outline: none; /* don't show the focus outline */
+	/* Activate 3D acceleration for WebKit based browsers*/
+	/* Performance regression on iOS. Needs further benchmarking 
+	-webkit-backface-visibility: hidden;
+	-webkit-perspective: 1000;
+	-webkit-transform: translate3d(0, 0, 0);
+	*/
+}
+
+/* Hide the touch highlight for Android/iOS*/
+*
+{
+       -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
+       -webkit-touch-callout: none;
+       -webkit-user-select: none;
+       -moz-user-select: none;
+}
+
+::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    border: 1px solid #006400;
+    height: 8px;
+    background-color: rgba(248, 224, 100,0.6);
+}
+/* TODO for firefox when support appears */
+
+#statusbar 
+{
+	position:fixed; 
+	float:left; 
+	min-width: 840px;
+	margin-left: -420px;
+	left: 50%;
+	border:0px solid #000;
+	/* to have content with opacity too
+	background-color:black;
+	opacity: 0.6;
+	*/
+	background: rgba(0,0,0,0.6);
+	z-index:3;
+	border-radius: 5px;
+}
+
+#menu 
+{
+	position:fixed; 
+	float:left; 
+	padding-left: 3px;
+	width: 35px;
+	left: 96%;
+	top: 30%;
+	border:0px solid #000; 
+	font-weight:bold; 
+	color:white; 
+	background-color: transparent;
+	z-index:3;
+}
+
+#slidemenu
+{
+	display: none;
+}
+
+#weathermsg
+{
+    font-family: openpanzer;
+    font-size: 20px;
+    width: 40px;
+    cursor: help;
+    float: left;
+    color: #33ccff;
+    padding-top: 1px;
+    padding-left: 5px;
+    -webkit-font-smoothing: antialiased;
+}
+
+#statusmsg
+{
+    width: 420px;
+    height:20px;
+    float: left;
+    padding: 5px 0px 0px 5px;
+}
+
+#locmsg
+{
+    width: 360px;
+    height:20px;
+    text-align: right;
+    float: left;
+    padding: 5px 5px 0px 0px;
+}
+
+.message
+{
+	color: #f8e064;
+	font-family: Arial;
+	font-size: 14px;
+	font-weight: normal;
+	text-shadow: 0.1em 0.1em 0.2em black;
+}
+
+.button
+{
+	float:left; 
+	margin: 3px 3px 0px 0px;
+	cursor: pointer;
+	border:0px solid #fff;
+	opacity: 1;
+	z-index:4;
+}
+
+.button img{ display:block;}
+
+a, a:visited
+{
+	color: white;
+}

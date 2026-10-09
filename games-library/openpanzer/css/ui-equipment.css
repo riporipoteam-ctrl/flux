@@ -1,0 +1,246 @@
+.hscroll-container /* Generic container for horizontal scrolling */
+{
+	min-width:835px;
+	margin:0 auto;
+	overflow: auto;
+	z-index: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.hscroll /* Force horizontal scrolling */
+{
+	padding-left: 5px;
+	float: left;
+	margin-right: -20000px;
+}
+
+/* The list of units currently on map with horizontal scrolling */
+#container-unitlist
+{
+	border: 0px solid #fff;
+	position: fixed;
+	min-width: 840px;
+	margin-left: -420px;
+	left: 50%;
+	top: 30px;
+	color: #fff;
+	font-size: 12px;
+	z-index: 98;
+	display: none;
+	background: rgba(0,0,0,0.6);
+	border-radius: 5px;
+}
+
+/* The equipment window with class selection buttons, equipment and transport units and buy/upgrade buttons */
+#equipment
+{
+	position: fixed;
+	width: 840px;
+	left:50%;
+	margin-left: -420px;
+	top:130px;
+	color: #fff;
+	font-weight: normal;
+    /*font-weight: bold;*/
+	font-family: Arial;
+	font-size: 12px;
+	text-shadow: 0.1em 0.1em 0.2em black;
+	background: rgba(20,20,20, 0.7);
+	border-radius: 5px;
+	background-repeat: no-repeat;
+	z-index:98;
+	display: none;
+	overflow: hidden;
+	float: left;	
+}
+
+#eqSortButtonsContainer
+{
+    height: 30px;
+    float: left;
+    margin-top: 1px;
+}
+
+.eqSortClassBut
+{
+    width: 30px;
+    height: 30px;
+    margin-left: 5px;
+    margin-righ: 5px;
+    float: left;
+}
+
+#eqInfoText
+{
+	height: 30px;
+	float: left;
+	padding-top: 7px;
+	padding-left: 10px;
+	font-size: 14px;
+	color: #f8e064;
+}
+
+.eqSelClassBut
+{
+	width: 45px;
+	height: 30px;
+	float: left;
+}
+
+#eqSelClass
+{
+	border: 0px solid #fff;
+	overflow: hidden;
+	width: 360px;
+	float: right;
+    margin-top: 1px;
+	margin-left: 50px;
+	z-index:100;
+}
+
+#currentPrestige /* Where the current player prestige is displayed */
+{
+    float: left;
+    font-size: 14px;
+    margin-top: 10px;
+    margin-left: 5px;
+}
+#currentPrestige img
+{
+    margin-left: 5px;
+    vertical-align:middle;
+}
+
+.eqCostText /* Where upgrade/buy costs are displayed */
+{
+	font-size: 14px;
+	color: #f8e064;
+	margin-top: 10px;
+	margin-left: 5px;
+	float: right;
+}
+
+.eqCostText img
+{
+	margin-left: 5px;
+	vertical-align:middle;
+}
+
+#eqButtonsContainer
+{
+	float: right;
+	height: 40px;
+    width: 100%;
+    border-top: 1px solid #f8e064;
+}
+
+#eqSortOptions
+{
+    position: relative;
+    display: none;
+    z-index: 101; /* bigger then #eqSelCountry */
+    height: 40px;
+    width: 100%;
+    top: 0px;  /* overlap #eqButtonsContainer */
+    border-top: 1px solid #f8e064;
+    float: right;
+    font-size: 14px;
+}
+
+#eqSortInfo { float: left; margin-top: 10px; margin-left: 5px; width: 320px;}
+#eqSortOptionsContainer { float:left; margin-top: 5px }
+
+.eqButton
+{
+	min-width: 30px; 
+	min-height: 30px;
+	background-repeat: no-repeat;
+	border: 0px solid #fff;
+	float: right;
+	margin: 5px 10px 0px 10px;
+}
+
+#eqSelCountryButton /* the round button below country flag */
+{
+	z-index: 90;
+	background-image: url('../resources/ui/buttons/empty.png');
+}
+
+#eqSelCountry  /* the actual country flag button with position relative to the eqSelCountryButton */
+{
+	position:relative;
+	top: 8px;
+	left:4px;
+	height: 30px;
+	width: 22px;
+	background-image: url('../resources/ui/flags/flags_med.png');
+	background-repeat: no-repeat;
+	background-position: -147px 0px; /*start with german flag 8th flag of 21px each */
+	z-index:100;
+}
+
+#eqSortCloseBut,#eqCloseBut { background-image: url('../resources/ui/buttons/close.png'); }
+#eqUpgradeBut {	background-image: url('../resources/ui/dialogs/equipment/images/upgrade.png'); }
+#eqNewBut {	background-image: url('../resources/ui/dialogs/equipment/images/buy.png'); }
+
+#eqUserSel { z-index: 0; display:none; width:0px; height: 0px;}
+
+.eqUnitBox
+{
+	border: 0px solid #fff;
+	width: 110px;
+	height: 76px;
+	background-image: url('../resources/ui/dialogs/equipment/images/unit-box.png');
+	background-repeat: no-repeat;
+	margin-top: 5px;
+	margin-right: 5px;
+	overflow: hidden;
+	position: relative;
+	float: left;
+}
+
+.eqUnitBox:hover
+{
+	background-image: url('../resources/ui/dialogs/equipment/images/unit-box-pressed.png');
+	background-repeat: no-repeat;
+}
+
+/* a eqUnitBox that has been clicked on make it appear selected */
+.eqUnitBox[selectedUnit]
+{
+    background-image: url('../resources/ui/dialogs/equipment/images/unit-box-pressed-over.png');
+}
+
+/* a eqUnitBox that has a core unit for the player */
+.eqUnitBox[coreUnit]
+{
+    background-image: url('../resources/ui/dialogs/equipment/images/unit-box-core.png');
+}
+
+.eqUnitBox > img:first-child /*for the unit image*/
+{
+	/*select the 4th image each ~80px wide */
+	position: absolute;
+	left: -240px;
+	clip:rect(0px, 320px, 50px, 240px);
+}
+
+.eqUnitBox img /* other images like currency coin */
+{
+	margin-left: 2px;
+	vertical-align:middle;
+}
+
+.eqUnitBox div
+{
+	border: 0px solid #fff;
+	position: absolute;
+	top: 56px;
+	left: 5px;
+	width: 110px;
+	font-weight:normal;
+	font-family: Arial;
+	font-size: 10px;
+	text-shadow: none;
+	white-space: nowrap;
+}

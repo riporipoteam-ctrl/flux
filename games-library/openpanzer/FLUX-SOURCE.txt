@@ -1,0 +1,4 @@
+Hosted by Flux from the open-source project below.
+Upstream: https://github.com/nicupavel/openpanzer
+Revision: 65dcb0f54cf5f21a986f2be1a487e8b742b2c213
+Flux has not removed the upstream copyright or license files.

@@ -1,0 +1,44 @@
+.textBounce
+{	
+	position: absolute;
+	z-index: 100;
+	border: 0px #fff solid;
+	margin-left: 10px;
+	min-width: 10px;
+	min-height: 10px;
+	font-family: coreUnitFont;
+	font-size: 8px;
+	color: #f8e064;
+	background-color: #AA1919;
+	-webkit-animation:jump 2s linear 1 normal;
+	-moz-animation:jump 2s linear 1 normal;
+	white-space: nowrap;
+}
+
+@-webkit-keyframes jump
+{
+    from, to  
+	{
+		bottom:0;
+		-webkit-animation-timing-function: ease-out;
+    }
+    50% 
+	{
+		bottom: 40px;
+		-webkit-animation-timing-function: ease-in;
+    }
+}
+
+@-moz-keyframes jump
+{
+    from, to  
+	{
+		bottom:0;
+		-moz-animation-timing-function: ease-out;
+    }
+    50% 
+	{
+		bottom: 40px;
+		-moz-animation-timing-function: ease-in;
+    }
+}
