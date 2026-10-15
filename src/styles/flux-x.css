@@ -1504,3 +1504,25 @@ html.dark .xxauth-submit, html.dim .xxauth-submit {
   .flux-mobile-compose-fab { transition: none; }
   .xxnav-post:hover, .flux-mobile-compose-fab:hover { transform: none; }
 }
+
+
+/* User-selectable accents must be respected by the X-style UI as well as the
+   older screens. Theme background choices above are intentionally unchanged. */
+html[data-accent="blue"]   { --xx-blue: #1d9bf0; --xx-blue-hover: #1a8cd8; }
+html[data-accent="yellow"] { --xx-blue: #ffd400; --xx-blue-hover: #e6bf00; }
+html[data-accent="pink"]   { --xx-blue: #f91880; --xx-blue-hover: #de1370; }
+html[data-accent="purple"] { --xx-blue: #7856ff; --xx-blue-hover: #6845e6; }
+html[data-accent="orange"] { --xx-blue: #f57419; --xx-blue-hover: #de6410; }
+html[data-accent="green"]  { --xx-blue: #00a873; --xx-blue-hover: #008f62; }
+html[data-accent] {
+  --flux-brand: var(--xx-blue);
+  --flux-brand-2: var(--xx-blue-hover);
+  --flux-brand-soft: color-mix(in srgb, var(--xx-blue) 12%, transparent);
+}
+html[data-accent="yellow"] .xxbtn-blue,
+html[data-accent="yellow"] .xxcomposer-post,
+html[data-accent="yellow"] .flux-post-btn,
+html[data-accent="yellow"] .xxnav-badge,
+html[data-accent="yellow"] .flux-mobile-compose-fab {
+  color: #0f1419 !important;
+}
