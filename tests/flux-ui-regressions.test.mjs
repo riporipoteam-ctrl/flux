@@ -46,3 +46,12 @@ test("tab animations remain scoped and reduced-motion tabs keep an indicator", (
   assert.doesNotMatch(ui, /layoutId="x-tab-underline"/);
   assert.match(ui, /reduce \? \(/);
 });
+
+
+test("switching timeline tabs cannot apply late results from the previous tab", () => {
+  const feed = source("src/app/(main)/home/page.tsx");
+  assert.match(feed, /requestIdRef\s*=\s*useRef\(0\)/);
+  assert.match(feed, /requestIdRef\.current\s*\+=\s*1/);
+  assert.match(feed, /if\s*\(!isCurrent\(\)\)\s*return/);
+  assert.match(feed, /const requestId = requestIdRef\.current/);
+});
