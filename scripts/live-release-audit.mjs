@@ -35,7 +35,7 @@ const ice = read("src/lib/live-ice.ts");
 for (const marker of ["staticauth.openrelay.metered.ca", "openrelayprojectsecret", "turns:", "createReliableLivePeer"]) requireText(ice, marker, "TURN relay fallback");
 
 const mainLayout = read("src/app/(main)/layout.tsx");
-for (const marker of ["isPublicLiveViewer", "isPublicAskAI", "data-flux-shell=\"v12\""]) requireText(mainLayout, marker, "Main application shell");
+for (const marker of ["isPublicLiveViewer", "isPublicAskAI", "xxshell", "xxmain-col"]) requireText(mainLayout, marker, "Main application shell");
 
 const askai = read("src/lib/ai/askai-groq.ts");
 for (const marker of ["checkAskAIGroqHealth", "ASKAI_PROVIDER_MISSING", "ASKAI_UPSTREAM_FAILED", "Ripo Team AI server"]) requireText(askai, marker, "AskAI diagnostics");
