@@ -1333,3 +1333,174 @@ html.dark .xxauth-submit, html.dim .xxauth-submit {
 .xxthread .xxpost-compact:only-of-type::before {
   display: none;
 }
+
+/* ==========================================================================
+   Flux Social shared experience — consistent X-style layout and interaction.
+   This lives in the final stylesheet so older pages inherit the same tokens.
+   Keep light / dim / dark palettes above intact.
+   ========================================================================== */
+
+:root {
+  --flux-ui-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+  --flux-ui-quick: 140ms;
+  --flux-ui-standard: 220ms;
+  --flux-ui-hover: var(--xx-hover);
+}
+
+/* All pages: readable surfaces, clear navigation, and responsive content. */
+.x-page { width: 100%; min-width: 0; max-width: 100%; }
+.x-header, .x-tabs {
+  background: var(--xx-bg);
+  color: var(--xx-text);
+  border-color: var(--xx-line);
+}
+.x-header {
+  background: color-mix(in srgb, var(--xx-bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.x-tabs { border-bottom: 1px solid var(--xx-line); }
+.x-tab { transition: background-color var(--flux-ui-quick) ease, color var(--flux-ui-quick) ease; }
+.x-tab:hover { background: var(--xx-hover); }
+.x-tab.is-active { color: var(--xx-text); }
+.x-row, .x-card-interactive, .xxpost {
+  transition: background-color var(--flux-ui-quick) ease, border-color var(--flux-ui-quick) ease;
+}
+.x-row:hover, .x-card-interactive:hover { background: var(--xx-card-hover); }
+.x-card { border-color: var(--xx-line); }
+.x-row { border-color: var(--xx-line); }
+.x-empty { color: var(--xx-text); }
+.x-empty p, .x-row-main > span { color: var(--xx-gray); }
+
+.xxnav-link, .xxnav-collapse, .xxnav-me, .xxnav-logo,
+.xxnav-post, .xxact, .xxrail-row, .xxrail-person, .xxbtn,
+.xxcomposer-icon, .flux8-mobile-tab, .flux8-mobile-header-action {
+  transition-timing-function: var(--flux-ui-ease);
+}
+.xxnav-link:focus-visible, .xxnav-collapse:focus-visible,
+.xxnav-post:focus-visible, .x-tab:focus-visible,
+.flux8-mobile-tab:focus-visible, .flux-mobile-compose-fab:focus-visible {
+  outline: 2px solid var(--xx-blue);
+  outline-offset: 2px;
+}
+.xxnav-link.is-active .xxnav-icon,
+.flux8-mobile-tab.is-active svg { color: var(--xx-text); }
+
+@media (hover: hover) and (pointer: fine) {
+  .xxnav-link:hover, .xxnav-me:hover, .xxnav-logo:hover {
+    background: var(--xx-hover);
+  }
+  .xxnav-post:hover, .flux-mobile-compose-fab:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+  }
+  .x-card-interactive:hover { border-color: var(--xx-border); }
+}
+.xxnav-post:active, .flux-mobile-compose-fab:active { transform: scale(0.97); }
+
+/* No forced scroll animations or bounce when the visitor asks for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .xxshell *, .xxshell *::before, .xxshell *::after,
+  .x-page *, .x-page *::before, .x-page *::after,
+  .flux-mobile-dock-portal *, .flux-mobile-dock-portal *::before, .flux-mobile-dock-portal *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Preserve desktop's wider reading column while allowing small screens to
+   shrink. This MUST remain after the 600px desktop override near line 956. */
+@media (max-width: 1023.98px) {
+  .xxshell, .xxshell-inner { width: 100%; max-width: 100%; }
+  .xxshell-inner { display: block; }
+  .xxmain-col {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+    border: 0;
+  }
+  .xxnav-col, .xxrail-col { display: none; }
+  .xxhead { top: 0; }
+  .xxpost { max-width: 100%; }
+  .xxpost-media, .xxpost-media img, .xxpost-media video { max-width: 100%; }
+  .flux8-mobile-header {
+    background: color-mix(in srgb, var(--xx-bg) 95%, transparent) !important;
+    border-color: var(--xx-line) !important;
+  }
+
+  /* Override old floating-pill dock rules from v12 for all three themes. */
+  html.light .flux-mobile-dock-portal,
+  html.dim .flux-mobile-dock-portal,
+  html.dark .flux-mobile-dock-portal {
+    display: block;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    padding: 4px 8px max(4px, env(safe-area-inset-bottom, 0px)) !important;
+    border: 0 !important;
+    border-top: 1px solid var(--xx-line) !important;
+    border-radius: 0 !important;
+    background: var(--xx-bg) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .flux-mobile-dock-portal .flux8-mobile-nav-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0 !important;
+  }
+  .flux-mobile-dock-portal .flux8-mobile-tab {
+    min-width: 0;
+    min-height: 50px !important;
+    border-radius: 12px !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  .flux-mobile-dock-portal .flux8-mobile-tab.is-active {
+    color: var(--xx-text) !important;
+    background: var(--xx-hover) !important;
+  }
+  .flux-mobile-compose-fab {
+    position: fixed;
+    right: 18px;
+    bottom: calc(79px + env(safe-area-inset-bottom, 0px));
+    z-index: 161;
+    display: inline-grid;
+    width: 56px;
+    height: 56px;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: var(--xx-blue);
+    color: #ffffff;
+    box-shadow: 0 5px 20px rgba(15, 20, 25, 0.2);
+    cursor: pointer;
+    transition: transform var(--flux-ui-quick) var(--flux-ui-ease),
+                filter var(--flux-ui-quick) ease;
+  }
+  .flux-mobile-compose-fab svg { width: 25px; height: 25px; }
+  /* All shared pages leave room for the dock and iOS home indicator. */
+  .xxmain-col { padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+}
+
+@media (min-width: 1024px) {
+  .flux-mobile-compose-fab { display: none; }
+}
+
+@media (max-width: 639.98px) {
+  .xxmain-col { font-size: 15px; }
+  .xxpost { padding: 12px; }
+  .xxcomposer { padding: 12px 12px 4px; }
+  .xxrail { display: none; }
+  .x-card { max-width: 100%; }
+  .x-header, .x-tabs, .xxhead { max-width: 100%; }
+  .flux-mobile-compose-fab { right: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flux-mobile-compose-fab { transition: none; }
+  .xxnav-post:hover, .flux-mobile-compose-fab:hover { transform: none; }
+}
