@@ -9,7 +9,12 @@ const forbidText = (source, marker, label) => {
 };
 
 const route = read("src/app/(main)/ask-ai/page.tsx");
-requireText(route, "RakazoOfficialApp", "AskAI route");
+// The live AskAI route was switched to the native Grok-style client in October.
+// Retain the legacy guest bridge audit below without requiring it as the route.
+requireText(route, "AskAIGrok", "AskAI route");
+requireText(route, "@/components/ask-ai/askai-grok", "AskAI route import");
+const nativeAskAI = read("src/components/ask-ai/askai-grok.tsx");
+requireText(nativeAskAI, "export default function", "Native AskAI component");
 
 const officialApp = read("src/components/ask-ai/rakazo-official-app.tsx");
 for (const marker of ["RAKAZO_GUEST_PATH", "/flux/rakazo/", "<iframe", "askai-v11-shell", "GrokPanel"]) requireText(officialApp, marker, "AskAI v11 shell");
