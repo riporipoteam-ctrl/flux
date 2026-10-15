@@ -9,7 +9,7 @@ const source = (file) => readFileSync(join(root, file), "utf8");
 test("phone layout overrides the fixed desktop feed width", () => {
   const css = source("src/styles/flux-x.css");
   const desktopWidth = css.lastIndexOf(".xxmain-col { width: 600px; }");
-  const mobileRule = css.lastIndexOf("@media (max-width: 1023.98px) {");
+  const mobileRule = css.indexOf("@media (max-width: 1023.98px) {", desktopWidth);
   assert.ok(desktopWidth >= 0, "desktop column baseline should remain");
   assert.ok(mobileRule > desktopWidth, "mobile sizing must be later in the cascade");
   assert.match(css.slice(mobileRule), /\.xxmain-col\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%/);
