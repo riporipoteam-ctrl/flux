@@ -49,10 +49,17 @@ export default function HomePage() {
   const cursorRef = useRef<QueryDocumentSnapshot | null>(null);
   const hasMoreRef = useRef(true);
   const loadingMoreRef = useRef(false);
+  // A slower request from another tab must never replace the active feed.
+  const requestIdRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async (force = false) => {
     if (!user) return;
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    const isCurrent = () => requestId === requestIdRef.current;
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
     const cached = readCache(user.uid, tab);
     if (cached?.posts.length && !force) {
       setPosts(cached.posts);
@@ -68,32 +75,39 @@ export default function HomePage() {
     try {
       if (tab === "following") {
         const data = await withTimeout(getFollowingFeed(user.uid), 12_000);
+        if (!isCurrent()) return;
         setPosts(data);
         saveCache(user.uid, tab, data);
         hasMoreRef.current = false;
       } else {
         const page = await withTimeout(getForYouFeed(user.uid, 20), 12_000);
+        if (!isCurrent()) return;
         setPosts(page.posts);
         saveCache(user.uid, tab, page.posts);
         cursorRef.current = page.lastDoc;
         hasMoreRef.current = Boolean(page.lastDoc) && page.posts.length >= 20;
       }
     } catch (cause) {
+      if (!isCurrent()) return;
       console.error(cause);
       if (!cached?.posts.length) setPosts([]);
       setError(cause instanceof Error ? cause.message : "Could not load the timeline");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isCurrent()) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [tab, user]);
 
   const loadMore = useCallback(async () => {
     if (!user || tab !== "foryou" || loadingMoreRef.current || !hasMoreRef.current || !cursorRef.current) return;
+    const requestId = requestIdRef.current;
     loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const page = await withTimeout(getForYouFeed(user.uid, 20, cursorRef.current), 12_000);
+      if (requestId !== requestIdRef.current) return;
       cursorRef.current = page.lastDoc;
       hasMoreRef.current = Boolean(page.lastDoc) && page.posts.length >= 20;
       setPosts((current) => {
@@ -103,10 +117,12 @@ export default function HomePage() {
         return next;
       });
     } catch {
-      hasMoreRef.current = false;
+      if (requestId === requestIdRef.current) hasMoreRef.current = false;
     } finally {
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
+      if (requestId === requestIdRef.current) {
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }
     }
   }, [tab, user]);
 
