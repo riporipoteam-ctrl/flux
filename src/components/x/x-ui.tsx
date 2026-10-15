@@ -109,6 +109,9 @@ export function XTabs<T extends string>({
   scrollable?: boolean;
 }) {
   const reduce = useReducedMotion();
+  // Each tab group needs its own layout namespace; shared hardcoded IDs can
+  // animate an underline between unrelated pages or tab strips.
+  const underlineId = React.useId();
 
   return (
     <div
@@ -135,12 +138,17 @@ export function XTabs<T extends string>({
                   {tab.count > 99 ? "99+" : tab.count}
                 </em>
               ) : null}
-              {active && !reduce ? (
-                <motion.span
-                  layoutId="x-tab-underline"
-                  className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full bg-[var(--v8-accent)]"
-                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                />
+              {active ? (
+                reduce ? (
+                  <span aria-hidden="true" className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full bg-[var(--v8-accent)]" />
+                ) : (
+                  <motion.span
+                    aria-hidden="true"
+                    layoutId={underlineId}
+                    className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full bg-[var(--v8-accent)]"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  />
+                )
               ) : null}
             </span>
           </button>
@@ -364,6 +372,9 @@ export function Reveal({
 
 /** Staggered container for lists. Children should be `<RevealItem>`. */
 export function RevealList({ children, className }: { children: React.ReactNode; className?: string }) {
+  const reduce = useReducedMotion();
+  if (reduce) return <div className={className}>{children}</div>;
+
   return (
     <motion.div
       className={className}
@@ -377,6 +388,9 @@ export function RevealList({ children, className }: { children: React.ReactNode;
 }
 
 export function RevealItem({ children, className }: { children: React.ReactNode; className?: string }) {
+  const reduce = useReducedMotion();
+  if (reduce) return <div className={className}>{children}</div>;
+
   return (
     <motion.div
       className={className}
