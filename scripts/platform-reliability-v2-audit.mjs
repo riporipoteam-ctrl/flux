@@ -58,9 +58,10 @@ for (const marker of [
 const postCard = read("src/components/posts/post-card.tsx");
 for (const marker of [
   "setRepostState",
-  "repostBusy",
-  "disabled={busy}",
-  "aria-busy={busy}",
+  "repostInflight",
+  "if (repostInflight.current) return",
+  "repostInflight.current = true",
+  "repostInflight.current = false",
 ]) requireText(postCard, marker, "Post interaction locking");
 forbidText(postCard, "toggleRepost(", "Post duplicate repost prevention");
 

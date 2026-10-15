@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Plus, Search, Sparkles, UserRound } from "lucide-react";
+import { Bell, Home, Mail, PenLine, Search, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isNavPathActive, profilePath } from "@/lib/routes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,12 +28,14 @@ export function MobileNav() {
 
   useEffect(() => setMounted(true), []);
 
+  // Mirror X's essential mobile destinations. AskAI and the other Flux
+  // experiences remain available from the slide-out navigation drawer.
   const tabs = useMemo(() => [
     { href: "/home", icon: Home, label: "Home" },
-    { href: "/explore", icon: Search, label: "Discover" },
-    { href: "#compose", icon: Plus, label: "Create", create: true },
-    { href: "/ask-ai", icon: Sparkles, label: "AskAI" },
-    { href: profileHref, icon: UserRound, label: "Me" },
+    { href: "/explore", icon: Search, label: "Explore" },
+    { href: "/notifications", icon: Bell, label: "Notifications" },
+    { href: "/messages", icon: Mail, label: "Messages" },
+    { href: profileHref, icon: UserRound, label: "Profile" },
   ], [profileHref]);
 
   const dock = (
@@ -41,15 +43,7 @@ export function MobileNav() {
       <div className="flux8-mobile-nav-grid">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const active = !tab.create && isNavPathActive(pathname, tab.href);
-          if (tab.create) {
-            return (
-              <button key={tab.label} type="button" onClick={() => setComposeOpen(true)} aria-label="Create post" className="flux8-mobile-tab flux8-mobile-tab-create">
-                <Icon className="h-[25px] w-[25px]" strokeWidth={2.7} />
-                <span className="flux-mobile-dock-label">Create</span>
-              </button>
-            );
-          }
+          const active = isNavPathActive(pathname, tab.href);
           return (
             <Link key={tab.href} href={tab.href} aria-label={tab.label} aria-current={active ? "page" : undefined} onClick={active ? backToTop : undefined} className={cn("flux8-mobile-tab", active && "is-active")}>
               <Icon className="h-[23px] w-[23px]" strokeWidth={active ? 2.7 : 2.05} />
@@ -63,7 +57,21 @@ export function MobileNav() {
 
   return (
     <>
-      {mounted ? createPortal(dock, document.body) : null}
+      {mounted ? createPortal(
+        <>
+          {dock}
+          <button
+            type="button"
+            className="flux-mobile-compose-fab"
+            aria-label="Create post"
+            title="Create post"
+            onClick={() => setComposeOpen(true)}
+          >
+            <PenLine aria-hidden="true" />
+          </button>
+        </>,
+        document.body
+      ) : null}
       <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
         <DialogContent className="flux8-dialog max-w-lg overflow-hidden p-0">
           <DialogHeader className="border-b border-border px-4 py-3"><DialogTitle>Create post</DialogTitle></DialogHeader>

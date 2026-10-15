@@ -1,33 +1,38 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
+/**
+ * Animate navigation without keying the entire app tree by pathname.
+ * Re-keying the root can remount shells and feel like a page flash.
+ * Only opacity changes, so fixed dialogs and menus are not repositioned.
+ */
 export function RouteMotion({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const reducedMotion = useReducedMotion();
-  const [lightweight, setLightweight] = useState(true);
+  const controls = useAnimationControls();
+  const lastPath = useRef(pathname);
+  const immersive = /^\/(studio|live\/create|live\/view|messages\/call|games\/play)(\/|$)/.test(pathname);
 
   useEffect(() => {
-    const query = window.matchMedia("(max-width: 1023px), (pointer: coarse), (prefers-reduced-motion: reduce)");
-    const sync = () => setLightweight(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
+    if (lastPath.current === pathname) return;
+    lastPath.current = pathname;
+    if (reducedMotion || immersive) {
+      controls.set({ opacity: 1 });
+      return;
+    }
 
-  const immersive = /^\/(studio|live\/create|live\/view|messages\/call|games\/play)(\/|$)/.test(pathname);
-  if (reducedMotion || lightweight || immersive) return <div className="flux-route-frame">{children}</div>;
+    controls.set({ opacity: 0.96 });
+    void controls.start({
+      opacity: 1,
+      transition: { duration: 0.18, ease: [0.2, 0.75, 0.25, 1] },
+    });
+  }, [pathname, reducedMotion, immersive, controls]);
 
   return (
-    <motion.div
-      key={pathname}
-      className="flux-route-frame"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
-    >
+    <motion.div initial={false} animate={controls} className="flux-route-frame">
       {children}
     </motion.div>
   );

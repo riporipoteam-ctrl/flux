@@ -33,6 +33,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Flux UI regression checks
+        run: node --test tests/flux-ui-regressions.test.mjs
+
       - name: Exclude server-only routes from static export
         run: mv src/app/api .pages-api
 
