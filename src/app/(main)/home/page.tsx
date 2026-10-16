@@ -45,10 +45,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cursorRef = useRef<QueryDocumentSnapshot | null>(null);
   const hasMoreRef = useRef(true);
   const loadingMoreRef = useRef(false);
+  const moreErrorRef = useRef(false);
   // A slower request from another tab must never replace the active feed.
   const requestIdRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -59,7 +61,9 @@ export default function HomePage() {
     const requestId = requestIdRef.current;
     const isCurrent = () => requestId === requestIdRef.current;
     loadingMoreRef.current = false;
+    moreErrorRef.current = false;
     setLoadingMore(false);
+    setMoreError(null);
     const cached = readCache(user.uid, tab);
     if (cached?.posts.length && !force) {
       setPosts(cached.posts);
@@ -85,7 +89,7 @@ export default function HomePage() {
         setPosts(page.posts);
         saveCache(user.uid, tab, page.posts);
         cursorRef.current = page.lastDoc;
-        hasMoreRef.current = Boolean(page.lastDoc) && page.posts.length >= 20;
+        hasMoreRef.current = page.hasMore;
       }
     } catch (cause) {
       if (!isCurrent()) return;
@@ -101,23 +105,27 @@ export default function HomePage() {
   }, [tab, user]);
 
   const loadMore = useCallback(async () => {
-    if (!user || tab !== "foryou" || loadingMoreRef.current || !hasMoreRef.current || !cursorRef.current) return;
+    if (!user || tab !== "foryou" || loadingMoreRef.current || moreErrorRef.current || !hasMoreRef.current || !cursorRef.current) return;
     const requestId = requestIdRef.current;
     loadingMoreRef.current = true;
     setLoadingMore(true);
+    setMoreError(null);
     try {
       const page = await withTimeout(getForYouFeed(user.uid, 20, cursorRef.current), 12_000);
       if (requestId !== requestIdRef.current) return;
       cursorRef.current = page.lastDoc;
-      hasMoreRef.current = Boolean(page.lastDoc) && page.posts.length >= 20;
+      hasMoreRef.current = page.hasMore;
       setPosts((current) => {
         const known = new Set(current.map((post) => post.id));
         const next = [...current, ...page.posts.filter((post) => !known.has(post.id))];
         saveCache(user.uid, tab, next);
         return next;
       });
-    } catch {
-      if (requestId === requestIdRef.current) hasMoreRef.current = false;
+    } catch (cause) {
+      if (requestId === requestIdRef.current) {
+        moreErrorRef.current = true;
+        setMoreError(cause instanceof Error ? cause.message : "Could not load more posts");
+      }
     } finally {
       if (requestId === requestIdRef.current) {
         loadingMoreRef.current = false;
@@ -231,6 +239,21 @@ export default function HomePage() {
       {loadingMore ? (
         <div className="flex items-center justify-center py-6 text-sm" style={{ color: "var(--xx-gray)" }}>
           Loading more posts&hellip;
+        </div>
+      ) : null}
+      {moreError ? (
+        <div className="xxfeed-more-error" role="alert">
+          <span>We couldn&apos;t load more posts.</span>
+          <button
+            type="button"
+            onClick={() => {
+              moreErrorRef.current = false;
+              setMoreError(null);
+              void loadMore();
+            }}
+          >
+            Try again
+          </button>
         </div>
       ) : null}
       {refreshing && !loading ? (

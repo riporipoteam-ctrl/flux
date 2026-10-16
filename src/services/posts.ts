@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   writeBatch,
   increment,
+  type QueryConstraint,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
@@ -270,7 +271,11 @@ export async function getForYouFeed(
   currentUid?: string | null,
   pageSize = 20,
   cursor?: QueryDocumentSnapshot | null
-): Promise<{ posts: PostWithAuthor[]; lastDoc: QueryDocumentSnapshot | null }> {
+): Promise<{
+  posts: PostWithAuthor[];
+  lastDoc: QueryDocumentSnapshot | null;
+  hasMore: boolean;
+}> {
   let muted = new Set<string>();
   if (currentUid) {
     try {
@@ -280,58 +285,71 @@ export async function getForYouFeed(
       /* ignore */
     }
   }
-  let q = query(
-    collection(db, "posts"),
-    where("isDeleted", "==", false),
-    where("isDraft", "==", false),
-    where("visibility", "==", "public"),
-    where("type", "in", ["post", "quote", "repost"]),
-    orderBy("createdAt", "desc"),
-    limit(pageSize)
-  );
+  const batchSize = Math.max(40, pageSize + 1);
+  const candidates: Array<{ post: Post; snapshot: QueryDocumentSnapshot }> = [];
+  let scanCursor = cursor ?? null;
+  let indexedQuery = true;
+  let exhausted = false;
 
-  if (cursor) {
-    q = query(
-      collection(db, "posts"),
-      where("isDeleted", "==", false),
-      where("isDraft", "==", false),
-      where("visibility", "==", "public"),
-      where("type", "in", ["post", "quote", "repost"]),
-      orderBy("createdAt", "desc"),
-      startAfter(cursor),
-      limit(pageSize)
-    );
+  // Keep the indexed query fast when its composite index is available. If an
+  // index is missing, switch to a simple chronological scan and apply the
+  // same public-feed rules in memory. The scan advances in batches so hidden,
+  // muted, draft, or legacy records cannot make an otherwise healthy feed look
+  // empty just because they occupy the first page of the collection.
+  while (candidates.length <= pageSize && !exhausted) {
+    let snap;
+    if (indexedQuery) {
+      try {
+        const constraints: QueryConstraint[] = [
+          where("isDeleted", "==", false),
+          where("isDraft", "==", false),
+          where("visibility", "==", "public"),
+          where("type", "in", ["post", "quote", "repost"]),
+          orderBy("createdAt", "desc"),
+          ...(scanCursor ? [startAfter(scanCursor)] : []),
+          limit(batchSize),
+        ];
+        snap = await getDocs(query(collection(db, "posts"), ...constraints));
+      } catch {
+        indexedQuery = false;
+        continue;
+      }
+    } else {
+      const constraints: QueryConstraint[] = [
+        orderBy("createdAt", "desc"),
+        ...(scanCursor ? [startAfter(scanCursor)] : []),
+        limit(batchSize),
+      ];
+      snap = await getDocs(query(collection(db, "posts"), ...constraints));
+    }
+
+    for (const snapshot of snap.docs) {
+      const post = mapPost(snapshot.id, snapshot.data());
+      const publicPost =
+        !post.isDeleted &&
+        !post.isDraft &&
+        (post.visibility === "public" || post.visibility == null) &&
+        post.type !== "reply";
+      if (publicPost && !muted.has(post.authorId)) {
+        candidates.push({ post, snapshot });
+      }
+      if (candidates.length > pageSize) break;
+    }
+
+    scanCursor = snap.docs[snap.docs.length - 1] ?? scanCursor;
+    exhausted = snap.docs.length < batchSize;
   }
 
-  try {
-    const snap = await getDocs(q);
-    const posts = snap.docs
-      .map((d) => mapPost(d.id, d.data()))
-      .filter((p) => !muted.has(p.authorId));
-    const enriched = await attachAuthors(posts, currentUid);
-    return {
-      posts: enriched,
-      lastDoc: snap.docs[snap.docs.length - 1] ?? null,
-    };
-  } catch {
-    // Fallback simpler query if indexes missing
-    const snap = await getDocs(
-      query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(pageSize))
-    );
-    const posts = snap.docs
-      .map((d) => mapPost(d.id, d.data()))
-      .filter(
-        (p) =>
-          !p.isDeleted &&
-          !p.isDraft &&
-          p.type !== "reply" &&
-          !muted.has(p.authorId)
-      );
-    return {
-      posts: await attachAuthors(posts, currentUid),
-      lastDoc: snap.docs[snap.docs.length - 1] ?? null,
-    };
-  }
+  const hasMore = candidates.length > pageSize;
+  const page = candidates.slice(0, pageSize);
+  const lastDoc = hasMore
+    ? page[page.length - 1]?.snapshot ?? null
+    : scanCursor;
+  return {
+    posts: await attachAuthors(page.map(({ post }) => post), currentUid),
+    lastDoc,
+    hasMore,
+  };
 }
 
 export async function getFollowingFeed(

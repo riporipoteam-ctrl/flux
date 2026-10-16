@@ -1,0 +1,332 @@
+/* Flux Social refresh — a calm, editorial X-inspired system with Flux blue. */
+
+html.light {
+  --xx-gray: #596a78;
+  --xx-line: #e7edf2;
+  --xx-border: #cbd5dd;
+  --xx-card: #ffffff;
+  --flux-canvas: #f3f6f8;
+}
+
+html.dim {
+  --xx-gray: #9aa9b5;
+  --xx-line: #303c47;
+  --xx-border: #50606c;
+  --xx-card: #1b2731;
+  --flux-canvas: #101820;
+}
+
+html.dark {
+  --xx-gray: #858d95;
+  --xx-line: #272b2f;
+  --xx-border: #444b51;
+  --xx-card: #101214;
+  --flux-canvas: #050607;
+}
+
+body { background: var(--flux-canvas); }
+
+.xxshell {
+  min-height: 100dvh;
+  background: var(--flux-canvas);
+  color: var(--xx-text);
+  letter-spacing: -0.005em;
+}
+
+.xxshell-inner {
+  min-height: 100dvh;
+  align-items: flex-start;
+}
+
+.xxmain-col {
+  background: var(--xx-bg);
+  border-color: var(--xx-line);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--xx-line) 22%, transparent);
+}
+
+.xxnav { padding-top: 8px; }
+.xxnav-logo { margin-bottom: 3px; }
+.xxnav-logo img {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 3px 7px color-mix(in srgb, var(--xx-blue) 18%, transparent));
+}
+.xxnav-link {
+  min-height: 48px;
+  border-radius: 16px;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms cubic-bezier(.2,.75,.25,1);
+}
+.xxnav-link:hover { transform: translateX(2px); }
+.xxnav-link.is-active .xxnav-icon { color: var(--xx-blue); }
+.xxnav-post {
+  min-height: 50px;
+  background: var(--xx-blue);
+  color: #fff;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--xx-blue) 22%, transparent);
+}
+html[data-accent="yellow"] .xxnav-post { color: #0f1419; }
+.xxnav-post:hover { filter: brightness(1.04); opacity: 1; }
+
+.xxrail { padding-top: 8px; }
+.xxrail-search {
+  padding-top: 4px;
+  padding-bottom: 14px;
+  background: var(--flux-canvas);
+}
+.xxrail-search form {
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--xx-bg) 78%, var(--flux-canvas));
+  transition: background-color 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+.xxrail-search form:focus-within {
+  border-color: color-mix(in srgb, var(--xx-blue) 55%, var(--xx-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--xx-blue) 12%, transparent);
+}
+.xxrail-card {
+  border: 1px solid var(--xx-line);
+  border-radius: 20px;
+  background: var(--xx-card);
+  box-shadow: 0 2px 8px rgba(15, 35, 50, .035);
+  margin-bottom: 14px;
+}
+.xxrail-card > h2 { padding-top: 17px; letter-spacing: -.025em; }
+.xxrail-premium {
+  background:
+    radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--xx-blue) 13%, transparent), transparent 62%),
+    var(--xx-card);
+}
+.xxrail-premium .xxbtn { box-shadow: 0 5px 14px color-mix(in srgb, var(--xx-blue) 20%, transparent); }
+.xxrail-row, .xxrail-person { transition: background-color 160ms ease; }
+.xxrail-more { font-weight: 650; }
+
+.xxhead,
+.xxshell .x-header,
+.xxshell .x-tabs {
+  border-color: var(--xx-line);
+  background: color-mix(in srgb, var(--xx-bg) 92%, transparent);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+.xxhead { border-bottom: 1px solid var(--xx-line); }
+.xxshell .x-header { min-height: 58px; }
+.xxshell .x-header-titles h1 { letter-spacing: -.035em; }
+.xxshell .x-tabs { border-bottom-width: 1px; }
+.xxshell .x-tab.is-active::after { height: 3px; border-radius: 3px 3px 0 0; }
+
+.xxcomposer {
+  position: relative;
+  background: var(--xx-bg);
+  transition: box-shadow 180ms ease;
+}
+.xxcomposer:focus-within {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--xx-blue) 68%, transparent);
+}
+.xxcomposer textarea { line-height: 1.45; }
+.xxcomposer-icon { border-radius: 12px; }
+.xxcomposer-post { box-shadow: 0 4px 12px color-mix(in srgb, var(--xx-blue) 18%, transparent); }
+
+.xxpost {
+  background: var(--xx-bg);
+  transition: background-color 150ms ease;
+  animation: flux-feed-enter 260ms cubic-bezier(.2,.75,.25,1) both;
+}
+.xxpost:nth-child(2) { animation-delay: 18ms; }
+.xxpost:nth-child(3) { animation-delay: 36ms; }
+.xxpost:nth-child(4) { animation-delay: 54ms; }
+.xxpost:nth-child(5) { animation-delay: 72ms; }
+.xxpost:hover { background: color-mix(in srgb, var(--xx-bg) 95%, var(--xx-blue)); }
+.xxpost-media { border-radius: 18px; }
+.xxpost-actions { margin-top: 9px; }
+.xxact-ic { width: 36px; height: 36px; }
+
+.flux-avatar-fallback {
+  padding: 0 !important;
+  overflow: hidden;
+  background: transparent !important;
+  color: transparent !important;
+}
+.flux-avatar-portrait { display: block; width: 100%; height: 100%; }
+
+.xxfeed-more-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px 14px;
+  color: var(--xx-gray);
+  font-size: 14px;
+}
+.xxfeed-more-error button {
+  min-height: 36px;
+  border: 1px solid var(--xx-border);
+  border-radius: 999px;
+  background: transparent;
+  padding: 0 14px;
+  color: var(--xx-text);
+  font-weight: 700;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+.xxfeed-more-error button:hover { background: var(--xx-hover); border-color: var(--xx-blue); }
+.xxfeed-more-error button:active { transform: scale(.97); }
+
+.xxshell .x-card {
+  background: var(--xx-bg);
+  border-color: var(--xx-line);
+}
+.xxshell .x-card-interactive:hover { background: color-mix(in srgb, var(--xx-bg) 95%, var(--xx-blue)); }
+.xxshell .x-row:hover { background: color-mix(in srgb, var(--xx-bg) 95%, var(--xx-blue)); }
+.xxshell :is(input, textarea, select) {
+  accent-color: var(--xx-blue);
+}
+.xxshell :is(input, textarea, select):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--xx-blue) 65%, transparent);
+  outline-offset: 2px;
+}
+.xxshell :is(.xxbtn-blue, .xxnav-post, .xxcomposer-post) {
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms cubic-bezier(.2,.75,.25,1), box-shadow 160ms ease;
+}
+.xxshell :is(button, a) { touch-action: manipulation; }
+
+.flux8-mobile-header {
+  background: color-mix(in srgb, var(--xx-bg) 92%, transparent) !important;
+  border-bottom-color: var(--xx-line) !important;
+  backdrop-filter: blur(16px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.2) !important;
+}
+.flux8-mobile-title strong { letter-spacing: -.02em; }
+.flux-mobile-dock-portal {
+  background: color-mix(in srgb, var(--xx-bg) 96%, transparent) !important;
+  border-top-color: var(--xx-line) !important;
+  backdrop-filter: blur(18px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.2) !important;
+}
+.flux-mobile-dock-portal .flux8-mobile-tab.is-active { color: var(--xx-blue) !important; }
+.flux-mobile-compose-fab {
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--xx-blue) 28%, transparent) !important;
+}
+
+/* AskAI keeps its focused workspace layout, while using Flux's blue/teal
+   identity instead of the stock violet AI palette. */
+.askg-shell {
+  background: #080e14;
+  color: #e7edf2;
+}
+.askg-sidebar { background: #0c131b; border-right-color: #1d2a35; }
+.askg-main {
+  background:
+    radial-gradient(980px 420px at 54% -12%, rgba(29, 155, 240, .09), transparent 62%),
+    radial-gradient(700px 380px at 100% 80%, rgba(19, 184, 166, .035), transparent 60%),
+    #080e14;
+}
+.askg-orb {
+  background: conic-gradient(from 0deg, #1d9bf0, #35d0bf, #7bd5f2, #1688da, #1d9bf0);
+}
+.askg-orb::after {
+  background: radial-gradient(circle at 35% 30%, #d7f5ff 0%, #238ed0 55%, #0b354b 100%);
+}
+.askg-side-head, .askg-side-foot { border-color: #1d2a35; }
+.askg-new-chat:hover,
+.askg-history-row:hover,
+.askg-icon-btn:hover,
+.askg-codeblock-bar button:hover,
+.askg-btn-ghost:hover { background: #17232e; }
+.askg-history-row.is-active,
+.askg-team-row.is-active { background: #142330; }
+.askg-topbar { border-bottom-color: #1d2a35; }
+.askg-md a,
+.askg-routine-tag,
+.askg-empty-hint code { color: #7dd3fc; }
+.askg-md blockquote {
+  border-left-color: #1d9bf0;
+  background: rgba(29, 155, 240, .08);
+}
+.askg-thinking { background: rgba(29, 155, 240, .045); }
+.askg-thinking-head,
+.askg-hire,
+.askg-icon-btn.is-active-tab { color: #7dc9f7; }
+.askg-thinking-dot { background: #35b9ef; }
+.askg-empty h1 {
+  background: linear-gradient(110deg, #f7fbff 26%, #a9dcfa 66%, #8ce3d6);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.askg-suggestion:hover,
+.askg-hire:hover { border-color: rgba(29, 155, 240, .72); background: rgba(29, 155, 240, .09); }
+.askg-suggestion svg,
+.askg-hire svg { color: #67bff0; }
+.askg-composer:focus-within,
+.askg-composer.is-think,
+.askg-composer.is-think:focus-within,
+.askg-add-row input:focus,
+.askg-field input:focus,
+.askg-field textarea:focus { border-color: #1d9bf0; }
+.askg-composer:focus-within { box-shadow: 0 0 0 1px #1d9bf0, 0 8px 34px rgba(29, 155, 240, .15); }
+.askg-composer.is-think:focus-within { box-shadow: 0 0 0 1px #1d9bf0, 0 8px 34px rgba(29, 155, 240, .15); }
+.askg-composer.is-imagine,
+.askg-composer.is-imagine:focus-within { border-color: #25b7aa; }
+.askg-composer.is-imagine:focus-within { box-shadow: 0 0 0 1px #25b7aa, 0 8px 34px rgba(37, 183, 170, .14); }
+.askg-mode-pill.is-active,
+.askg-send,
+.askg-add-row button,
+.askg-btn-primary {
+  background: #1689dc;
+}
+.askg-mode-pill.is-active { border-color: #1689dc; box-shadow: 0 4px 14px rgba(22, 137, 220, .22); }
+.askg-send { box-shadow: 0 4px 16px rgba(22, 137, 220, .28); }
+.askg-panel-tab.is-active,
+.askg-emoji-pick.is-active,
+.askg-interval-pick.is-active {
+  border-color: rgba(29, 155, 240, .65);
+  background: rgba(29, 155, 240, .13);
+  color: #d9f1ff;
+}
+.askg-switch.is-on { background: #1689dc; }
+.askg-modal { background: #101922; border-color: #263541; }
+.askg-field input,
+.askg-field textarea,
+.askg-interval-pick { background: #0a1219; border-color: #263541; }
+.askg-memory-item,
+.askg-routine-item { background: #0e1720; border-color: #263541; }
+.askg-assistant-mark { background: #111f2a; border-color: #263541; }
+
+@media (prefers-reduced-motion: reduce) {
+  .askg-orb,
+  .askg-orb::after,
+  .askg-thinking-dot.is-live,
+  .askg-shimmer,
+  .askg-wave span,
+  .askg-typing span { animation: none !important; }
+}
+
+@keyframes flux-feed-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1023.98px) {
+  .xxshell, .xxshell-inner { background: var(--xx-bg); }
+  .xxmain-col { box-shadow: none; }
+  .xxshell .xxhead {
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    z-index: 30;
+  }
+  .xxprof-head {
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    background: color-mix(in srgb, var(--xx-bg) 94%, transparent);
+  }
+  .xxrail-card { box-shadow: none; }
+  .xxpost:hover { background: var(--xx-bg); }
+}
+
+@media (max-width: 639.98px) {
+  .xxshell .x-header { min-height: 54px; padding-inline: 13px; }
+  .xxcomposer { padding-inline: 13px; }
+  .xxpost { padding: 12px 13px; }
+  .xxpost-actions { max-width: 100%; }
+  .xxfeed-more-error { justify-content: space-between; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xxpost { animation: none; }
+  .xxnav-link:hover { transform: none; }
+}
