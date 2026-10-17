@@ -330,3 +330,319 @@ html[data-accent="yellow"] .xxnav-post { color: #0f1419; }
   .xxpost { animation: none; }
   .xxnav-link:hover { transform: none; }
 }
+
+/* Flux's visible X-style refresh: clearer feed surfaces, calmer canvas, and
+   a branded sign-in screen instead of the untouched legacy auth split. */
+html.light {
+  --xx-gray: #536574;
+  --xx-line: #dfe8ee;
+  --xx-border: #c7d4dc;
+  --xx-card: #f6f9fb;
+  --flux-canvas: #edf3f6;
+}
+html.dim {
+  --xx-line: #34434e;
+  --xx-border: #536572;
+  --xx-card: #1b2a35;
+  --flux-canvas: #0e171e;
+}
+html.dark {
+  --xx-line: #252d33;
+  --xx-border: #3b454d;
+  --xx-card: #111518;
+  --flux-canvas: #080b0d;
+}
+
+body { background: var(--flux-canvas); }
+.xxshell { background: var(--flux-canvas); }
+.xxshell-inner { align-items: stretch; max-width: 1380px; }
+.xxmain-col {
+  background: var(--flux-canvas);
+  border-color: color-mix(in srgb, var(--xx-line) 78%, transparent);
+  box-shadow: none;
+}
+.xxhead {
+  background: color-mix(in srgb, var(--flux-canvas) 90%, transparent);
+  border-bottom: 1px solid var(--xx-line);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+.xxhead .xxtabs { gap: 8px; padding: 8px 12px 0; }
+.xxhead .xxtab { min-height: 48px; border-radius: 14px 14px 0 0; }
+.xxhead .xxtab:hover { background: color-mix(in srgb, var(--xx-blue) 7%, var(--xx-bg)); }
+.xxhead .xxtab.is-active .xxtab-label { color: var(--xx-blue); }
+.xxhead .xxtab-bar { height: 3px; }
+
+.xxshell .xxcomposer {
+  margin: 12px 14px 10px;
+  padding: 14px 16px 10px;
+  border: 1px solid var(--xx-line);
+  border-radius: 20px;
+  background: var(--xx-bg);
+  box-shadow: 0 4px 18px rgba(23, 47, 62, .045);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.xxshell .xxcomposer:focus-within {
+  border-color: color-mix(in srgb, var(--xx-blue) 50%, var(--xx-line));
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--xx-blue) 10%, transparent);
+}
+.xxshell .xxpost {
+  margin: 10px 14px;
+  padding: 16px 17px;
+  border: 1px solid var(--xx-line);
+  border-radius: 19px;
+  background: var(--xx-bg);
+  box-shadow: 0 3px 13px rgba(23, 47, 62, .035);
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.xxshell .xxpost:hover {
+  background: color-mix(in srgb, var(--xx-bg) 97%, var(--xx-blue));
+  border-color: color-mix(in srgb, var(--xx-blue) 28%, var(--xx-line));
+  box-shadow: 0 7px 20px rgba(23, 47, 62, .075);
+  transform: translateY(-1px);
+}
+.xxshell .xxpost-actions { margin-top: 12px; }
+.xxshell .xxrail-card {
+  border-radius: 19px;
+  box-shadow: 0 3px 14px rgba(23, 47, 62, .04);
+}
+.xxshell .xxnav-link.is-active {
+  background: color-mix(in srgb, var(--xx-blue) 10%, var(--xx-bg));
+  color: var(--xx-blue);
+}
+.xxshell .xxnav-link.is-active .xxnav-label { font-weight: 800; }
+
+html.dim .xxshell .xxpost,
+html.dark .xxshell .xxpost,
+html.dim .xxshell .xxcomposer,
+html.dark .xxshell .xxcomposer {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .16);
+}
+
+/* Sign-in is the public first impression too, so it gets the same Flux
+   identity as the feed while keeping the existing form and auth behavior. */
+.xxauth.flux-auth-layout {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(410px, .92fr);
+  gap: 18px;
+  padding: 18px;
+  background: #eaf0f3;
+  color: #111b23;
+  font-family: var(--font-geist-sans), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+.flux-auth-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: calc(100dvh - 36px);
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: clamp(32px, 5vw, 68px);
+  background:
+    radial-gradient(ellipse at 83% 17%, rgba(29, 155, 240, .27), transparent 30%),
+    radial-gradient(ellipse at 9% 88%, rgba(25, 177, 167, .16), transparent 34%),
+    #0b1922;
+  color: #f5f9fb;
+}
+.flux-auth-hero::after {
+  position: absolute;
+  z-index: -1;
+  right: -190px;
+  top: 20%;
+  width: 470px;
+  height: 470px;
+  border: 1px solid rgba(183, 222, 241, .12);
+  border-radius: 50%;
+  box-shadow: 0 0 0 44px rgba(183, 222, 241, .035), 0 0 0 90px rgba(183, 222, 241, .025);
+  content: "";
+}
+.flux-auth-hero-grid {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: .11;
+  background-image: linear-gradient(rgba(255,255,255,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.14) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: linear-gradient(90deg, black, transparent 84%);
+}
+.flux-auth-brandline { display: flex; align-items: center; gap: 11px; position: relative; z-index: 1; }
+.flux-auth-mark { filter: none; border-radius: 10px; background: #fff; padding: 5px; }
+.flux-auth-wordmark { font-size: 25px; font-weight: 850; letter-spacing: -.07em; }
+.flux-auth-brand-caption {
+  margin-left: auto;
+  color: #8ba0ae;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .17em;
+}
+.flux-auth-hero-copy { position: relative; z-index: 1; margin: auto 0 24px; max-width: 650px; }
+.flux-auth-overline,
+.flux-auth-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #55c4ef;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .17em;
+}
+.flux-auth-overline i,
+.flux-auth-preview-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #31d0b0;
+  box-shadow: 0 0 0 4px rgba(49, 208, 176, .12);
+}
+.flux-auth-hero-copy h2 {
+  margin: 18px 0 12px;
+  color: #f6fafc;
+  font-size: clamp(42px, 5vw, 70px);
+  font-weight: 830;
+  letter-spacing: -.065em;
+  line-height: .99;
+}
+.flux-auth-hero-copy h2 em { color: #66c9eb; font-style: normal; }
+.flux-auth-hero-copy p { max-width: 470px; margin: 0; color: #a9bbc5; font-size: 15px; line-height: 1.65; }
+.flux-auth-preview {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 580px);
+  margin: 0 0 20px auto;
+  overflow: hidden;
+  border: 1px solid rgba(211, 232, 242, .18);
+  border-radius: 20px;
+  background: rgba(231, 244, 250, .075);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, .2);
+  backdrop-filter: blur(12px);
+}
+.flux-auth-preview-head,
+.flux-auth-preview-body,
+.flux-auth-preview-actions { display: flex; align-items: center; }
+.flux-auth-preview-head { gap: 10px; padding: 14px 16px; border-bottom: 1px solid rgba(211, 232, 242, .12); }
+.flux-auth-preview-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 11px; background: #fff; }
+.flux-auth-preview-mark .flux-auth-mark { width: 26px !important; height: 26px !important; padding: 3px; }
+.flux-auth-preview-head > span:nth-child(2),
+.flux-auth-preview-body > span:nth-child(2) { display: grid; gap: 2px; }
+.flux-auth-preview-head strong { color: #eef7fb; font-size: 13px; }
+.flux-auth-preview-head small,
+.flux-auth-preview-body small { color: #9db2bf; font-size: 11px; }
+.flux-auth-preview-live { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: #a8c3ce; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.flux-auth-preview-body { gap: 11px; padding: 17px 16px; }
+.flux-auth-preview-avatar { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 50%; background: #72d6cb; color: #0c2a33; font-size: 15px; font-weight: 900; }
+.flux-auth-preview-body strong { color: #f3f8fa; font-size: 13px; }
+.flux-auth-preview-arrow { width: 18px; height: 18px; margin-left: auto; color: #72d6cb; }
+.flux-auth-preview-actions { gap: 18px; padding: 11px 16px 13px; border-top: 1px solid rgba(211, 232, 242, .12); color: #b2c4cd; font-size: 10px; font-weight: 650; }
+.flux-auth-preview-actions span { display: inline-flex; align-items: center; gap: 6px; }
+.flux-auth-preview-actions svg { width: 13px; height: 13px; color: #68c9eb; }
+.flux-auth-hero-footer { position: relative; z-index: 1; display: flex; align-items: center; gap: 11px; color: #77909e; font-size: 9px; font-weight: 850; letter-spacing: .18em; }
+.flux-auth-hero-footer b { color: #4a7184; }
+.xxauth-form-col.flux-auth-panel {
+  min-width: 0;
+  justify-content: center;
+  border: 1px solid rgba(20, 46, 60, .06);
+  border-radius: 28px;
+  padding: clamp(32px, 5vw, 72px);
+  background: #fff;
+  box-shadow: 0 14px 42px rgba(21, 47, 61, .065);
+}
+.flux-auth-mobile-brand { display: none; }
+.flux-auth-form-inner { width: 100%; max-width: 410px; min-height: 0; }
+.flux-auth-form { width: 100%; }
+.flux-auth-form-heading { margin-bottom: 28px; }
+.flux-auth-eyebrow { color: #1686c4; }
+.flux-auth-title {
+  margin: 11px 0 0;
+  color: #111b23;
+  font-size: clamp(34px, 3vw, 43px);
+  font-weight: 820;
+  letter-spacing: -.055em;
+  line-height: 1.05;
+}
+.flux-auth-subtitle { margin: 9px 0 0; color: #657581; font-size: 14px; line-height: 1.55; }
+.flux-auth-google {
+  width: 100%;
+  height: 50px !important;
+  border: 1px solid #d8e1e7 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  color: #1a252d !important;
+  font-size: 14px !important;
+  font-weight: 720 !important;
+  box-shadow: 0 2px 5px rgba(19, 43, 57, .045) !important;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease !important;
+}
+.flux-auth-google:hover { border-color: #9db7c7 !important; background: #f7fafc !important; box-shadow: 0 5px 14px rgba(19, 43, 57, .08) !important; }
+.flux-auth-google:active { transform: scale(.99); }
+.flux-auth-form [data-orientation="horizontal"] { background: #e4ebef; }
+.flux-auth-form .flux-auth-input {
+  width: 100%;
+  height: 52px !important;
+  border: 1px solid #dbe4e9 !important;
+  border-radius: 14px !important;
+  background: #fbfcfd !important;
+  color: #14212a !important;
+  box-shadow: none !important;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease !important;
+}
+.flux-auth-form .flux-auth-input:focus-visible { border-color: #168fca !important; background: #fff !important; box-shadow: 0 0 0 4px rgba(29, 155, 240, .12) !important; }
+.flux-auth-submit,
+.xxauth .xxauth-submit {
+  height: 50px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #1389c9 !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 8px 18px rgba(19, 137, 201, .2) !important;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
+}
+.flux-auth-submit:hover { background: #0e73aa !important; box-shadow: 0 10px 22px rgba(19, 137, 201, .27) !important; }
+.flux-auth-submit:active { transform: translateY(1px); }
+.flux-auth-switch { margin: 26px 0 0; color: #64737e; text-align: center; font-size: 13px; }
+.flux-auth-switch a { color: #087fb9 !important; text-decoration: none; }
+.flux-auth-switch a:hover { text-decoration: underline; }
+.flux-auth-terms { margin: 18px 0 0; color: #75838c; text-align: center; font-size: 11px; line-height: 1.6; }
+.xxauth-footer { display: grid; gap: 6px; margin: 30px 0 0; color: #87939b; font-size: 10px; }
+.xxauth-footer span { color: #a2adb4; }
+
+@media (max-width: 1023.98px) {
+  .xxshell .xxcomposer { margin: 10px 10px 8px; }
+  .xxshell .xxpost { margin: 9px 10px; }
+}
+@media (max-width: 900px) {
+  .xxauth.flux-auth-layout { display: flex; flex-direction: column; gap: 0; padding: 0; }
+  .flux-auth-hero { min-height: 224px; border-radius: 0 0 24px 24px; padding: 20px 22px 22px; }
+  .flux-auth-brandline { gap: 8px; }
+  .flux-auth-brandline .flux-auth-mark { width: 30px !important; height: 30px !important; }
+  .flux-auth-wordmark { font-size: 21px; }
+  .flux-auth-brand-caption { font-size: 8px; }
+  .flux-auth-hero-copy { margin: auto 0 0; }
+  .flux-auth-overline { font-size: 8px; }
+  .flux-auth-hero-copy h2 { margin: 11px 0 6px; font-size: clamp(31px, 8vw, 42px); line-height: 1; }
+  .flux-auth-hero-copy p { max-width: 370px; font-size: 12px; line-height: 1.45; }
+  .flux-auth-preview, .flux-auth-hero-footer { display: none; }
+  .xxauth-form-col.flux-auth-panel { flex: 1; min-height: calc(100dvh - 224px); justify-content: flex-start; margin: 0; border: 0; border-radius: 0; padding: 23px 22px 26px; box-shadow: none; }
+  .flux-auth-mobile-brand { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 410px; margin: 0 auto 22px; color: #17242d; font-size: 19px; font-weight: 850; letter-spacing: -.06em; }
+  .flux-auth-mobile-brand .flux-auth-mark { background: #eaf2f6; }
+  .flux-auth-form-inner { margin: 0 auto; }
+  .flux-auth-form-heading { margin-bottom: 22px; }
+  .flux-auth-title { font-size: 34px; }
+  .xxauth-footer { margin-top: auto; padding-top: 26px; }
+}
+@media (max-width: 520px) {
+  .flux-auth-hero { min-height: 207px; padding: 18px 18px 20px; }
+  .flux-auth-brand-caption { display: none; }
+  .flux-auth-hero-copy h2 { font-size: 33px; }
+  .flux-auth-hero-copy p { max-width: 320px; font-size: 11px; }
+  .xxauth-form-col.flux-auth-panel { min-height: calc(100dvh - 207px); padding: 19px 18px 24px; }
+  .flux-auth-mobile-brand { margin-bottom: 18px; }
+  .flux-auth-title { font-size: 32px; }
+  .flux-auth-switch { margin-top: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flux-auth-google, .flux-auth-submit, .xxshell .xxpost { transition: none !important; animation: none !important; }
+}

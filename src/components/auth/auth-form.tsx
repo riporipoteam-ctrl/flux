@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { Separator } from "@/components/ui/separator";
-import { FluxMark } from "@/components/shared/logo";
 import { cn } from "@/lib/utils";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
@@ -62,26 +61,18 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const isSignup = mode === "signup";
 
   return (
-    <div className="w-full">
-      {/* Brand mark (mobile already shows one in layout; keep this subtle on desktop) */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.35 }}
-        className="mb-6 hidden lg:block"
-      >
-        <FluxMark size={48} className="text-primary" />
-      </motion.div>
-
+    <div className="w-full flux-auth-form">
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05 }}
+        className="flux-auth-form-heading"
       >
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+        <span className="flux-auth-eyebrow">{isSignup ? "A NEW KIND OF SOCIAL" : "YOUR SPACE IS WAITING"}</span>
+        <h1 className="flux-auth-title">
           {isSignup ? "Join Flux today" : "Welcome back"}
         </h1>
-        <p className="mt-2 text-[15px] text-muted-foreground">
+        <p className="flux-auth-subtitle">
           {isSignup
             ? "Create your account and start posting in seconds."
             : "Sign in to see what's happening."}
@@ -98,7 +89,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           type="button"
           variant="outline"
           size="lg"
-          className="w-full rounded-full border-border bg-card font-bold shadow-sm hover:bg-muted"
+          className="flux-auth-google"
           disabled={googleLoading || loading}
           onClick={onGoogle}
         >
@@ -129,7 +120,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                 autoComplete="name"
                 required
                 disabled={loading}
-                className="h-13 rounded-2xl px-5 py-3.5 text-[15px]"
+                className="flux-auth-input h-13 rounded-2xl px-5 py-3.5 text-[15px]"
               />
             </div>
           ) : null}
@@ -143,7 +134,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               placeholder="Email address"
               required
               disabled={loading}
-              className="h-13 rounded-2xl px-5 py-3.5 text-[15px]"
+              className="flux-auth-input h-13 rounded-2xl px-5 py-3.5 text-[15px]"
             />
           </div>
           <div className="relative">
@@ -157,7 +148,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               minLength={6}
               required
               disabled={loading}
-              className="h-13 rounded-2xl px-5 py-3.5 pr-12 text-[15px]"
+              className="flux-auth-input h-13 rounded-2xl px-5 py-3.5 pr-12 text-[15px]"
             />
             <button
               type="button"
@@ -181,7 +172,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <Button
             type="submit"
             size="lg"
-            className="xxauth-submit"
+            className="xxauth-submit flux-auth-submit"
             loading={loading}
             disabled={loading || googleLoading}
           >
@@ -189,7 +180,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-muted-foreground">
+        <p className="flux-auth-switch">
           {isSignup ? (
             <>
               Already have an account?{" "}
@@ -214,7 +205,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </p>
 
         {isSignup ? (
-          <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
+          <p className="flux-auth-terms">
             By signing up, you agree to the Terms of Service and Privacy
             Policy.
           </p>
