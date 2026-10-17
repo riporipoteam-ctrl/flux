@@ -1,0 +1,4 @@
+Hosted by Flux from the open-source project below.
+Upstream: https://github.com/ebbejan/tux-racer-js
+Revision: 8d2a6aea698db0a199ca39f3f4d754a134105bc8
+Flux has not removed the upstream copyright or license files.

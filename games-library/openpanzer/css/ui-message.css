@@ -1,0 +1,58 @@
+#ui-message
+{
+	position: fixed;
+	width: 306px;
+	height: 201px;
+	left:50%;
+	margin-left: -153px;
+	top:50%;
+	margin-top: -100px;
+	color: #f8e064;
+	font-weight:bold;
+	font-family: Arial;
+	font-size: 12px;
+	text-shadow: 0.1em 0.1em 0.2em black;
+	background-image: url('../resources/ui/dialogs/ui-message/images/ui-message.png');
+	z-index:97;
+	overflow-y: auto;
+	display: none;
+	overflow: hidden;
+}
+
+#ui-message #title
+{
+	border: 0px #fff solid;
+	position:absolute;
+	top:10px;
+	left:5px;
+	width:305px;
+	text-align: center;
+}
+
+#ui-message #message
+{
+	border: 0px #fff solid;
+	position:absolute;
+	top:30px;
+	left:5px;
+	width:300px;
+	text-align: center;
+	color: #fff;
+	font-weight:normal;
+	height: 130px;
+}
+
+#ui-message #uiokbut
+{
+	background-image: url('../resources/ui/buttons/ok.png');
+	background-repeat: no-repeat;
+	border: 0px #fff solid;
+	position:absolute;
+	top:165px;
+	left:270px;
+	width:30px;
+	height: 30px;
+	text-align: center;
+	color: #fff;
+	font-weight:normal;
+}
