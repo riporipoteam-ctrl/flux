@@ -34,7 +34,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { cn, formatCount } from "@/lib/utils";
 import { isNavPathActive, profilePath } from "@/lib/routes";
 
-const release = process.env.NEXT_PUBLIC_RELEASE_SHA?.slice(0, 7) || "local";
+
 
 const sections: Array<{ label: string; items: Array<{ href: string; label: string; icon: LucideIcon; description?: string }> }> = [
   {
@@ -113,7 +113,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 420, damping: 42 }}
-            className="absolute inset-y-0 left-0 flex h-[100dvh] w-[min(88vw,360px)] flex-col overflow-hidden border-r border-border bg-background text-foreground shadow-2xl"
+            className="flux-drawer absolute inset-y-0 left-0 flex h-[100dvh] w-[min(88vw,360px)] flex-col overflow-hidden border-r border-border bg-background text-foreground shadow-2xl"
           >
             <header className="border-b border-border px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
               <div className="flex items-center justify-between">
@@ -138,7 +138,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
               ))}
               {profile?.isAdmin ? <section className="mt-5"><p className="px-4 pb-2 text-[10px] font-black uppercase tracking-[.16em] text-muted-foreground">Owner</p><DrawerLink href="/admin" label="Admin" icon={Shield} description="Moderation and platform controls" active={isNavPathActive(pathname, "/admin")} onClose={onClose} /></section> : null}
             </nav>
-            <footer className="border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">Flux Aurora · {release}</footer>
+            <footer className="border-t border-border px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">Your people. Your space.</footer>
           </motion.aside>
         </div>
       ) : null}

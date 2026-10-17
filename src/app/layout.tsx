@@ -18,7 +18,7 @@ import "@/styles/flux-v13-redesign.css";
 import "@/styles/flux-motion.css";
 import "@/styles/flux-x.css";
 import "@/styles/askai-grok.css";
-import "@/styles/flux-social-refresh.css";
+import "@/styles/flux-platform.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const release = process.env.NEXT_PUBLIC_RELEASE_SHA || "local";
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     shortcut: [{ url: `${basePath}/flux-icon.png?v=flux-v12`, type: "image/png", sizes: "1024x1024" }],
     apple: [{ url: `${basePath}/flux-icon.png?v=flux-v12`, type: "image/png", sizes: "180x180" }],
   },
-  other: { "mobile-web-app-capable": "yes", "flux-release": release, "flux-ui": "v12" },
+  other: { "mobile-web-app-capable": "yes", "flux-release": release, "flux-ui": "platform-2026" },
 };
 
 export const viewport: Viewport = {

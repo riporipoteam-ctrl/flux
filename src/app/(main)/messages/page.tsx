@@ -382,9 +382,9 @@ function MessagesInner() {
   }, [typingUids, messages]);
 
   return (
-    <main className="flex h-[calc(100dvh_-_53px_-_58px_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] min-h-0 bg-background lg:h-[100dvh]">
+    <main className="flux-messages flex h-[calc(100dvh_-_53px_-_58px_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] min-h-0 bg-background lg:h-[100dvh]">
       {/* ---------------- Conversation list ---------------- */}
-      <section className={cn("w-full shrink-0 border-r border-border bg-background sm:w-[340px] lg:w-[380px]", activeId && "hidden sm:flex sm:flex-col")}>
+      <section className={cn("flux-conversation-list flex flex-col w-full shrink-0 border-r border-border bg-background sm:w-[300px] lg:w-[320px]", activeId && "hidden sm:flex sm:flex-col")}>
         <header className="flex h-[60px] shrink-0 items-center gap-2 px-5">
           <h1 className="flex-1 text-[22px] font-extrabold tracking-tight">Messages</h1>
           <button
@@ -476,7 +476,7 @@ function MessagesInner() {
       </section>
 
       {/* ---------------- Active chat ---------------- */}
-      <section className={cn("flex min-w-0 flex-1 flex-col bg-background", !activeId && "hidden sm:flex")}>
+      <section className={cn("flux-conversation flex min-w-0 flex-1 flex-col bg-background", !activeId && "hidden sm:flex")}>
         {!activeId ? (
           <div className="grid flex-1 place-items-center p-8">
             <div className="max-w-xs text-center">

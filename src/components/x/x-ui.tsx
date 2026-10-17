@@ -5,7 +5,7 @@
  *
  * Every screen outside the timeline is built from these so headers, tabs,
  * rows, cards and empty states stay identical across the app and across
- * phone / tablet / desktop. Presentation lives in styles/flux-v8.css; this
+ * phone / tablet / desktop. Presentation lives in styles/flux-platform.css; this
  * file only owns structure, behaviour and motion.
  */
 
@@ -27,7 +27,7 @@ export function XPage({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <main className={cn("x-page", className)}>{children}</main>;
+  return <section className={cn("x-page", className)}>{children}</section>;
 }
 
 /**
@@ -57,7 +57,9 @@ export function XHeader({
   const router = useRouter();
 
   return (
-    <header className={cn("x-header", hideOnMobile && "hidden lg:flex", className)}>
+    <header
+      className={cn("x-header", hideOnMobile && "hidden lg:flex", className)}
+    >
       {back ? (
         <button
           type="button"
@@ -80,7 +82,9 @@ export function XHeader({
         {subtitle ? <p>{subtitle}</p> : null}
       </div>
 
-      {actions ? <div className="flex flex-none items-center gap-1">{actions}</div> : null}
+      {actions ? (
+        <div className="flex flex-none items-center gap-1">{actions}</div>
+      ) : null}
     </header>
   );
 }
@@ -89,7 +93,11 @@ export function XHeader({
 /* Tabs                                                                        */
 /* -------------------------------------------------------------------------- */
 
-export type XTabItem<T extends string> = { id: T; label: string; count?: number };
+export type XTabItem<T extends string> = {
+  id: T;
+  label: string;
+  count?: number;
+};
 
 /**
  * Sticky tab strip with a shared-layout underline. The indicator animates
@@ -118,7 +126,7 @@ export function XTabs<T extends string>({
       className={cn("x-tabs", className)}
       role="tablist"
       aria-orientation="horizontal"
-      style={scrollable ? undefined : { display: "grid", gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+      data-scrollable={scrollable || undefined}
     >
       {tabs.map((tab) => {
         const active = tab.id === value;
@@ -129,6 +137,26 @@ export function XTabs<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
+            onKeyDown={(event) => {
+              const offset =
+                event.key === "ArrowRight"
+                  ? 1
+                  : event.key === "ArrowLeft"
+                    ? -1
+                    : 0;
+              if (!offset) return;
+              event.preventDefault();
+              const next =
+                tabs[(tabs.indexOf(tab) + offset + tabs.length) % tabs.length];
+              onChange(next.id);
+              const siblings =
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                  '[role="tab"]',
+                );
+              siblings?.[
+                (tabs.indexOf(tab) + offset + tabs.length) % tabs.length
+              ]?.focus();
+            }}
             className={cn("x-tab", active && "is-active")}
           >
             <span className="relative flex items-center gap-1.5 py-4">
@@ -140,7 +168,10 @@ export function XTabs<T extends string>({
               ) : null}
               {active ? (
                 reduce ? (
-                  <span aria-hidden="true" className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full bg-[var(--v8-accent)]" />
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full bg-[var(--v8-accent)]"
+                  />
                 ) : (
                   <motion.span
                     aria-hidden="true"
@@ -169,13 +200,22 @@ export function XCard({
   ...rest
 }: React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
   return (
-    <div className={cn("x-card", interactive && "x-card-interactive", className)} {...rest}>
+    <div
+      className={cn("x-card", interactive && "x-card-interactive", className)}
+      {...rest}
+    >
       {children}
     </div>
   );
 }
 
-export function XSectionTitle({ children, meta }: { children: React.ReactNode; meta?: React.ReactNode }) {
+export function XSectionTitle({
+  children,
+  meta,
+}: {
+  children: React.ReactNode;
+  meta?: React.ReactNode;
+}) {
   return (
     <h2 className="x-section-title">
       {children}
@@ -207,15 +247,30 @@ export function XRow({
   const body = (
     <>
       {Icon ? (
-        <span className="x-row-icon" style={tone === "danger" ? { background: "var(--v8-red-soft)", color: "var(--v8-red)" } : undefined}>
+        <span
+          className="x-row-icon"
+          style={
+            tone === "danger"
+              ? { background: "var(--v8-red-soft)", color: "var(--v8-red)" }
+              : undefined
+          }
+        >
           <Icon className="h-[18px] w-[18px]" />
         </span>
       ) : null}
       <span className="x-row-main">
-        <strong style={tone === "danger" ? { color: "var(--v8-red)" } : undefined}>{title}</strong>
+        <strong
+          style={tone === "danger" ? { color: "var(--v8-red)" } : undefined}
+        >
+          {title}
+        </strong>
         {description ? <span>{description}</span> : null}
       </span>
-      {trailing ? <span className="flex flex-none items-center gap-2 text-[var(--v8-muted)]">{trailing}</span> : null}
+      {trailing ? (
+        <span className="flex flex-none items-center gap-2 text-[var(--v8-muted)]">
+          {trailing}
+        </span>
+      ) : null}
     </>
   );
 
@@ -270,7 +325,9 @@ export function XHero({
   return (
     <section className="x-hero">
       {eyebrow ? (
-        <p className="mb-3 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--v8-accent)]">{eyebrow}</p>
+        <p className="mb-3 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--v8-accent)]">
+          {eyebrow}
+        </p>
       ) : null}
       <h1>{title}</h1>
       {description ? <p>{description}</p> : null}
@@ -303,7 +360,9 @@ export function XEmpty({
         </div>
         <h3>{title}</h3>
         {description ? <p className="mx-auto">{description}</p> : null}
-        {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
+        {action ? (
+          <div className="mt-6 flex justify-center">{action}</div>
+        ) : null}
       </div>
     </div>
   );
@@ -313,7 +372,10 @@ export function XRowSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <div aria-busy="true" aria-label="Loading">
       {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} className="flex gap-3 border-b border-[var(--v8-line)] px-4 py-4">
+        <div
+          key={index}
+          className="flex gap-3 border-b border-[var(--v8-line)] px-4 py-4"
+        >
           <div className="x-skeleton h-10 w-10 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-2">
             <div className="x-skeleton h-3.5 w-1/3 rounded" />
@@ -328,7 +390,11 @@ export function XRowSkeleton({ rows = 6 }: { rows?: number }) {
 
 export function XCardSkeleton({ cards = 4 }: { cards?: number }) {
   return (
-    <div className="grid gap-3 p-4 sm:grid-cols-2" aria-busy="true" aria-label="Loading">
+    <div
+      className="grid gap-3 p-4 sm:grid-cols-2"
+      aria-busy="true"
+      aria-label="Loading"
+    >
       {Array.from({ length: cards }).map((_, index) => (
         <div key={index} className="x-card p-4">
           <div className="x-skeleton h-24 w-full rounded-xl" />
@@ -371,7 +437,13 @@ export function Reveal({
 }
 
 /** Staggered container for lists. Children should be `<RevealItem>`. */
-export function RevealList({ children, className }: { children: React.ReactNode; className?: string }) {
+export function RevealList({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
 
@@ -380,14 +452,23 @@ export function RevealList({ children, className }: { children: React.ReactNode;
       className={className}
       initial="hidden"
       animate="show"
-      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.035 } } }}
+      variants={{
+        hidden: {},
+        show: { transition: { staggerChildren: 0.035 } },
+      }}
     >
       {children}
     </motion.div>
   );
 }
 
-export function RevealItem({ children, className }: { children: React.ReactNode; className?: string }) {
+export function RevealItem({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const reduce = useReducedMotion();
   if (reduce) return <div className={className}>{children}</div>;
 
@@ -396,7 +477,11 @@ export function RevealItem({ children, className }: { children: React.ReactNode;
       className={className}
       variants={{
         hidden: { opacity: 0, y: 10 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] } },
+        show: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+        },
       }}
     >
       {children}
@@ -405,7 +490,13 @@ export function RevealItem({ children, className }: { children: React.ReactNode;
 }
 
 /** Crossfades tab panels without shifting layout. */
-export function XSwitch({ id, children }: { id: string; children: React.ReactNode }) {
+export function XSwitch({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
   const reduce = useReducedMotion();
   if (reduce) return <>{children}</>;
 

@@ -109,7 +109,7 @@ export default function GroupsPage() {
   return (
     <div className="min-h-screen">
       <header className="x-header justify-between">
-        <h1 className="hidden text-xl font-extrabold lg:block">Groups</h1>
+        <div className="x-header-titles"><h1>Communities</h1><p>A place for the things you share.</p></div>
         <Dialog
           open={open}
           onOpenChange={(v) => {
@@ -273,7 +273,7 @@ export default function GroupsPage() {
           description="Create a community with banner, rules, and ranks."
         />
       ) : (
-        <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="divide-y divide-border">
+        <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flux-community-grid">
           {groups.map((g) => (
             <li key={g.id}>
               <Link

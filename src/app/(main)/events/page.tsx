@@ -76,7 +76,7 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen">
       <header className="x-header justify-between">
-        <h1 className="text-lg font-bold">Events</h1>
+        <div className="x-header-titles"><h1>Events</h1><p>Meet up, tune in, and be part of something.</p></div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -148,7 +148,7 @@ export default function EventsPage() {
         <motion.ul
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="divide-y divide-border"
+          className="flux-event-grid"
         >
           {events.map((ev) => {
             let when = ev.startAt;

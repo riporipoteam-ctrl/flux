@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { RefreshCw, Compass } from "lucide-react";
+import { XEmpty } from "@/components/x/x-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
 import { useAuth } from "@/contexts/auth-context";
@@ -157,6 +160,7 @@ export default function HomePage() {
     <div>
       {/* Sticky X tab header */}
       <header className="xxhead">
+        <div className="flux-feed-heading"><div><h1>Home</h1><p>Your people. Fresh perspectives. One conversation.</p></div><button type="button" className="flux-icon-button" aria-label="Refresh timeline" disabled={refreshing || loading} onClick={() => void load(true)}><RefreshCw size={17} className={refreshing ? "animate-spin" : ""} /></button></div>
         <div className="xxtabs" role="tablist" aria-label="Timeline">
           <button
             type="button"
@@ -215,10 +219,7 @@ export default function HomePage() {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="xxempty">
-          <h3>{tab === "following" ? "No posts from people you follow" : "Your timeline is quiet"}</h3>
-          <p>{tab === "following" ? "Follow people to build your Following timeline." : "When you post or follow people, their posts will show up here."}</p>
-        </div>
+        <XEmpty icon={Compass} title={tab === "following" ? "Start with a few good follows" : "Your next conversation starts here"} description={tab === "following" ? "Find people who share your interests. Their posts will fill this timeline." : "Share a thought, or explore what people are talking about on Flux."} action={<Link href="/explore" className="x-btn">Explore Flux</Link>} />
       ) : (
         <div>
           {posts.map((post) => (

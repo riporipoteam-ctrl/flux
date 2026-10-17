@@ -296,7 +296,7 @@ export default function LiveViewerV4() {
   }
 
   return (
-    <main className="h-[100dvh] overflow-hidden bg-black text-white">
+    <main className="flux-live-viewer h-[100dvh] overflow-hidden bg-black text-white">
       <section className="relative mx-auto h-full max-w-[1500px] overflow-hidden bg-black xl:grid xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="relative h-full overflow-hidden">
           <video

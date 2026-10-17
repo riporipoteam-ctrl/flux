@@ -206,9 +206,9 @@ export default function ShopPage() {
   const equipped = profile?.decorations || {};
 
   return (
-    <div className="min-h-screen">
-      <header className="relative z-20 flex items-center justify-end border-b border-border bg-background/80 px-3 py-2.5 backdrop-blur-xl lg:sticky lg:top-0 lg:z-30 lg:justify-between sm:px-4">
-        <div className="hidden lg:block">
+    <div className="flux-shop min-h-screen">
+      <header className="x-header justify-between">
+        <div className="x-header-titles">
           <h1 className="text-xl font-extrabold">Shop</h1>
           <p className="text-xs text-muted-foreground">
             Weekly drop · {weekKey()}
@@ -346,7 +346,7 @@ export default function ShopPage() {
                 No items in this category yet.
               </p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flux-shop-products grid gap-3 sm:grid-cols-2">
                 {filtered.map((item) => {
                   const isOwned = owned.includes(item.id);
                   const isEquipped =
@@ -357,9 +357,9 @@ export default function ShopPage() {
                   return (
                     <div
                       key={item.id}
-                      className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card"
+                      className="flux-shop-product flex flex-col overflow-hidden rounded-2xl border border-border bg-card"
                     >
-                      <div className="relative flex h-36 items-center justify-center bg-muted">
+                      <div className="flux-shop-preview relative flex h-36 items-center justify-center bg-muted">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img

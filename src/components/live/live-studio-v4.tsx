@@ -327,7 +327,7 @@ export default function LiveStudioV4() {
   };
 
   return (
-    <main className="h-[100dvh] overflow-hidden bg-black text-white">
+    <main className="flux-live-studio h-[100dvh] overflow-hidden bg-black text-white">
       <div className="grid h-full lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="relative h-full overflow-hidden bg-black">
           <video ref={videoRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-contain" />

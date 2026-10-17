@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
+  const [authError, setAuthError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -24,6 +26,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
     setLoading(true);
     try {
       if (mode === "login") {
@@ -39,20 +42,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       toast.success(mode === "login" ? "Welcome back" : "Account created");
       router.push("/");
     } catch (err: unknown) {
-      toast.error(friendlyAuthError(err));
+      setAuthError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
   const onGoogle = async () => {
+    setAuthError(null);
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
       toast.success("Signed in with Google");
       router.push("/");
     } catch (err: unknown) {
-      toast.error(friendlyAuthError(err));
+      setAuthError(friendlyAuthError(err));
     } finally {
       setGoogleLoading(false);
     }
@@ -63,14 +67,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <div className="w-full flux-auth-form">
       <motion.div
-        initial={{ opacity: 0, y: 14 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.05 }}
         className="flux-auth-form-heading"
       >
-        <span className="flux-auth-eyebrow">{isSignup ? "A NEW KIND OF SOCIAL" : "YOUR SPACE IS WAITING"}</span>
+        <span className="flux-auth-eyebrow">{isSignup ? "Your next chapter starts here" : "Your conversations are waiting"}</span>
         <h1 className="flux-auth-title">
-          {isSignup ? "Join Flux today" : "Welcome back"}
+          {isSignup ? "Make yourself at home." : "Back to your people."}
         </h1>
         <p className="flux-auth-subtitle">
           {isSignup
@@ -80,7 +84,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 14 }}
+        initial={reducedMotion ? false : { opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.12 }}
         className="mt-8"
@@ -109,9 +113,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <Separator className="flex-1" />
         </div>
 
+        {authError ? <div className="flux-auth-error" role="alert">{authError}</div> : null}
         <form onSubmit={onSubmit} className="space-y-4">
           {isSignup ? (
             <div>
+              <label className="flux-field-label" htmlFor="name">Your name</label>
               <Input
                 id="name"
                 value={displayName}
@@ -125,19 +131,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             </div>
           ) : null}
           <div>
+            <label className="flux-field-label" htmlFor="email">Email address</label>
             <Input
               id="email"
               type="email"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email address"
+              placeholder="you@example.com"
               required
               disabled={loading}
               className="flux-auth-input h-13 rounded-2xl px-5 py-3.5 text-[15px]"
             />
           </div>
           <div className="relative">
+            <label className="flux-field-label" htmlFor="password">Password</label>
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -156,7 +164,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               disabled={loading}
               aria-label={showPassword ? "Hide password" : "Show password"}
               className={cn(
-                "absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1",
+                "flux-password-toggle absolute right-3 bottom-2 rounded-full p-1",
                 "text-muted-foreground transition-colors hover:text-foreground",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               )}
@@ -220,9 +228,9 @@ function friendlyAuthError(err: unknown): string {
   if (raw.includes("auth/invalid-credential") || raw.includes("wrong-password"))
     return "Wrong email or password.";
   if (raw.includes("auth/operation-not-allowed"))
-    return "Email/password sign-in is disabled in Firebase. Enable the Email/Password provider in Firebase Authentication.";
+    return "Email sign-in is temporarily unavailable. Try Google sign-in or return later.";
   if (raw.includes("auth/invalid-api-key"))
-    return "Firebase authentication is misconfigured. Redeploy the latest Flux folder so its public Firebase settings are included.";
+    return "Sign-in is temporarily unavailable. Please try again later.";
   if (raw.includes("auth/invalid-email"))
     return "Enter a valid email address.";
   if (raw.includes("auth/too-many-requests"))

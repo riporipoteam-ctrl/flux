@@ -424,7 +424,7 @@ function CallInner() {
   const isVideo = call?.mode === "video" || requestedMode === "video";
 
   return (
-    <main className="relative flex h-[calc(100dvh_-_53px_-_env(safe-area-inset-top))] min-h-[520px] flex-col overflow-hidden bg-[#0f1419] text-white lg:h-[100dvh]">
+    <main className="flux-call-screen relative flex h-[calc(100dvh_-_53px_-_env(safe-area-inset-top))] min-h-[520px] flex-col overflow-hidden bg-[#0f1419] text-white lg:h-[100dvh]">
       {/* Always mounted: this is what carries a voice call's audio. */}
       <audio ref={remoteAudio} autoPlay playsInline className="hidden" />
       {needsSound ? (

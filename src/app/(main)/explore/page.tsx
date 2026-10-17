@@ -206,6 +206,7 @@ function ExploreInner() {
 
   return (
     <XPage>
+      <div className="flux-discover-intro"><span>Beyond your following</span><h1>There’s more to discover.</h1><p>Fresh voices, shared interests, and conversations worth joining.</p><div className="flux-explore-shortcuts"><Link href="/groups">Communities</Link><Link href="/stories">Stories</Link><Link href="/live">Live now</Link></div></div>
       {/* The search field lives in the sticky header itself, the way X does. */}
       <header className="x-header x-header-search">
         <label className="flux8-rail-search !static">

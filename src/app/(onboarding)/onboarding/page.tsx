@@ -159,7 +159,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flux-onboarding min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen max-w-xl flex-col px-4 py-6 sm:px-6">
         <div className="mb-6 flex items-center justify-between">
           <Logo href="#" />

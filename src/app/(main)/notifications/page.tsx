@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import {
   getNotifications,
@@ -127,14 +128,23 @@ export default function NotificationsPage() {
 
   const markAll = async () => {
     if (!user) return;
-    await markAllNotificationsRead(user.uid);
-    setItems((previous) => previous.map((row) => ({ ...row, read: true })));
+    try {
+      await markAllNotificationsRead(user.uid);
+      setItems((previous) => previous.map((row) => ({ ...row, read: true })));
+    } catch {
+      toast.error("Couldn’t update notifications. Try again.");
+    }
   };
 
   const open = async (row: NotifRow) => {
     if (row.read) return;
-    await markNotificationRead(row.id);
-    setItems((previous) => previous.map((item) => (item.id === row.id ? { ...item, read: true } : item)));
+    try {
+      await markNotificationRead(row.id);
+      setItems((previous) => previous.map((item) => (item.id === row.id ? { ...item, read: true } : item)));
+    } catch {
+      // Opening the destination still works when the read receipt cannot sync.
+      toast.error("Couldn’t mark this notification as read.");
+    }
   };
 
   const unread = useMemo(() => items.filter((row) => !row.read).length, [items]);

@@ -15,15 +15,21 @@ import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
 import { IncomingCallBanner } from "@/components/messages/incoming-call-banner";
 import { RouteProgress } from "@/components/layout/route-progress";
+import { AppMasthead } from "@/components/layout/app-masthead";
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+export default function MainLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, profile, loading, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [stickyResolved, setStickyResolved] = useState(false);
   const [stickyComplete, setStickyComplete] = useState(false);
   const routePath = pathname?.replace(/\/+$/, "") || "/";
-  const isPublicLiveViewer = routePath === "/live/view" || routePath.endsWith("/live/view");
+  const isPublicLiveViewer =
+    routePath === "/live/view" || routePath.endsWith("/live/view");
   const isAskAI = routePath === "/ask-ai" || routePath.endsWith("/ask-ai");
   const isPublicAskAI = isAskAI;
   const isMessages = pathname?.startsWith("/messages");
@@ -34,8 +40,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isStudio = pathname?.startsWith("/studio");
   const isLiveRoom = pathname?.startsWith("/live/create") || isPublicLiveViewer;
   const isImmersive = isAskAI || isCall || isLiveRoom || isArcade;
-  const hideRail = isMessages || isFluxRec || isLive;
-  const profileCompleted = Boolean(profile && (profile.onboardingComplete || String(profile.username || "").trim()));
+  const hideRail =
+    isMessages ||
+    isFluxRec ||
+    isLive ||
+    /^\/(settings|create|shop|premium|games)(\/|$)/.test(routePath);
+  const profileCompleted = Boolean(
+    profile &&
+      (profile.onboardingComplete || String(profile.username || "").trim()),
+  );
 
   useEffect(() => {
     if (!user) {
@@ -44,52 +57,133 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       return;
     }
     if (profileCompleted) markStickyOnboardingComplete(user.uid);
-    setStickyComplete(profileCompleted || hasStickyOnboardingComplete(user.uid));
+    setStickyComplete(
+      profileCompleted || hasStickyOnboardingComplete(user.uid),
+    );
     setStickyResolved(true);
   }, [user, profileCompleted]);
 
   const needsOnboarding = Boolean(
     stickyResolved &&
-    profile &&
-    hasOnboardingPending(user?.uid || "") &&
-    !stickyComplete &&
-    !profile.onboardingComplete &&
-    !String(profile.username || "").trim()
+      profile &&
+      hasOnboardingPending(user?.uid || "") &&
+      !stickyComplete &&
+      !profile.onboardingComplete &&
+      !String(profile.username || "").trim(),
   );
 
   useEffect(() => {
-    if (loading || !stickyResolved || isPublicLiveViewer || isPublicAskAI) return;
+    if (loading || !stickyResolved || isPublicLiveViewer || isPublicAskAI)
+      return;
     if (!user) router.replace("/login");
     else if (needsOnboarding) router.replace("/onboarding");
-  }, [user, needsOnboarding, loading, stickyResolved, router, isPublicLiveViewer, isPublicAskAI]);
+  }, [
+    user,
+    needsOnboarding,
+    loading,
+    stickyResolved,
+    router,
+    isPublicLiveViewer,
+    isPublicAskAI,
+  ]);
 
   if (isPublicLiveViewer) {
-    return <div className="h-[100dvh] w-full overflow-hidden bg-black">{children}</div>;
+    return (
+      <div className="flux-media-workspace h-[100dvh] w-full overflow-hidden bg-black">
+        {children}
+      </div>
+    );
   }
 
   if (isPublicAskAI) {
-    return <div className="h-[100dvh] w-full overflow-auto bg-background">{children}</div>;
+    return (
+      <div className="h-[100dvh] w-full overflow-auto bg-background">
+        {children}
+      </div>
+    );
   }
 
   if (loading || !stickyResolved) return <LoadingScreen label="Loading Flux" />;
   if (!user) return <LoadingScreen label="Opening sign in" />;
 
   if (!profile) {
-    return <div className="grid min-h-[100dvh] place-items-center px-5" style={{ background: "var(--xx-bg)" }}><div className="w-full max-w-sm rounded-2xl p-7 text-center" style={{ border: "1px solid var(--xx-line)" }}><h1 className="text-xl font-black">We couldn&apos;t load your profile</h1><p className="mt-2 text-sm leading-6" style={{ color: "var(--xx-gray)" }}>Your session is safe. Retry the connection, or return to sign in.</p><button onClick={() => void refreshProfile()} className="xxbtn xxbtn-blue mt-5 h-11 w-full">Try again</button><button onClick={() => void signOut()} className="mt-2 h-10 w-full rounded-full text-sm font-semibold" style={{ color: "var(--xx-gray)" }}>Return to sign in</button></div></div>;
+    return (
+      <div
+        className="grid min-h-[100dvh] place-items-center px-5"
+        style={{ background: "var(--xx-bg)" }}
+      >
+        <div
+          className="w-full max-w-sm rounded-2xl p-7 text-center"
+          style={{ border: "1px solid var(--xx-line)" }}
+        >
+          <h1 className="text-xl font-black">
+            We couldn&apos;t load your profile
+          </h1>
+          <p
+            className="mt-2 text-sm leading-6"
+            style={{ color: "var(--xx-gray)" }}
+          >
+            Your session is safe. Retry the connection, or return to sign in.
+          </p>
+          <button
+            onClick={() => void refreshProfile()}
+            className="xxbtn xxbtn-blue mt-5 h-11 w-full"
+          >
+            Try again
+          </button>
+          <button
+            onClick={() => void signOut()}
+            className="mt-2 h-10 w-full rounded-full text-sm font-semibold"
+            style={{ color: "var(--xx-gray)" }}
+          >
+            Return to sign in
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (needsOnboarding) return <LoadingScreen label="Continuing setup" />;
 
-  if (isStudio) return <div className="h-[100dvh] w-full overflow-hidden bg-black"><RouteProgress /><IncomingCallBanner />{children}</div>;
-  if (isImmersive) return <div className="h-[100dvh] w-full overflow-auto bg-background"><RouteProgress /><IncomingCallBanner />{children}</div>;
+  if (isStudio)
+    return (
+      <div className="flux-studio-workspace h-[100dvh] w-full overflow-hidden bg-black">
+        <RouteProgress />
+        <IncomingCallBanner />
+        {children}
+      </div>
+    );
+  if (isImmersive)
+    return (
+      <div
+        className="flux-special-workspace h-[100dvh] w-full overflow-auto bg-background"
+        data-workspace={routePath.split("/")[1]}
+      >
+        <RouteProgress />
+        <IncomingCallBanner />
+        {children}
+      </div>
+    );
 
   return (
-    <div className="xxshell">
+    <div
+      className="xxshell flux-app"
+      data-page={routePath.split("/")[1] || "home"}
+      data-wide={hideRail ? "true" : undefined}
+    >
+      <a href="#main-content" className="flux-skip-link">
+        Skip to content
+      </a>
       <RouteProgress />
       <IncomingCallBanner />
+      <AppMasthead />
       <div className="xxshell-inner">
         <Sidebar />
-        <main className="xxmain-col">
+        <main
+          className="xxmain-col flux-page-column"
+          id="main-content"
+          tabIndex={-1}
+        >
           <MobileAppHeader />
           {children}
         </main>
