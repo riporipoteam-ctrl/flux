@@ -15,7 +15,6 @@ import { MobileAppHeader } from "@/components/layout/mobile-app-header";
 import { RightRail } from "@/components/layout/right-rail";
 import { IncomingCallBanner } from "@/components/messages/incoming-call-banner";
 import { RouteProgress } from "@/components/layout/route-progress";
-import { AppMasthead } from "@/components/layout/app-masthead";
 
 export default function MainLayout({
   children,
@@ -167,7 +166,7 @@ export default function MainLayout({
 
   return (
     <div
-      className="xxshell flux-app"
+      className="xxshell flux-app flux-social"
       data-page={routePath.split("/")[1] || "home"}
       data-wide={hideRail ? "true" : undefined}
     >
@@ -176,7 +175,6 @@ export default function MainLayout({
       </a>
       <RouteProgress />
       <IncomingCallBanner />
-      <AppMasthead />
       <div className="xxshell-inner">
         <Sidebar />
         <main

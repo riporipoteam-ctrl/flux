@@ -1,10 +1,11 @@
 "use client";
 
+import { FluxMark, Logo } from "@/components/shared/logo";
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { LoadingScreen } from "@/components/shared/loading-screen";
-import { ArrowUpRight, MessageCircle, Users, PenLine } from "lucide-react";
 
 /** Shared account entry layout for the Flux platform. */
 export default function AuthLayout({
@@ -31,72 +32,32 @@ export default function AuthLayout({
 
   return (
     <main className="xxauth flux-auth-layout">
-      <section className="flux-auth-hero" aria-label="About Flux">
-        <div className="flux-auth-hero-grid" aria-hidden="true" />
-        <div className="flux-auth-brandline">
-          <span className="flux-brand-symbol" aria-hidden="true">
-            f<span />
-          </span>
-          <span className="flux-auth-wordmark">flux</span>
-          <span className="flux-auth-brand-caption">
-            A little more connected.
-          </span>
-        </div>
-
-        <div className="flux-auth-hero-copy">
-          <span className="flux-auth-overline">
-            Your people. Your perspective.
-          </span>
+      <section
+        className="flux-auth-hero flux-identity-auth"
+        aria-label="About Flux"
+      >
+        <Logo size={44} />
+        <div className="flux-auth-identity-art">
+          <FluxMark size={240} />
           <h2>
-            Life happens.
+            Stay in the
             <br />
-            <em>Talk about it.</em>
+            conversation.
           </h2>
-          <p>
-            A home for the thoughts, photos, and conversations that bring your
-            world a little closer.
-          </p>
         </div>
-
-        <div className="flux-auth-feature-list">
-          <div>
-            <MessageCircle size={20} />
-            <span>Find your next conversation.</span>
-            <ArrowUpRight size={16} />
-          </div>
-          <div>
-            <Users size={20} />
-            <span>A community for your interests.</span>
-            <ArrowUpRight size={16} />
-          </div>
-          <div>
-            <PenLine size={20} />
-            <span>Make room for your perspective.</span>
-            <ArrowUpRight size={16} />
-          </div>
-        </div>
-
-        <div className="flux-auth-hero-footer">
-          <span>© {new Date().getFullYear()} Ripo Team</span>
-          <b>·</b>
-          <span>Built for connection.</span>
-        </div>
+        <p className="flux-auth-identity-footer">
+          © {new Date().getFullYear()} Ripo Team
+        </p>
       </section>
 
       <section
         className="xxauth-form-col flux-auth-panel"
         aria-label="Sign in to Flux"
       >
-        <div className="flux-auth-mobile-brand">
-          <span className="flux-brand-symbol" aria-hidden="true">
-            f<span />
-          </span>
-          <span>Flux</span>
-        </div>
         <div className="xxauth-form-inner">{children}</div>
         <p className="xxauth-footer">
           © {new Date().getFullYear()} Flux by Ripo Team{" "}
-          <span>Made for your people.</span>
+          <span>Your conversations start here.</span>
         </p>
       </section>
     </main>

@@ -6,8 +6,8 @@ The platform uses `src/styles/flux-platform.css` as its final design layer. It r
 
 | Area | Changes |
 | --- | --- |
-| Shared desktop shell | New masthead, search, grouped navigation, account menu, contextual right rail, skip link |
-| Shared mobile shell | New brand/header, labeled five-destination bottom navigation, compose button, drawer styling |
+| Shared desktop shell | Generated Flux identity, full-height sidebar, large primary navigation, compact More menu, rail search, account menu and skip link |
+| Shared mobile shell | Generated logo header, custom five-destination bottom navigation, full-screen composer, focus-trapped navigation drawer |
 | Home and post surfaces | Continuous feed, new heading, refresh, composer, typography, media, actions, empty/retry states |
 | Profiles | Banner/avatar composition, identity, metadata, statistics, timeline styling, revised fallback portraits |
 | Explore | Discovery introduction, working destination shortcuts, people rows, search and trends |
@@ -32,4 +32,6 @@ Desktop and phone route checks cover home, explore, profile, notifications, mess
 
 ## Deployment
 
-`publish-flux-live.yml` builds the static export for `flux.sitey.my`, verifies platform markers and the local font, publishes the same artifact to `gh-pages`, and deploys GitHub Pages. `/version.txt`, `/release.json`, and the `flux-release` meta tag identify the source commit. The `data-flux-ui="x5"` attribute remains a compatibility selector; the public UI version is `platform-2026`.
+`publish-flux-live.yml` builds the static export for `flux.sitey.my`, verifies platform markers and the local font, publishes the same artifact to `gh-pages`, and deploys GitHub Pages. `/version.txt`, `/release.json`, and the `flux-release` meta tag identify the source commit. The `data-flux-ui="x5"` attribute remains a compatibility selector; the public UI version is `identity-2026`.
+
+The identity update adds a generated Flux symbol, multi-resolution favicon, Apple touch icon, separate normal and maskable PWA icons, and corrects the installed app launch URL to `/home/`. The source artwork and reproducible export instructions are in `docs/brand/`. Phone login/signup prioritize account controls, and the phone feed places posts directly below its tabs.

@@ -1,61 +1,44 @@
 "use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
-
+import { NavIcon } from "@/components/navigation/nav-icon";
+import { Logo } from "@/components/shared/logo";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { useAuth } from "@/contexts/auth-context";
-
-function sectionLabel(pathname: string): string {
-  const section = pathname.split("/")[1];
-  const labels: Record<string, string> = {
-    home: "Home",
-    messages: "Messages",
-    notifications: "Notifications",
-    explore: "Explore",
-    stories: "Stories",
-    live: "Live",
-    bookmarks: "Saved posts",
-    groups: "Communities",
-    group: "Community",
-    events: "Events",
-    "flux-rec": "Flux Rec",
-    shop: "Shop",
-    settings: "Settings",
-    post: "Conversation",
-    profile: "Profile",
-    create: "Create",
-    gifts: "Gifts",
-    rewards: "Rewards",
-    premium: "Premium",
-    games: "Games",
-    help: "Help",
-    lists: "Lists",
-    stickers: "Sticker Lab",
-    activity: "Activity",
-  };
-  return labels[section] || "Profile";
-}
-
+import { profilePath } from "@/lib/routes";
 export function MobileAppHeader() {
-  const pathname = (usePathname() || "/home").replace(/\/+$/, "") || "/home";
   const { profile } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const home = pathname === "/home";
-
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setDrawerOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
   return (
     <>
-      <header className="flux8-mobile-header lg:hidden">
-        <div className="flux8-mobile-header-row">
+      <header className="flux-mobile-header">
+        <div className="flux-mobile-header-inner">
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flux8-mobile-avatar"
+            className="flux-header-menu"
+            id="flux-open-menu"
+            aria-haspopup="dialog"
+            aria-controls="flux-navigation-panel"
             aria-label="Open navigation menu"
             aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen(true)}
+          >
+            <NavIcon name="menu" />
+          </button>
+          <Logo size={30} />
+          <Link
+            href={profilePath(profile?.username)}
+            className="flux-header-profile"
+            aria-label="Your profile"
           >
             <UserAvatar
               user={profile}
@@ -63,32 +46,7 @@ export function MobileAppHeader() {
               clickable={false}
               decorations={profile?.decorations}
             />
-          </button>
-          <Link
-            href="/home"
-            className="flux8-mobile-title"
-            aria-label="Flux home"
-          >
-            {home ? (
-              <>
-                <span className="flux-brand-symbol" aria-hidden="true">
-                  f<span />
-                </span>
-                <strong className="ml-2">flux</strong>
-              </>
-            ) : (
-              <strong>{sectionLabel(pathname)}</strong>
-            )}
           </Link>
-          <div className="flux8-mobile-header-actions">
-            <Link
-              href="/explore"
-              className="flux8-mobile-header-action"
-              aria-label="Search Flux"
-            >
-              <Search className="h-[21px] w-[21px]" />
-            </Link>
-          </div>
         </div>
       </header>
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

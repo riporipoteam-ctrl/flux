@@ -1,5 +1,7 @@
 "use client";
 
+import { FluxMark } from "@/components/shared/logo";
+
 export function LoadingScreen({ label = "Loading Flux" }: { label?: string }) {
   return (
     <div
@@ -9,9 +11,7 @@ export function LoadingScreen({ label = "Loading Flux" }: { label?: string }) {
       aria-label={label}
     >
       <header>
-        <span className="flux-brand-symbol" aria-hidden="true">
-          f<span />
-        </span>
+        <FluxMark size={36} />
         <strong>flux</strong>
         <span className="flux-loading-search" />
       </header>

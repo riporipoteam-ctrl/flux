@@ -2,7 +2,7 @@
 const CACHE = "flux-shell-v4";
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const scoped = (path) => `${SCOPE_PATH}${path}`;
-const PRECACHE = [scoped("/"), scoped("/manifest.webmanifest"), scoped("/favicon.ico"), scoped("/flux-icon.png")];
+const PRECACHE = [scoped("/"), scoped("/manifest.webmanifest"), scoped("/favicon.ico"), scoped("/flux-icon.png"), scoped("/brand/flux-symbol.png"), scoped("/icons/flux-192.png"), scoped("/icons/flux-512.png"), scoped("/apple-touch-icon.png")];
 
 self.addEventListener("install", (event) => {
   // Do NOT call skipWaiting(). A newly deployed worker should wait until the

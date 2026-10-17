@@ -27,7 +27,14 @@ export const THEME_KEY = "flux-theme-v2";
 export const ACCENT_KEY = "flux-accent-v1";
 
 export const THEMES: ThemeMode[] = ["light", "dim", "dark", "system"];
-export const ACCENTS: AccentColor[] = ["blue", "yellow", "pink", "purple", "orange", "green"];
+export const ACCENTS: AccentColor[] = [
+  "blue",
+  "yellow",
+  "pink",
+  "purple",
+  "orange",
+  "green",
+];
 
 function isTheme(value: unknown): value is ThemeMode {
   return typeof value === "string" && (THEMES as string[]).includes(value);
@@ -68,6 +75,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add(next);
       // Prevent the OS preference from fighting an explicit choice.
       root.style.colorScheme = next === "light" ? "light" : "dark";
+      const chromeColor =
+        next === "light" ? "#ffffff" : next === "dim" ? "#17221d" : "#101714";
+      document
+        .querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
+        .forEach((meta) => {
+          meta.content = chromeColor;
+        });
     };
 
     apply(theme);
@@ -88,17 +102,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [accent, mounted]);
 
   const setTheme = useCallback((next: ThemeMode) => setThemeState(next), []);
-  const setAccent = useCallback((next: AccentColor) => setAccentState(next), []);
+  const setAccent = useCallback(
+    (next: AccentColor) => setAccentState(next),
+    [],
+  );
   const toggleDark = useCallback((enabled: boolean) => {
     setThemeState(enabled ? "dark" : "light");
   }, []);
 
   const value = useMemo(
     () => ({ theme, resolved, accent, setTheme, setAccent, toggleDark }),
-    [theme, resolved, accent, setTheme, setAccent, toggleDark]
+    [theme, resolved, accent, setTheme, setAccent, toggleDark],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

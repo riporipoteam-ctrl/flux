@@ -18,7 +18,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:brightness-110",
         soft: "bg-accent text-accent-foreground hover:opacity-90",
-        sky: "bg-[#1d9bf0] text-white hover:bg-[#1a8cd8]",
+        sky: "bg-primary text-primary-foreground hover:opacity-90",
         flux: "bg-gradient-to-br from-violet-500 via-indigo-500 to-cyan-400 text-white shadow-[0_10px_30px_rgba(91,70,255,.28)] hover:-translate-y-0.5 hover:shadow-[0_14px_38px_rgba(91,70,255,.38)]",
       },
       size: {

@@ -1,0 +1,1219 @@
+/* Flux identity and navigation. Product screens share the platform controls;
+   this sheet owns the app frame, navigation, and the generated brand assets. */
+:root {
+  --flux-signature: #159a7b;
+  --p-header: 0px;
+}
+html.light {
+  --p-canvas: #fff;
+  --p-surface: #fff;
+  --p-soft: #f4f7f5;
+  --p-ink: #111b17;
+  --p-muted: #66716b;
+  --p-line: #e6eae7;
+  --p-strong: #cad3cd;
+}
+html.dim {
+  --p-canvas: #17221d;
+  --p-surface: #17221d;
+  --p-soft: #203029;
+  --p-line: #314239;
+  --p-ink: #f1f7f3;
+  --p-muted: #a1b2a8;
+  --p-strong: #4b6255;
+}
+html.dark {
+  --p-canvas: #101714;
+  --p-surface: #101714;
+  --p-soft: #1c2721;
+  --p-line: #29382f;
+  --p-ink: #f2f6f3;
+  --p-muted: #9eada4;
+  --p-strong: #465d4e;
+}
+html[data-accent="blue"] {
+  --p-accent: #0c8669;
+  --p-accent-soft: #e9f6f0;
+}
+html.dark[data-accent="blue"],
+html.dim[data-accent="blue"] {
+  --p-accent: #45c9a1;
+  --p-accent-soft: #1c3c2f;
+}
+.flux-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  text-decoration: none;
+  color: var(--p-ink);
+  flex-shrink: 0;
+}
+.flux-logo .flux-brand-word {
+  font-family: var(--font-geist-sans);
+  font-size: 33px;
+  font-weight: 780;
+  letter-spacing: -0.065em;
+  line-height: 1;
+}
+.flux-brand-mark {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  filter: none !important;
+  overflow: visible !important;
+}
+.flux-brand-mark img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+  filter: none !important;
+}
+.flux-brand-mark .flux-brand-symbol {
+  display: none;
+}
+.flux-app.flux-social {
+  background: var(--p-surface);
+  min-height: 100dvh;
+}
+.flux-app.flux-social .xxshell-inner {
+  max-width: 1280px;
+  grid-template-columns: 236px minmax(0, 650px) minmax(250px, 306px);
+  gap: 0;
+  min-height: 100dvh;
+  padding: 0 20px;
+  margin: 0 auto;
+}
+.flux-app.flux-social[data-wide="true"] .xxshell-inner {
+  grid-template-columns: 236px minmax(0, 1fr);
+  max-width: 1280px;
+}
+.flux-app.flux-social .flux-page-column {
+  border-radius: 0;
+  border-top: 0;
+  border-bottom: 0;
+  border-inline: 1px solid var(--p-line);
+  min-height: 100dvh;
+  padding: 0;
+  box-shadow: none;
+  background: var(--p-surface);
+}
+.flux-app.flux-social .flux-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  min-height: 0;
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 20px 16px 0;
+  background: var(--p-surface);
+}
+.flux-sidebar-brand {
+  display: flex;
+  align-items: center;
+  min-height: 88px;
+  padding-left: 11px;
+}
+.flux-sidebar-links {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+}
+.flux-sidebar-links::-webkit-scrollbar {
+  display: none;
+}
+.flux-sidebar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  min-height: 51px;
+  padding: 10px 13px;
+  border-radius: 28px;
+  background: none;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  color: var(--p-ink);
+  font-size: 18px;
+  font-weight: 450;
+  text-decoration: none;
+  line-height: 1.3;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
+.flux-sidebar-link > svg,
+.flux-sidebar-icon {
+  width: 25px;
+  height: 25px;
+  flex-shrink: 0;
+}
+.flux-sidebar-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flux-sidebar-icon > em {
+  position: absolute;
+  left: 14px;
+  top: -8px;
+  background: var(--p-accent);
+  border: 2px solid var(--p-surface);
+  border-radius: 9px;
+  color: var(--p-surface);
+  min-width: 17px;
+  padding: 0 3px;
+  line-height: 14px;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  text-align: center;
+}
+.flux-sidebar-link:hover {
+  background: var(--p-soft);
+}
+.flux-sidebar-link.is-active {
+  font-weight: 730;
+}
+.flux-sidebar-link.is-active::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--p-accent);
+  margin-left: auto;
+}
+.flux-sidebar-post {
+  margin: 20px 0 16px;
+  width: 100%;
+  min-height: 49px;
+  border: 0;
+  border-radius: 28px;
+  background: var(--p-ink);
+  color: var(--p-surface);
+  font-size: 16px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition:
+    opacity 0.18s,
+    transform 0.18s;
+}
+.flux-sidebar-post:hover {
+  opacity: 0.88;
+}
+.flux-sidebar-post:active {
+  transform: scale(0.98);
+}
+.flux-sidebar-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 12px 9px;
+  width: 100%;
+  border: 0;
+  border-radius: 30px;
+  background: none;
+  color: var(--p-ink);
+  text-align: left;
+}
+.flux-sidebar-account:hover {
+  background: var(--p-soft);
+}
+.flux-sidebar-account > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.flux-sidebar-account strong,
+.flux-sidebar-account small {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.flux-sidebar-account strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.flux-sidebar-account small {
+  font-size: 12px;
+  color: var(--p-muted);
+  margin-top: 2px;
+}
+.flux-more-menu,
+.flux-account-menu {
+  padding: 8px;
+  border: 1px solid var(--p-line) !important;
+  border-radius: 16px !important;
+  background: var(--p-surface) !important;
+  color: var(--p-ink) !important;
+  box-shadow: 0 10px 45px #101c1820 !important;
+  z-index: 220 !important;
+  max-height: min(640px, 85dvh);
+  overflow-y: auto;
+  width: 270px;
+}
+.flux-more-menu [role="menuitem"],
+.flux-account-menu [role="menuitem"] {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 14px;
+  min-height: 47px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 9px;
+}
+.flux-more-menu [role="menuitem"]:focus,
+.flux-account-menu [role="menuitem"]:focus {
+  background: var(--p-soft);
+}
+.flux-app.flux-social .xxrail-col {
+  top: 0;
+  padding: 16px 0 24px 26px;
+  position: sticky;
+  width: 100%;
+}
+.flux-app.flux-social .xxrail-card {
+  margin-bottom: 26px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--p-line);
+}
+.flux-app.flux-social .xxrail-card h2 {
+  font-size: 20px;
+  font-weight: 720;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+.flux-app.flux-social .xxrail-names strong {
+  font-size: 14px;
+}
+.flux-app.flux-social .xxrail-names span {
+  font-size: 12px;
+}
+.flux-app.flux-social .xxrail-person {
+  padding: 12px 0;
+  gap: 10px;
+}
+.flux-app.flux-social .xxrail-row {
+  padding: 15px 0;
+  gap: 4px;
+}
+.flux-app.flux-social .xxrail-row strong {
+  font-size: 15px;
+}
+.flux-app.flux-social .xxrail-row small,
+.flux-app.flux-social .xxrail-row em {
+  font-size: 11px;
+}
+.flux-app.flux-social .flux-rail-caption {
+  display: none;
+}
+.flux-app.flux-social .xxrail-premium {
+  background: var(--p-soft);
+  border: 0;
+  padding: 20px;
+  border-radius: 15px;
+}
+.flux-app.flux-social .xxrail-premium .xxrail-sub {
+  font-size: 13px;
+}
+.flux-rail-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 45px;
+  padding: 0 16px;
+  margin-bottom: 28px;
+  background: var(--p-soft);
+  border: 1px solid transparent;
+  border-radius: 24px;
+  color: var(--p-muted);
+}
+.flux-rail-search:focus-within {
+  border-color: var(--p-accent);
+  background: var(--p-surface);
+}
+.flux-rail-search input {
+  width: 100%;
+  min-width: 0;
+  font-size: 14px;
+  background: none;
+  color: var(--p-ink);
+  border: 0;
+  outline: 0;
+}
+.flux-app.flux-social .xxhead {
+  top: 0;
+  background: var(--p-surface);
+  backdrop-filter: none;
+}
+.flux-social .flux-feed-heading {
+  padding: 18px 20px 8px;
+  min-height: 57px;
+}
+.flux-social .flux-feed-heading h1 {
+  font-size: 23px;
+  letter-spacing: -0.04em;
+}
+.flux-social .flux-feed-heading .flux-icon-button {
+  border: 0;
+  background: none;
+  width: 34px;
+  height: 34px;
+}
+.flux-app.flux-social .xxhead .xxtabs {
+  padding: 0;
+  gap: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.flux-app.flux-social .xxhead .xxtab {
+  min-height: 53px;
+  display: flex;
+  justify-content: center;
+}
+.flux-app.flux-social .xxtab-label {
+  font-size: 14px;
+}
+.flux-app.flux-social .xxtab-bar {
+  height: 3px;
+  width: 100%;
+  min-width: 50px;
+}
+.flux-app.flux-social .xxtab:hover {
+  background: var(--p-soft);
+}
+.flux-app.flux-social .xxcomposer {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--p-line);
+  margin: 0;
+}
+.flux-app.flux-social .xxcomposer textarea {
+  font-size: 18px !important;
+  min-height: 54px !important;
+  line-height: 1.5 !important;
+}
+.flux-app.flux-social .xxcomposer .flux-post-btn {
+  background: var(--p-ink) !important;
+  color: var(--p-surface) !important;
+  border-radius: 24px !important;
+  min-width: 74px;
+  height: 36px !important;
+  font-size: 13px !important;
+}
+.flux-app.flux-social .xxpost {
+  padding: 18px 20px;
+  animation: none;
+}
+.flux-app.flux-social .xxpost-text {
+  font-size: 15px;
+  line-height: 1.6;
+  margin-top: 5px;
+  letter-spacing: 0;
+}
+.flux-app.flux-social .xxpost-name {
+  font-size: 14px;
+}
+.flux-app.flux-social .xxpost-meta {
+  font-size: 12px;
+}
+.flux-app.flux-social .xxpost-actions {
+  margin-top: 12px;
+}
+.flux-app.flux-social .xxact {
+  font-size: 11px;
+  gap: 4px;
+}
+.flux-app.flux-social .xxact-ic {
+  width: 32px;
+  height: 32px;
+}
+.flux-app.flux-social .xxact-ic svg {
+  width: 18px;
+  height: 18px;
+}
+.flux-app.flux-social .xxpost-media {
+  border-radius: 14px;
+}
+.flux-follow-button {
+  color: var(--p-ink);
+  border-color: var(--p-strong);
+  border-radius: 20px;
+  min-width: 30px;
+  height: 30px;
+}
+.flux-follow-button:disabled {
+  background: none;
+  color: var(--p-muted);
+}
+.flux-mobile-header {
+  display: none;
+}
+.flux-phone-nav,
+.flux-phone-compose {
+  display: none !important;
+}
+.flux-compose-dialog {
+  padding: 0 !important;
+  gap: 0 !important;
+  max-width: 600px !important;
+  border-radius: 18px !important;
+}
+.flux-compose-dialog > div:first-of-type {
+  padding: 22px 24px !important;
+  text-align: left;
+  border-bottom: 1px solid var(--p-line);
+}
+.flux-compose-dialog > .flux-composer {
+  margin: 0 !important;
+  padding: 24px !important;
+}
+.flux-compose-dialog .flux-composer textarea {
+  min-height: 150px !important;
+  font-size: 18px !important;
+}
+.flux-compose-dialog .flux-post-btn {
+  background: var(--p-ink) !important;
+  color: var(--p-surface) !important;
+  border-radius: 24px !important;
+}
+.flux-navigation-drawer {
+  display: none !important;
+}
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .flux-app.flux-social .xxshell-inner {
+    grid-template-columns: 220px minmax(0, 650px);
+    max-width: 920px;
+    padding-inline: 16px;
+  }
+  .flux-app.flux-social[data-wide="true"] .xxshell-inner {
+    grid-template-columns: 220px minmax(0, 1fr);
+    max-width: 1100px;
+  }
+  .flux-app.flux-social .flux-sidebar {
+    width: 220px;
+    padding-right: 16px;
+  }
+  .flux-app.flux-social .xxrail-col {
+    display: none;
+  }
+  .flux-sidebar-link {
+    font-size: 17px;
+    gap: 15px;
+  }
+}
+@media (min-width: 1200px) and (max-width: 1240px) {
+  .flux-app.flux-social .xxrail-col {
+    display: block;
+  }
+}
+@media (max-height: 780px) and (min-width: 1024px) {
+  .flux-sidebar-brand {
+    min-height: 76px;
+  }
+  .flux-sidebar-link {
+    min-height: 46px;
+    font-size: 17px;
+  }
+  .flux-sidebar-links {
+    gap: 0;
+  }
+  .flux-sidebar-post {
+    margin: 16px 0 12px;
+  }
+  .flux-sidebar-account {
+    padding-block: 9px;
+  }
+}
+@media (max-width: 1023px) {
+  html,
+  body {
+    background: var(--p-surface) !important;
+  }
+  body {
+    padding-bottom: 0 !important;
+  }
+  .flux-app.flux-social .xxshell-inner,
+  .flux-app.flux-social[data-wide="true"] .xxshell-inner {
+    display: block;
+    padding: 0;
+    max-width: 700px;
+    margin: auto;
+  }
+  .flux-app.flux-social .flux-sidebar,
+  .flux-app.flux-social .xxrail-col {
+    display: none;
+  }
+  .flux-app.flux-social .flux-page-column {
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+    overflow: clip;
+  }
+  .flux-mobile-header {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: var(--p-surface);
+    padding-top: env(safe-area-inset-top);
+    border-bottom: 1px solid var(--p-line);
+  }
+  .flux-mobile-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+    padding: 0 12px;
+  }
+  .flux-mobile-header .flux-logo {
+    gap: 6px;
+  }
+  .flux-mobile-header .flux-brand-word {
+    font-size: 27px;
+  }
+  .flux-header-menu,
+  .flux-header-profile {
+    display: grid;
+    place-items: center;
+    min-width: 42px;
+    min-height: 44px;
+    border: 0;
+    background: none;
+    color: var(--p-ink);
+    border-radius: 50%;
+  }
+  .flux-header-menu:hover {
+    background: var(--p-soft);
+  }
+  .flux-header-menu svg {
+    width: 24px;
+    height: 24px;
+  }
+  .flux-app.flux-social .xxhead {
+    top: calc(58px + env(safe-area-inset-top));
+    z-index: 35;
+  }
+  .flux-social .flux-home-heading {
+    display: none;
+  }
+  .flux-app.flux-social .xxhead .xxtab {
+    min-height: 49px;
+  }
+  .flux-app.flux-social .xxtab-label {
+    font-size: 14px;
+  }
+  .flux-app.flux-social .xxcomposer {
+    padding: 16px 16px 12px;
+  }
+  .flux-app.flux-social .xxcomposer textarea {
+    min-height: 45px !important;
+    font-size: 17px !important;
+  }
+  .flux-app.flux-social .xxcomposer .flux-composer > span {
+    flex-shrink: 0;
+  }
+  .flux-app.flux-social .xxcomposer .flux-post-btn {
+    height: 34px !important;
+    min-width: 67px;
+  }
+  .flux-app.flux-social .xxpost {
+    padding: 16px;
+    border-radius: 0;
+  }
+  .flux-app.flux-social .xxpost-row {
+    gap: 10px;
+  }
+  .flux-app.flux-social .xxpost-avatar > span > *:first-child {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .flux-app.flux-social .xxpost-text {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .flux-app.flux-social .xxpost-name {
+    font-size: 14px;
+  }
+  .flux-app.flux-social .xxpost-meta {
+    font-size: 11px;
+  }
+  .flux-app.flux-social .xxpost-actions {
+    gap: 0;
+    justify-content: space-between;
+    margin-left: -5px;
+    margin-right: -7px;
+  }
+  .flux-app.flux-social .xxact {
+    min-height: 40px;
+    gap: 0;
+    font-size: 10px;
+  }
+  .flux-app.flux-social .xxact-ic {
+    height: 32px;
+    width: 28px;
+  }
+  .flux-app.flux-social .xxact-ic svg {
+    height: 17px;
+    width: 17px;
+  }
+  .flux-app.flux-social .xxpost-media {
+    margin-top: 12px;
+    border-radius: 12px;
+  }
+  html .flux-mobile-dock-portal.flux-phone-nav {
+    display: block !important;
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    z-index: 100 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    transform: none !important;
+    border: 0 !important;
+    border-top: 1px solid var(--p-line) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: var(--p-surface) !important;
+    backdrop-filter: none !important;
+    padding: 0 0 env(safe-area-inset-bottom) !important;
+    contain: none !important;
+  }
+  .flux-phone-links {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: 65px;
+    max-width: 700px;
+    margin: auto;
+    padding: 4px 8px 2px;
+  }
+  .flux-phone-link {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 55px;
+    color: var(--p-muted);
+    text-decoration: none;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.2;
+    min-width: 0;
+  }
+  .flux-phone-link > svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .flux-phone-link.is-active {
+    color: var(--p-ink);
+    font-weight: 700;
+  }
+  .flux-phone-link.is-active::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: calc(50% - 8px);
+    width: 16px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--p-accent);
+  }
+  .flux-phone-link:active {
+    background: var(--p-soft);
+  }
+  .flux-mobile-compose-fab.flux-phone-compose {
+    display: grid !important;
+    place-items: center;
+    position: fixed !important;
+    width: 50px !important;
+    height: 50px !important;
+    border-radius: 50% !important;
+    right: max(16px, calc((100vw - 700px) / 2 + 16px)) !important;
+    bottom: calc(85px + env(safe-area-inset-bottom)) !important;
+    z-index: 90 !important;
+    background: var(--p-ink) !important;
+    color: var(--p-surface) !important;
+    box-shadow: 0 4px 14px #101c1825 !important;
+  }
+  .flux-phone-compose svg {
+    width: 26px;
+    height: 26px;
+    stroke-width: 2;
+  }
+  .flux-phone-compose:active {
+    transform: scale(0.94) !important;
+  }
+  .flux-navigation-drawer {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    transform: none !important;
+    width: min(340px, calc(100vw - 32px)) !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    max-width: none !important;
+    border: 0 !important;
+    border-right: 1px solid var(--p-line) !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    background: var(--p-surface) !important;
+    overflow: hidden !important;
+    z-index: 210 !important;
+    box-shadow: 12px 0 40px #101c1820 !important;
+  }
+  .flux-navigation-drawer[data-state="open"] {
+    animation: flux-menu-enter 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .flux-navigation-drawer > button:last-child {
+    top: calc(14px + env(safe-area-inset-top));
+    right: 14px;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+  }
+  .flux-navigation-drawer > button:last-child svg {
+    width: 21px;
+    height: 21px;
+  }
+  .flux-drawer-brand {
+    padding: calc(16px + env(safe-area-inset-top)) 24px 16px;
+    border-bottom: 1px solid var(--p-line);
+  }
+  .flux-drawer-brand .flux-brand-word {
+    font-size: 30px;
+  }
+  .flux-drawer-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .flux-drawer-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 24px 24px 20px;
+    text-decoration: none;
+    color: var(--p-ink);
+  }
+  .flux-drawer-identity > strong {
+    font-size: 21px;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .flux-drawer-identity > span {
+    color: var(--p-muted);
+    font-size: 13px;
+  }
+  .flux-drawer-identity > span:first-child {
+    color: inherit;
+  }
+  .flux-drawer-identity p {
+    font-size: 12px;
+    color: var(--p-muted);
+    margin-top: 10px;
+  }
+  .flux-drawer-identity b {
+    font-weight: 650;
+    color: var(--p-ink);
+    margin-right: 2px;
+  }
+  .flux-drawer-identity b:not(:first-child) {
+    margin-left: 15px;
+  }
+  .flux-drawer-scroll nav {
+    padding: 4px 12px 16px;
+  }
+  .flux-drawer-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 50px;
+    padding: 12px;
+    border-radius: 9px;
+    font-size: 16px;
+    font-weight: 550;
+    line-height: 1.4;
+    text-decoration: none;
+    color: var(--p-ink);
+  }
+  .flux-drawer-link > svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    stroke-width: 1.75;
+  }
+  .flux-drawer-link:hover,
+  .flux-drawer-link.is-active {
+    background: var(--p-soft);
+  }
+  .flux-drawer-link.is-active {
+    font-weight: 700;
+    color: var(--p-accent);
+  }
+  .flux-drawer-more {
+    margin: 12px 0 0;
+    border-top: 1px solid var(--p-line);
+    padding-top: 10px;
+  }
+  .flux-drawer-more summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 45px;
+    padding: 8px 12px;
+    color: var(--p-muted);
+    font-size: 13px;
+    font-weight: 550;
+    cursor: pointer;
+    list-style: none;
+  }
+  .flux-drawer-more summary::-webkit-details-marker {
+    display: none;
+  }
+  .flux-drawer-more[open] summary svg {
+    transform: rotate(180deg);
+  }
+  .flux-drawer-utilities {
+    border-top: 1px solid var(--p-line);
+    padding: 12px 24px 18px;
+  }
+  .flux-drawer-utilities > a,
+  .flux-drawer-utilities > button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 46px;
+    font-size: 13px;
+    font-weight: 500;
+    width: 100%;
+    border: 0;
+    background: none;
+    text-decoration: none;
+    color: var(--p-ink);
+    text-align: left;
+  }
+  .flux-theme-switch {
+    display: block;
+    width: 31px;
+    height: 18px;
+    border-radius: 18px;
+    background: var(--p-strong);
+    margin-left: auto;
+    padding: 2px;
+  }
+  .flux-theme-switch::after {
+    content: "";
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--p-surface);
+    transition: transform 0.18s;
+  }
+  .flux-theme-switch[data-on="true"] {
+    background: var(--p-accent);
+  }
+  .flux-theme-switch[data-on="true"]::after {
+    transform: translateX(13px);
+  }
+  .flux-drawer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--p-line);
+    min-height: 56px;
+    gap: 12px;
+  }
+  .flux-drawer-footer button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 36px;
+    background: none;
+    border: 0;
+    color: var(--p-ink);
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .flux-drawer-footer > span {
+    font-size: 10px;
+    color: var(--p-muted);
+  }
+  .flux-compose-dialog {
+    position: fixed !important;
+    inset: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    align-content: start;
+    background: var(--p-surface) !important;
+  }
+  .flux-compose-dialog > div:first-of-type {
+    padding: calc(22px + env(safe-area-inset-top)) 20px 22px !important;
+    min-height: 70px;
+  }
+  .flux-compose-dialog > div:first-of-type h2 {
+    font-size: 18px !important;
+  }
+  .flux-compose-dialog > .flux-composer {
+    padding: 24px 20px !important;
+  }
+  .flux-compose-dialog > button:last-child {
+    top: calc(14px + env(safe-area-inset-top)) !important;
+    right: 14px !important;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+  }
+  .flux-compose-dialog .flux-composer textarea {
+    font-size: 18px !important;
+    min-height: 180px !important;
+  }
+  .flux-app.flux-social .flux-messages {
+    height: calc(
+      100dvh - 124px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    ) !important;
+    border-radius: 0;
+  }
+  .flux-app.flux-social[data-page="messages"] .flux-page-column {
+    padding-bottom: 0;
+  }
+}
+@media (max-width: 359px) {
+  .flux-app.flux-social .xxpost {
+    padding-inline: 12px;
+  }
+  .flux-phone-link {
+    font-size: 9px;
+  }
+  .flux-app.flux-social .xxpost-text {
+    font-size: 14px;
+  }
+  .flux-app.flux-social .xxact-ic {
+    width: 25px;
+  }
+  .flux-app.flux-social .xxcomposer {
+    padding-inline: 12px;
+  }
+  .flux-app.flux-social .xxpost-actions {
+    margin-right: -2px;
+  }
+  .flux-app.flux-social .xxpost-row {
+    gap: 8px;
+  }
+}
+@keyframes flux-menu-enter {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flux-navigation-drawer[data-state="open"] {
+    animation: none;
+  }
+  .flux-sidebar-link,
+  .flux-sidebar-post,
+  .flux-phone-link {
+    transition: none;
+  }
+}
+/* Radix centers regular dialogs with individual CSS translate properties.
+   Navigation drawers and phone composers use edge-to-edge positioning. */
+.flux-more-menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 370px;
+  max-height: min(540px, 85dvh);
+}
+.flux-more-menu [role="menuitem"] {
+  min-height: 49px;
+  gap: 10px;
+  padding: 12px 10px;
+  font-size: 14px;
+}
+.flux-more-menu [role="menuitem"] > svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+.flux-more-menu-title {
+  grid-column: 1/-1;
+  padding: 10px 10px 12px !important;
+  font-size: 12px !important;
+  font-weight: 550 !important;
+  color: var(--p-muted);
+}
+@media (max-width: 1023px) {
+  .flux-navigation-drawer,
+  .flux-compose-dialog {
+    translate: none !important;
+  }
+  .flux-app.flux-social[data-page="home"] .xxcomposer {
+    display: none;
+  }
+  .flux-app.flux-social .xxpost-actions .xxact {
+    min-width: 35px;
+    min-height: 42px;
+  }
+  .flux-app.flux-social .xxpost-actions .xxact:last-child {
+    min-width: 30px;
+  }
+  .flux-compose-dialog .flux-composer {
+    display: flex !important;
+  }
+}
+.flux-auth-hero.flux-identity-auth {
+  background: var(--p-soft) !important;
+  padding: 48px clamp(32px, 5vw, 80px);
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+.flux-auth-identity-art {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 60px 0;
+}
+.flux-auth-identity-art h2 {
+  font-size: clamp(40px, 4.2vw, 66px);
+  font-weight: 730;
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  text-align: center;
+  color: var(--p-ink);
+}
+.flux-auth-identity-footer {
+  font-size: 11px;
+  color: var(--p-muted);
+}
+.flux-auth-title {
+  max-width: none;
+  font-size: 35px !important;
+}
+.flux-auth-form .flux-auth-eyebrow {
+  font-size: 13px;
+}
+.flux-auth-google {
+  font-size: 13px !important;
+}
+.xxauth .xxauth-submit {
+  background: var(--p-ink) !important;
+  color: var(--p-surface) !important;
+  border-radius: 26px !important;
+}
+.flux-auth-google {
+  border-radius: 26px !important;
+}
+.flux-auth-subtitle {
+  font-size: 14px;
+}
+.flux-auth-panel .xxauth-footer {
+  font-size: 10px;
+}
+@media (max-width: 900px) {
+  .xxauth.flux-auth-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+  .flux-auth-hero.flux-identity-auth {
+    min-height: 0 !important;
+    padding: calc(24px + env(safe-area-inset-top)) 24px 16px !important;
+    border: 0;
+    background: var(--p-surface) !important;
+  }
+  .flux-identity-auth .flux-auth-identity-art,
+  .flux-auth-identity-footer {
+    display: none;
+  }
+  .flux-auth-hero.flux-identity-auth .flux-logo .flux-brand-word {
+    font-size: 33px;
+  }
+  .xxauth-form-col.flux-auth-panel {
+    min-height: 0 !important;
+    flex: 1;
+    justify-content: flex-start;
+    padding: 30px 24px 28px !important;
+  }
+  .flux-auth-title {
+    font-size: 32px !important;
+    line-height: 1.1;
+    max-width: 14ch;
+  }
+  .xxauth .xxauth-form-inner {
+    max-width: 390px;
+  }
+  .flux-auth-form-heading {
+    margin-bottom: 24px;
+  }
+  .flux-auth-panel .xxauth-footer {
+    margin-top: 36px;
+  }
+  .flux-auth-subtitle {
+    max-width: 32ch;
+  }
+  .flux-auth-panel .flux-auth-form .flux-auth-input {
+    font-size: 16px !important;
+  }
+  .flux-auth-switch {
+    font-size: 13px;
+  }
+}
+.flux-profile-banner-editor {
+  width: 100%;
+  min-width: 0;
+  height: 208px;
+}
+.flux-profile-banner-editor > label:focus-within {
+  outline: 3px solid var(--p-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 1023px) {
+  .flux-profile-banner-editor {
+    height: 144px;
+  }
+  .flux-profile-banner-editor > label {
+    max-width: calc(100% - 24px);
+    white-space: nowrap;
+  }
+}

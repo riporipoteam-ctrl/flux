@@ -72,9 +72,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         transition={{ duration: 0.4, delay: 0.05 }}
         className="flux-auth-form-heading"
       >
-        <span className="flux-auth-eyebrow">{isSignup ? "Your next chapter starts here" : "Your conversations are waiting"}</span>
+        <span className="flux-auth-eyebrow">
+          {isSignup ? "Welcome to Flux" : "Welcome back"}
+        </span>
         <h1 className="flux-auth-title">
-          {isSignup ? "Make yourself at home." : "Back to your people."}
+          {isSignup ? "Join Flux." : "Sign in to Flux."}
         </h1>
         <p className="flux-auth-subtitle">
           {isSignup
@@ -113,11 +115,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <Separator className="flex-1" />
         </div>
 
-        {authError ? <div className="flux-auth-error" role="alert">{authError}</div> : null}
+        {authError ? (
+          <div className="flux-auth-error" role="alert">
+            {authError}
+          </div>
+        ) : null}
         <form onSubmit={onSubmit} className="space-y-4">
           {isSignup ? (
             <div>
-              <label className="flux-field-label" htmlFor="name">Your name</label>
+              <label className="flux-field-label" htmlFor="name">
+                Your name
+              </label>
               <Input
                 id="name"
                 value={displayName}
@@ -131,7 +139,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             </div>
           ) : null}
           <div>
-            <label className="flux-field-label" htmlFor="email">Email address</label>
+            <label className="flux-field-label" htmlFor="email">
+              Email address
+            </label>
             <Input
               id="email"
               type="email"
@@ -145,7 +155,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             />
           </div>
           <div className="relative">
-            <label className="flux-field-label" htmlFor="password">Password</label>
+            <label className="flux-field-label" htmlFor="password">
+              Password
+            </label>
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -166,7 +178,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               className={cn(
                 "flux-password-toggle absolute right-3 bottom-2 rounded-full p-1",
                 "text-muted-foreground transition-colors hover:text-foreground",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               )}
             >
               {showPassword ? (
@@ -214,8 +226,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
         {isSignup ? (
           <p className="flux-auth-terms">
-            By signing up, you agree to the Terms of Service and Privacy
-            Policy.
+            By signing up, you agree to the Terms of Service and Privacy Policy.
           </p>
         ) : null}
       </motion.div>
@@ -231,8 +242,7 @@ function friendlyAuthError(err: unknown): string {
     return "Email sign-in is temporarily unavailable. Try Google sign-in or return later.";
   if (raw.includes("auth/invalid-api-key"))
     return "Sign-in is temporarily unavailable. Please try again later.";
-  if (raw.includes("auth/invalid-email"))
-    return "Enter a valid email address.";
+  if (raw.includes("auth/invalid-email")) return "Enter a valid email address.";
   if (raw.includes("auth/too-many-requests"))
     return "Too many attempts. Wait a moment and try again.";
   if (raw.includes("auth/email-already-in-use"))

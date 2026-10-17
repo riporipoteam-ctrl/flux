@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Plus } from "lucide-react";
+import { RailSearch } from "@/components/layout/rail-search";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
 import { useAuth } from "@/contexts/auth-context";
@@ -64,9 +65,10 @@ export function RightRail() {
   return (
     <aside className="xxrail-col" aria-label="Discover on Flux">
       <div className="xxrail">
+        <RailSearch />
         <section className="xxrail-card" aria-label="People to follow">
-          <span className="flux-rail-caption">A bigger circle</span>
-          <h2>Find your people</h2>
+          <span className="flux-rail-caption">Who to follow</span>
+          <h2>People you might like</h2>
           {suggestions.length ? (
             suggestions.map((person) => (
               <div key={person.uid} className="xxrail-person">
@@ -117,8 +119,8 @@ export function RightRail() {
           </Link>
         </section>
         <section className="xxrail-card" aria-label="Trending conversations">
-          <span className="flux-rail-caption">In the conversation</span>
-          <h2>Trending on Flux</h2>
+          <span className="flux-rail-caption">Explore</span>
+          <h2>What’s happening</h2>
           {tags.length ? (
             tags.map((tag, index) => (
               <Link

@@ -117,7 +117,7 @@ export default function SettingsPage() {
           <XRow
             icon={Palette}
             title="Display & appearance"
-            description={`${BACKGROUND_LABEL[resolved]} appearance · ${accent} accent`}
+            description={`${BACKGROUND_LABEL[resolved]} appearance · ${accent === "blue" ? "Flux green" : accent} accent`}
             href="/settings/display"
             trailing={<ChevronRight size={15} />}
           />

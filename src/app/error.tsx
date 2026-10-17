@@ -1,5 +1,7 @@
 "use client";
 
+import { FluxMark } from "@/components/shared/logo";
+
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
 
@@ -12,9 +14,7 @@ export default function ErrorPage({
   return (
     <main className="flux-system-state">
       <Link href="/home" className="flux-system-brand">
-        <span className="flux-brand-symbol" aria-hidden="true">
-          f<span />
-        </span>
+        <FluxMark size={36} />
         <strong>flux</strong>
       </Link>
       <div>

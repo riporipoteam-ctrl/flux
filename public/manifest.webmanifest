@@ -1,27 +1,37 @@
 {
   "name": "Flux",
   "short_name": "Flux",
-  "description": "Flux social + Hangout multiplayer. Firebase-backed, no PC required.",
-  "start_url": "./game/?app=1",
+  "description": "Flux \u2014 posts, conversations and communities by Ripo Team.",
+  "start_url": "./home/?app=1",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0a0a0c",
-  "theme_color": "#0a0a0c",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "lang": "en",
-  "categories": ["social", "games", "entertainment"],
+  "categories": [
+    "social",
+    "games",
+    "entertainment"
+  ],
   "icons": [
     {
-      "src": "flux-icon.png?v=flux-20260722",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "flux-icon.png?v=flux-20260722",
-      "sizes": "1024x1024",
+      "src": "icons/flux-192.png?v=identity-2026",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icons/flux-512.png?v=identity-2026",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/flux-maskable-512.png?v=identity-2026",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
