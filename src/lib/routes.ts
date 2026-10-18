@@ -1,5 +1,20 @@
 import { assetUrl } from "@/lib/asset-url";
 
+/** Accept a same-origin path for post-auth redirects; reject external URLs. */
+export function safeInternalPath(value?: string | null): string | null {
+  const candidate = value?.trim();
+  if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//") || candidate.includes("\\")) {
+    return null;
+  }
+  try {
+    const parsed = new URL(candidate, "https://flux.invalid");
+    if (parsed.origin !== "https://flux.invalid") return null;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 function queryPath(path: string, key: string, value: string): string {
   const params = new URLSearchParams({ [key]: value });
   return `${path}?${params.toString()}`;

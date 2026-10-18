@@ -55,3 +55,23 @@ test("switching timeline tabs cannot apply late results from the previous tab", 
   assert.match(feed, /if\s*\(!isCurrent\(\)\)\s*return/);
   assert.match(feed, /const requestId = requestIdRef\.current/);
 });
+
+test("Flux Rec pairing deep links survive sign in and first account onboarding", () => {
+  const main = source("src/app/(main)/layout.tsx");
+  const auth = source("src/app/(auth)/layout.tsx");
+  const onboarding = source("src/app/(onboarding)/onboarding/page.tsx");
+  const account = source("src/app/(main)/flux-rec/page.tsx");
+  assert.match(main, /window\.location\.pathname\}\$\{window\.location\.search\}/);
+  assert.match(auth, /safeInternalPath\([\s\S]*?window\.location\.search[\s\S]*?\/onboarding\?next=/);
+  assert.match(onboarding, /safeInternalPath\([\s\S]*?window\.location\.search[\s\S]*?router\.replace\(next \|\| "\/home"\)/);
+  assert.match(account, /searchParams\.get\("link"\) !== "fluxrec"/);
+  assert.match(account, /setPairOpen\(true\)/);
+});
+
+test("post-auth redirect helper rejects external and protocol-relative destinations", () => {
+  const routes = source("src/lib/routes.ts");
+  assert.match(routes, /!candidate\.startsWith\("\/"\)/);
+  assert.match(routes, /candidate\.startsWith\("\/\/"\)/);
+  assert.match(routes, /candidate\.includes\("\\\\"\)/);
+  assert.match(routes, /parsed\.origin !== "https:\/\/flux\.invalid"/);
+});

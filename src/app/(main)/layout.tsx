@@ -74,8 +74,14 @@ export default function MainLayout({
   useEffect(() => {
     if (loading || !stickyResolved || isPublicLiveViewer || isPublicAskAI)
       return;
-    if (!user) router.replace("/login");
-    else if (needsOnboarding) router.replace("/onboarding");
+    if (!user) {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/login?next=${encodeURIComponent(returnTo)}`);
+    }
+    else if (needsOnboarding) {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/onboarding?next=${encodeURIComponent(returnTo)}`);
+    }
   }, [
     user,
     needsOnboarding,

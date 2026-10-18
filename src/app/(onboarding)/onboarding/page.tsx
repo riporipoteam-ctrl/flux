@@ -33,6 +33,7 @@ import type { UserProfile } from "@/types";
 import { cn, formatUsername } from "@/lib/utils";
 import { assetUrl } from "@/lib/asset-url";
 import { clearOnboardingPending, hasOnboardingPending } from "@/lib/onboarding-state";
+import { safeInternalPath } from "@/lib/routes";
 
 const STEPS = [
   "Username",
@@ -147,7 +148,10 @@ export default function OnboardingPage() {
       await refreshProfile();
       clearOnboardingPending(user.uid);
       toast.success("You're in. Welcome to Flux!");
-      router.replace("/home");
+      const next = safeInternalPath(
+        new URLSearchParams(window.location.search).get("next"),
+      );
+      router.replace(next || "/home");
     } catch (e) {
       console.error(e);
       toast.error(

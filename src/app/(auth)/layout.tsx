@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { LoadingScreen } from "@/components/shared/loading-screen";
+import { safeInternalPath } from "@/lib/routes";
 
 /** Shared account entry layout for the Flux platform. */
 export default function AuthLayout({
@@ -23,8 +24,16 @@ export default function AuthLayout({
 
   useEffect(() => {
     if (loading) return;
-    if (user && onboarded) router.replace("/home");
-    else if (user && profile && !onboarded) router.replace("/onboarding");
+    if (user && onboarded) {
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.replace(safeInternalPath(next) || "/home");
+    }
+    else if (user && profile && !onboarded) {
+      const next = safeInternalPath(
+        new URLSearchParams(window.location.search).get("next"),
+      );
+      router.replace(next ? `/onboarding?next=${encodeURIComponent(next)}` : "/onboarding");
+    }
   }, [user, profile, onboarded, loading, router]);
 
   if (loading) return <LoadingScreen />;

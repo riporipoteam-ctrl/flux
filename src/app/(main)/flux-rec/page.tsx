@@ -214,6 +214,16 @@ export default function FluxRecPage() {
     return () => { alive = false; };
   }, []);
 
+  // The launcher links here with `?link=fluxrec`; open the same pairing dialog
+  // as the page button and remove the one-shot parameter from browser history.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("link") !== "fluxrec") return;
+    setPairOpen(true);
+    url.searchParams.delete("link");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+
   const loadMine = useCallback(
     async (t: string) => {
       setMineLoading(true);
