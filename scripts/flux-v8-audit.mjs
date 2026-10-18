@@ -32,24 +32,27 @@ for (const marker of [
 
 const sidebar = read("src/components/layout/sidebar.tsx");
 for (const marker of [
-  "Home", "Explore", "Notifications", "Messages", "AskAI",
-  "Bookmarks", "Communities", "Premium", "Profile",
-  "More", "xxnav-post",
+  "Home", "Explore", "Notifications", "Messages",
+  "Bookmarks", "Communities", "Profile", "More",
+  "fluxDestinations", "flux-sidebar-post",
 ]) requireText(sidebar, marker, "Desktop social navigation");
+const destinations = read("src/lib/flux-navigation.ts");
+for (const marker of ["/ask-ai", "AskAI", "/premium", "Premium"])
+  requireText(destinations, marker, "More menu destinations");
 
 const mobileHeader = read("src/components/layout/mobile-app-header.tsx");
 for (const marker of [
-  "flux8-mobile-header", "MobileDrawer", "Search",
-  "flux8-mobile-header-actions",
+  "flux-mobile-header", "MobileDrawer", "flux-header-menu",
+  "profilePath",
 ]) requireText(mobileHeader, marker, "Responsive app header");
 const mobileDrawer = read("src/components/layout/mobile-drawer.tsx");
-for (const marker of ["/ask-ai", "/notifications", "/messages", "/settings"])
+for (const marker of ["fluxDestinations", "visiblePaths", "flux-navigation-drawer", "flux-drawer-link"])
   requireText(mobileDrawer, marker, "Mobile drawer access");
 
 const mobileNav = read("src/components/layout/mobile-nav.tsx");
 for (const marker of [
   "/home", "/explore", "/notifications", "/messages", "profileHref",
-  "flux8-mobile-tab", "flux-mobile-compose-fab", "setComposeOpen",
+  "flux-phone-link", "flux-mobile-compose-fab", "setComposeOpen",
 ]) requireText(mobileNav, marker, "Mobile X-style navigation");
 forbidText(mobileNav, "Gamepad2", "Five-destination mobile navigation");
 

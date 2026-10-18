@@ -9,7 +9,7 @@ const forbidText = (source, marker, label) => {
 };
 
 const nav = read("src/components/layout/mobile-nav.tsx");
-for (const marker of ["createPortal", "document.body", "data-flux-mobile-dock=\"v12\""]) requireText(nav, marker, "Mobile dock");
+for (const marker of ["createPortal", "document.body", "data-flux-mobile-dock=\"identity-2026\""]) requireText(nav, marker, "Mobile dock");
 
 const root = read("src/app/layout.tsx");
 for (const marker of ["data-flux-ui=\"x5\"", "flux-v12-rebuild.css"]) requireText(root, marker, "Flux v12 release");
@@ -43,4 +43,4 @@ for (const marker of ["checkAskAIGroqHealth", "ASKAI_PROVIDER_MISSING", "ASKAI_U
 const recroom = read("src/services/recroom-browser.ts");
 for (const marker of ["recroom-2021-08-25", "v12-session-direct", "streamUrl", "gameReady"]) requireText(recroom, marker, "Rec Room browser session");
 
-console.log("Flux v12 release audit passed with public TURN-backed Live, hybrid AskAI, bundled open-source games, and Rec Room browser sessions.");
+console.log("Current Flux release audit passed with Live, AskAI, bundled games, and Rec Room browser sessions.");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { safeInternalPath } from "@/lib/routes";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const { signIn, signUp, signInWithGoogle } = useAuth();
@@ -23,6 +24,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [nextQuery, setNextQuery] = useState("");
+
+  useEffect(() => {
+    const next = safeInternalPath(new URLSearchParams(window.location.search).get("next"));
+    setNextQuery(next ? `?next=${encodeURIComponent(next)}` : "");
+  }, []);
+
+  const returnAfterAuth = () =>
+    safeInternalPath(new URLSearchParams(window.location.search).get("next")) || "/home";
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +50,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         await signUp(email, password, displayName.trim());
       }
       toast.success(mode === "login" ? "Welcome back" : "Account created");
-      router.push("/");
+      router.replace(returnAfterAuth());
     } catch (err: unknown) {
       setAuthError(friendlyAuthError(err));
     } finally {
@@ -54,7 +64,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     try {
       await signInWithGoogle();
       toast.success("Signed in with Google");
-      router.push("/");
+      router.replace(returnAfterAuth());
     } catch (err: unknown) {
       setAuthError(friendlyAuthError(err));
     } finally {
@@ -205,7 +215,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             <>
               Already have an account?{" "}
               <Link
-                href="/login"
+                href={`/login${nextQuery}`}
                 className="font-bold text-primary hover:underline"
               >
                 Sign in
@@ -215,7 +225,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             <>
               New to Flux?{" "}
               <Link
-                href="/signup"
+                href={`/signup${nextQuery}`}
                 className="font-bold text-primary hover:underline"
               >
                 Sign up
