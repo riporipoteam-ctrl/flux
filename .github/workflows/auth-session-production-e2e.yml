@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           for i in $(seq 1 120); do
-            release="$(curl -fsS -H 'Cache-Control: no-cache' "https://riporipoteam-ctrl.github.io/flux/release.json?ts=$(date +%s)" || true)"
+            release="$(curl -fsSL --retry 2 -H 'Cache-Control: no-cache' "https://riporipoteam-ctrl.github.io/flux/release.json?ts=$(date +%s)" || true)"
             if [ -n "$release" ]; then
               current="$(printf '%s' "$release" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("release", ""))' 2>/dev/null || true)"
               echo "production=$current expected=$EXPECTED_SHA"
