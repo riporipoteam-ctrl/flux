@@ -1,0 +1,4 @@
+Hosted by Flux from the open-source project below.
+Upstream: https://github.com/ncase/anxiety
+Revision: ba2421f7bc46125f0fedfebcc3171c73ef0e01f4
+Flux has not removed the upstream copyright or license files.
